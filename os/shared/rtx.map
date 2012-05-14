@@ -1,0 +1,389 @@
+
+Allocating common symbols
+Common symbol       size              file
+
+registered_commands_begin
+                    0x4               ../keyboard_decoder_process/keyboard_decoder_process.o
+user_input_current_index
+                    0x4               ../keyboard_decoder_process/keyboard_decoder_process.o
+g_pool              0x4               ../memory_pool/MemoryPool.o
+old_stack           0x4               /tmp/ccSsdHxg.o
+user_input          0x40              ../keyboard_decoder_process/keyboard_decoder_process.o
+priorityQueues      0x40              ../initialization/ProcessQueue.o
+main_stack          0x1000            /tmp/ccSsdHxg.o
+heap                0x4               ../memory/memory.o
+free_memory         0x4               ../memory/memory.o
+freeMemoryBegin     0x4               rtx.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+ram              0x10100000         0x00100000
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+LOAD /tmp/ccSsdHxg.o
+LOAD /tmp/ccUTNBun.o
+LOAD /tmp/cc2xXVOx.o
+LOAD /tmp/ccBaHnHz.o
+LOAD /tmp/cc6aYdpA.o
+LOAD /tmp/ccdLPevE.o
+LOAD rtx.o
+LOAD dbug.o
+LOAD main_rtx.o
+LOAD kernel_rtx.o
+LOAD ../memory_pool/MemoryPool.o
+LOAD ../memory_pool/MemoryBlock.o
+LOAD ../message_passing/Mailbox.o
+LOAD ../memory/memory.o
+LOAD ../initialization/ProcessQueue.o
+LOAD ../initialization/Initialization.o
+LOAD ../scheduler/scheduler.o
+LOAD ../trap_handler/trap_handler.o
+LOAD ../initialization/SysProc.o
+LOAD ../keyboard_decoder_process/registered_command.o
+LOAD ../keyboard_decoder_process/keyboard_decoder_process.o
+LOAD ../wall_clock/wall_clock_process.o
+LOAD ../set_process_priority_process/set_process_priority_process.o
+LOAD ../atomic/atomic.o
+LOAD ../serial/serial_interrupt_handler.o
+LOAD ../timer/timer_interrupt_handler.o
+LOAD ../timer/timer0.o
+LOAD ../serial/serial.o
+LOAD ../initialization/UserProc.o
+LOAD ../initialization/ProcessABC.o
+LOAD ../crt_display/crt_display.o
+START GROUP
+LOAD /opt/gcc-coldfire/bin/../lib/gcc/m68k-elf/4.3.2/m5307/libgcc.a
+END GROUP
+                0x00000000                __DYNAMIC = 0x0
+                0x00000000                PROVIDE (hardware_init_hook, 0x0)
+                0x00000000                PROVIDE (_hardware_init_hook, 0x0)
+                0x00000000                PROVIDE (software_init_hook, 0x0)
+                0x00000000                PROVIDE (_software_init_hook, 0x0)
+
+.text           0x10100000     0x3546
+ *(.text)
+ .text          0x10100000       0x1e /tmp/ccSsdHxg.o
+ *fill*         0x1010001e        0x2 00
+ .text          0x10100020       0x5c /tmp/ccUTNBun.o
+                0x10100020                asm_trap_entry
+                0x1010007a                trap_handler_exit
+ .text          0x1010007c       0x2c /tmp/cc2xXVOx.o
+                0x1010007c                context_switch
+ .text          0x101000a8       0x44 /tmp/ccBaHnHz.o
+                0x101000a8                rtx_memset
+ .text          0x101000ec       0x48 /tmp/cc6aYdpA.o
+                0x101000ec                asm_timer_entry
+ .text          0x10100134       0x48 /tmp/ccdLPevE.o
+                0x10100134                asm_serial_entry
+ .text          0x1010017c      0x1f6 rtx.o
+                0x1010017c                request_free_memory
+                0x10100368                get_process_priority
+                0x1010025e                request_memory_block
+                0x1010035e                set_process_priority
+                0x101001dc                send_message
+                0x1010029c                release_memory_block
+                0x1010021e                receive_message
+                0x1010031a                delayed_send
+                0x101002dc                release_processor
+ *fill*         0x10100372        0x2 00
+ .text          0x10100374      0x1fc dbug.o
+                0x101003d0                rtx_dbug_out_number
+                0x10100394                rtx_dbug_outs
+                0x10100374                rtx_dbug_out_char
+ .text          0x10100570      0x104 main_rtx.o
+                0x101005ae                __main
+                0x10100570                create_user_table
+                0x101005b8                main
+ .text          0x10100674      0x2a8 kernel_rtx.o
+                0x1010076c                kernel_request_memory_block
+                0x10100802                kernel_release_processor
+                0x10100824                kernel_delayed_send
+                0x101008a4                kernel_set_process_priority
+                0x10100674                kernel_send_message
+                0x101006f4                kernel_receive_message
+                0x101008e4                kernel_get_process_priority
+                0x101007b6                kernel_release_memory_block
+ .text          0x1010091c      0x1a6 ../memory_pool/MemoryPool.o
+                0x10100a60                MemoryPool_alloc
+                0x101009f8                MemoryPool_num_used_blocks
+                0x1010091c                MemoryPool_init
+                0x101009b4                MemoryPool_num_free_blocks_
+                0x10100942                MemoryPool_construct
+                0x10100a76                MemoryPool_free_
+                0x10100a0e                MemoryPool_alloc_
+                0x10100aa8                MemoryPool_free
+                0x101009e0                MemoryPool_num_used_blocks_
+                0x101009ca                MemoryPool_num_free_blocks
+ *fill*         0x10100ac2        0x2 00
+ .text          0x10100ac4      0x1a0 ../memory_pool/MemoryBlock.o
+                0x10100b68                MemoryBlockList_pop_front
+                0x10100c36                MemoryBlockList_size
+                0x10100b10                MemoryBlockList_push_back
+                0x10100ad2                MemoryBlockList_push_front
+                0x10100ba0                MemoryBlockList_erase
+                0x10100ac4                MemoryBlockList_construct
+                0x10100c0e                MemoryBlockList_empty
+ .text          0x10100c64      0x1ca ../message_passing/Mailbox.o
+                0x10100c64                Mailbox_construct
+                0x10100d3a                Mailbox_peek
+                0x10100cd6                Mailbox_getMailOut
+                0x10100d48                Mailbox_insertMailByTime
+                0x10100c72                Mailbox_putMailIn
+ *fill*         0x10100e2e        0x2 00
+ .text          0x10100e30      0x146 ../memory/memory.o
+                0x10100e40                init_user_heap
+                0x10100eca                s_release_memory_block
+                0x10100e62                s_request_memory_block
+                0x10100e30                getMask
+ *fill*         0x10100f76        0x2 00
+ .text          0x10100f78      0xb24 ../initialization/ProcessQueue.o
+                0x1010172a                next_blocked_memory_process
+                0x10101584                dump_pcb
+                0x101015ea                dump_all
+                0x101011c6                pull_process
+                0x101012be                grab_pcb_from_single_queue
+                0x101010f4                append_process
+                0x10101272                find_pcb_from_single_queue
+                0x101014d4                dump_queue
+                0x10100f78                pcb_new
+                0x1010198c                set_priority_helper
+                0x10101a70                get_timer_pcb
+                0x10101492                next_priority
+                0x101018aa                message_receiver
+                0x101013b6                find_process
+                0x101010b6                init_p_queue
+                0x1010144a                next_ready_process
+                0x10101a86                get_uart_pcb
+ .text          0x10101a9c      0x21e ../initialization/Initialization.o
+                0x10101a9c                coldfire_vbr_init
+                0x10101ab4                initalize_i_process_asm
+                0x10101bb2                initialize
+ *fill*         0x10101cba        0x2 00
+ .text          0x10101cbc       0xdc ../scheduler/scheduler.o
+                0x10101cbc                process_switch
+                0x10101d10                process_switch_if_there_is_a_higher_priority_process
+                0x10101d4a                context_switch_helper
+                0x10101d3c                get_running_process
+                0x10101cf4                context_switch_back_from_i_process
+ .text          0x10101d98      0x13c ../trap_handler/trap_handler.o
+                0x10101d98                c_trap_handler
+ .text          0x10101ed4      0x1d4 ../initialization/SysProc.o
+                0x10101ed4                null_process
+                0x10101ee0                register_sys_proc
+ .text          0x101020a8       0x70 ../keyboard_decoder_process/registered_command.o
+                0x101020dc                RegisteredCommand_construct_copy
+                0x101020a8                RegisteredCommand_construct
+ .text          0x10102118      0x2c6 ../keyboard_decoder_process/keyboard_decoder_process.o
+                0x101022ee                send_registered_command
+                0x10102118                keyboard_decoder_process
+                0x10102230                register_command
+                0x10102280                append_input
+ *fill*         0x101023de        0x2 00
+ .text          0x101023e0      0x430 ../wall_clock/wall_clock_process.o
+                0x1010259e                parse_to_sec
+                0x101026bc                fillChar
+                0x1010271e                parse_to_display
+                0x101023e0                wall_clock
+ .text          0x10102810      0x1dc ../set_process_priority_process/set_process_priority_process.o
+                0x10102810                set_process_priority_process
+ .text          0x101029ec       0x4c ../atomic/atomic.o
+                0x101029ec                atomic_on
+                0x10102a0a                atomic_off
+ .text          0x10102a38       0x1e ../serial/serial_interrupt_handler.o
+                0x10102a38                c_serial_handler
+ *fill*         0x10102a56        0x2 00
+ .text          0x10102a58       0x24 ../timer/timer_interrupt_handler.o
+                0x10102a58                c_timer_handler
+ .text          0x10102a7c      0x114 ../timer/timer0.o
+                0x10102a7c                timer_i_process
+ .text          0x10102b90      0x128 ../serial/serial.o
+                0x10102b90                uart_i_process
+ .text          0x10102cb8      0x19e ../initialization/UserProc.o
+                0x10102cb8                register_user_process
+ *fill*         0x10102e56        0x2 00
+ .text          0x10102e58      0x304 ../initialization/ProcessABC.o
+                0x10102f58                user_process_b
+                0x10102f84                user_process_c
+                0x10102e58                user_process_a
+ .text          0x1010315c      0x23a ../crt_display/crt_display.o
+                0x1010315c                crt_display_process
+                0x10103398                . = ALIGN (0x4)
+ *fill*         0x10103396        0x2 00
+                0x10103398                __CTOR_LIST__ = .
+                0x10103398        0x4 LONG 0x0 (((__CTOR_END__ - __CTOR_LIST__) / 0x4) - 0x2)
+ *(.ctors)
+                0x1010339c        0x4 LONG 0x0
+                0x101033a0                __CTOR_END__ = .
+                0x101033a0                __DTOR_LIST__ = .
+                0x101033a0        0x4 LONG 0x0 (((__DTOR_END__ - __DTOR_LIST__) / 0x4) - 0x2)
+ *(.dtors)
+                0x101033a4        0x4 LONG 0x0
+                0x101033a8                __DTOR_END__ = .
+ *(.rodata*)
+ .rodata        0x101033a8        0x4 dbug.o
+ .rodata        0x101033ac       0xc3 ../initialization/ProcessQueue.o
+ .rodata        0x1010346f       0x4c ../keyboard_decoder_process/keyboard_decoder_process.o
+ .rodata        0x101034bb       0x7b ../initialization/ProcessABC.o
+ *(.gcc_except_table)
+                0x10103536                __INIT_SECTION__ = .
+                0x10103536        0x4 LONG 0x4e560000
+ *(.init)
+                0x1010353a        0x2 SHORT 0x4e5e
+                0x1010353c        0x2 SHORT 0x4e75
+                0x1010353e                __FINI_SECTION__ = .
+                0x1010353e        0x4 LONG 0x4e560000
+ *(.fini)
+                0x10103542        0x2 SHORT 0x4e5e
+                0x10103544        0x2 SHORT 0x4e75
+                0x10103546                _etext = .
+ *(.lit)
+
+.data           0x10103548       0x40
+ *(.shdata)
+ *(.data)
+ .data          0x10103548        0x0 /tmp/ccSsdHxg.o
+ .data          0x10103548        0x0 /tmp/ccUTNBun.o
+ .data          0x10103548        0x0 /tmp/cc2xXVOx.o
+ .data          0x10103548        0x0 /tmp/ccBaHnHz.o
+ .data          0x10103548        0x0 /tmp/cc6aYdpA.o
+ .data          0x10103548        0x0 /tmp/ccdLPevE.o
+ .data          0x10103548        0x0 rtx.o
+ .data          0x10103548        0x0 dbug.o
+ .data          0x10103548        0x0 main_rtx.o
+ .data          0x10103548        0x0 kernel_rtx.o
+ .data          0x10103548        0x0 ../memory_pool/MemoryPool.o
+ .data          0x10103548        0x0 ../memory_pool/MemoryBlock.o
+ .data          0x10103548        0x0 ../message_passing/Mailbox.o
+ .data          0x10103548        0x0 ../memory/memory.o
+ .data          0x10103548        0x0 ../initialization/ProcessQueue.o
+ .data          0x10103548        0x0 ../initialization/Initialization.o
+ .data          0x10103548        0x0 ../scheduler/scheduler.o
+ .data          0x10103548        0x0 ../trap_handler/trap_handler.o
+ .data          0x10103548        0x0 ../initialization/SysProc.o
+ .data          0x10103548        0x0 ../keyboard_decoder_process/registered_command.o
+ .data          0x10103548        0x0 ../keyboard_decoder_process/keyboard_decoder_process.o
+ .data          0x10103548        0x0 ../wall_clock/wall_clock_process.o
+ .data          0x10103548       0x3d ../set_process_priority_process/set_process_priority_process.o
+                0x10103548                SPPP_ERROR_MSG
+ *fill*         0x10103585        0x3 00
+ .data          0x10103588        0x0 ../atomic/atomic.o
+ .data          0x10103588        0x0 ../serial/serial_interrupt_handler.o
+ .data          0x10103588        0x0 ../timer/timer_interrupt_handler.o
+ .data          0x10103588        0x0 ../timer/timer0.o
+ .data          0x10103588        0x0 ../serial/serial.o
+ .data          0x10103588        0x0 ../initialization/UserProc.o
+ .data          0x10103588        0x0 ../initialization/ProcessABC.o
+ .data          0x10103588        0x0 ../crt_display/crt_display.o
+                0x10103588                _edata = .
+
+.bss            0x10103588     0x10b0
+                0x10103588                __bss_start = .
+ *(.shbss)
+ *(.bss)
+ .bss           0x10103588        0x0 /tmp/ccSsdHxg.o
+ .bss           0x10103588        0x0 /tmp/ccUTNBun.o
+ .bss           0x10103588        0x0 /tmp/cc2xXVOx.o
+ .bss           0x10103588        0x0 /tmp/ccBaHnHz.o
+ .bss           0x10103588        0x0 /tmp/cc6aYdpA.o
+ .bss           0x10103588        0x0 /tmp/ccdLPevE.o
+ .bss           0x10103588        0x0 rtx.o
+ .bss           0x10103588        0x0 dbug.o
+ .bss           0x10103588        0x0 main_rtx.o
+ .bss           0x10103588        0x0 kernel_rtx.o
+ .bss           0x10103588        0x0 ../memory_pool/MemoryPool.o
+ .bss           0x10103588        0x0 ../memory_pool/MemoryBlock.o
+ .bss           0x10103588        0x0 ../message_passing/Mailbox.o
+ .bss           0x10103588        0x0 ../memory/memory.o
+ .bss           0x10103588        0x0 ../initialization/ProcessQueue.o
+ .bss           0x10103588        0x0 ../initialization/Initialization.o
+ .bss           0x10103588        0x4 ../scheduler/scheduler.o
+                0x10103588                currentRunningProcess
+ .bss           0x1010358c        0x0 ../trap_handler/trap_handler.o
+ .bss           0x1010358c        0x0 ../initialization/SysProc.o
+ .bss           0x1010358c        0x0 ../keyboard_decoder_process/registered_command.o
+ .bss           0x1010358c        0x0 ../keyboard_decoder_process/keyboard_decoder_process.o
+ .bss           0x1010358c        0x0 ../wall_clock/wall_clock_process.o
+ .bss           0x1010358c        0x0 ../set_process_priority_process/set_process_priority_process.o
+ .bss           0x1010358c        0x4 ../atomic/atomic.o
+                0x1010358c                atomicCounter
+ .bss           0x10103590        0x0 ../serial/serial_interrupt_handler.o
+ .bss           0x10103590        0x0 ../timer/timer_interrupt_handler.o
+ .bss           0x10103590        0x0 ../timer/timer0.o
+ .bss           0x10103590        0x0 ../serial/serial.o
+ .bss           0x10103590        0x0 ../initialization/UserProc.o
+ .bss           0x10103590        0x0 ../initialization/ProcessABC.o
+ .bss           0x10103590        0x0 ../crt_display/crt_display.o
+ *(COMMON)
+ COMMON         0x10103590     0x1010 /tmp/ccSsdHxg.o
+                0x10103590                old_stack
+                0x101035a0                main_stack
+ COMMON         0x101045a0        0x4 rtx.o
+                0x101045a0                freeMemoryBegin
+ COMMON         0x101045a4        0x4 ../memory_pool/MemoryPool.o
+                0x101045a4                g_pool
+ COMMON         0x101045a8        0x8 ../memory/memory.o
+                0x101045a8                heap
+                0x101045ac                free_memory
+ COMMON         0x101045b0       0x40 ../initialization/ProcessQueue.o
+                0x101045b0                priorityQueues
+ COMMON         0x101045f0       0x48 ../keyboard_decoder_process/keyboard_decoder_process.o
+                0x101045f0                registered_commands_begin
+                0x101045f4                user_input_current_index
+                0x101045f8                user_input
+                0x10104638                _end = ALIGN (0x8)
+                0x10104638                __end = _end
+
+.stab
+ *(.stab)
+
+.stabstr
+ *(.stabstr)
+
+__REGISTER_RTX__
+                0x10300000       0x68
+                0x10300000                __REGISTER_RTX_ENTRY__ = <code 345> (.)
+ *(__REGISTER_RTX__)
+ __REGISTER_RTX__
+                0x10300000       0x68 main_rtx.o
+                0x10300000                register_rtx
+                0x10380000                __REGISTER_TEST_PROCS_ENTRY__ = 0x10380000
+                0x10400000                __RTX_TEST_CODE_ENTRY__ = 0x10400000
+
+__RTX_TEST_DATA__
+                0x10500000       0x5c
+ *(__RTX_TEST_DATA__)
+ __RTX_TEST_DATA__
+                0x10500000       0x5c main_rtx.o
+                0x10500020                g_test_proc
+                0x10500000                g_test_fixture
+OUTPUT(rtx.bin elf32-m68k)
+
+.comment        0x00000000      0x3cf
+ .comment       0x00000000       0x27 rtx.o
+ .comment       0x00000027       0x27 dbug.o
+ .comment       0x0000004e       0x27 main_rtx.o
+ .comment       0x00000075       0x27 kernel_rtx.o
+ .comment       0x0000009c       0x27 ../memory_pool/MemoryPool.o
+ .comment       0x000000c3       0x27 ../memory_pool/MemoryBlock.o
+ .comment       0x000000ea       0x27 ../message_passing/Mailbox.o
+ .comment       0x00000111       0x27 ../memory/memory.o
+ .comment       0x00000138       0x27 ../initialization/ProcessQueue.o
+ .comment       0x0000015f       0x27 ../initialization/Initialization.o
+ .comment       0x00000186       0x27 ../scheduler/scheduler.o
+ .comment       0x000001ad       0x27 ../trap_handler/trap_handler.o
+ .comment       0x000001d4       0x27 ../initialization/SysProc.o
+ .comment       0x000001fb       0x27 ../keyboard_decoder_process/registered_command.o
+ .comment       0x00000222       0x27 ../keyboard_decoder_process/keyboard_decoder_process.o
+ .comment       0x00000249       0x27 ../wall_clock/wall_clock_process.o
+ .comment       0x00000270       0x27 ../set_process_priority_process/set_process_priority_process.o
+ .comment       0x00000297       0x27 ../atomic/atomic.o
+ .comment       0x000002be       0x27 ../serial/serial_interrupt_handler.o
+ .comment       0x000002e5       0x27 ../timer/timer_interrupt_handler.o
+ .comment       0x0000030c       0x27 ../timer/timer0.o
+ .comment       0x00000333       0x27 ../serial/serial.o
+ .comment       0x0000035a       0x27 ../initialization/UserProc.o
+ .comment       0x00000381       0x27 ../initialization/ProcessABC.o
+ .comment       0x000003a8       0x27 ../crt_display/crt_display.o

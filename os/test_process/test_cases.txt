@@ -1,0 +1,17 @@
+
+1. producer-consumer for message passing
+  - message block
+2. sent to non-existent process
+
+3. memory blocking, 
+   - get 1st time.
+   - doesnt get first time. 
+
+4. use all of the stack.
+   -   
+
+5. Local variables.
+   -  
+
+6. scheduling.
+   - 

@@ -1,0 +1,8 @@
+#ifndef SET_PROCESS_PRIORITY_PROCESS
+#define SET_PROCESS_PRIORITY_PROCESS
+
+#define SET_PROCESS_PRIORITY_PROCESS_PID 13
+void set_process_priority_process();
+
+#endif // SET_PROCESS_PRIORITY_PROCESS
+

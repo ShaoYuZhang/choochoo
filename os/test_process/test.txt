@@ -1,0 +1,33 @@
+1. Change other process's priority. x10
+   p1-HIGH, p2-MEDIUM
+   p1, make p2 HIGHEST
+   p1 send p2.
+   p2 continue execution
+   p1 receive.
+ 
+   p1 shoulbe receive msg from p2.
+  
+2. Consecutively change self prioirty compared to other. x10
+   P1, highest, 
+   p2, high
+   p3, medium
+   etc..
+
+   p1 send msg to p2, 
+   make self low.
+   p2 send msg to p3, 
+   make self low.
+   etc..
+  
+5. P1 delay send to self
+   make p2 priority high.
+   p1 send to p2 to (send p1, change p1's priority high)
+   p1 receive_msg()
+   msg should be from self.
+
+6. test release processor.
+
+7. get process prioirty.
+
+
+

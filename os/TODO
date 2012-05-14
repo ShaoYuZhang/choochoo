@@ -1,0 +1,90 @@
+P3 TODO
+
+1. 
+
+
+
+
+0. Memory-pool manager.
+   Requirement: number of block,
+                size of block
+
+   a. you always allocate and get a fixed size. (you cannot get more)
+
+0. a atomic counter for nested interrupts. (maybe)
+
+
+1. RTX Initialization 
+{
+  process id, 
+  priority, 
+  stack size, 
+  start address, 
+  and for system processes, whether the process is an interrupt-process.
+}
+
+
+2. scheduling: 4 user priority levels plus on priority lvl for Null
+{
+  For now, 
+  4 queues, 1 for each priority.
+
+  We always dispatch the process with the lowest priority.
+
+  If we know the maximum number of process, we just allocate the maximum siez, use it as a circular queue. 
+
+  Null process, TODO: release_processor.
+}
+
+
+3. memory management 
+{
+  // These two methods are somewhat implemented already. But they must be executed in a critical section.
+
+  // Atomic operation can be done by overwritting the status register.
+  // see enable/disable all interrupt in serial.c
+
+  void* request_memory_block();
+  int release_memory_block(void* MemoryBlock)
+
+}
+
+
+4. Processor Management
+{
+  int release_process()
+
+  Control is transferred to the RTX (the calling process voluntarily releases the processor). 
+  The invoking process remains ready to execute. Another process may possibly be selected for execution.
+}
+
+
+5. Interprocess Communication 
+{
+  // Implementation idea:
+
+  // Assume, we can modify the first 64bytes.
+  int send_message(int processID, void *MessageEnvelope)
+
+  // Delivers to the destination process a message carried in the message envelope (a memory block). Changes the state of destination 
+  // process to ready_to_execute if appropriate. The sending process is preempted if the receiving process was blocked
+  // waiting for a message and has higher priority, otherwise the sender continues executing. The header of the message will
+  // have the layout given in the course overheads. It also fills in the sender_process_id and destination_process_id fields in the
+  // message envelope. The fields sender_process_id, destination_process_id and message_type are all of type int. The
+  // sender fills in the message_type field of the message envelope before invoking the primitive.
+
+
+  void* receive_message(int* send_ID)
+  // This is a blocking receive. If there is a message waiting, a pointer to the message envelope containing it will be returned to
+  // the caller. If there is no such message, the calling process blocks and another process is selected for execution. The sender
+  // of the message is identified through sender_ID, unless it is NULL. Note the sender_ID is an output parameter and is not
+  // meant to filter which message to receive.
+}
+
+
+6. detect error for send_message to a non-existent process_id
+{
+
+}
+
+7. .... documentation

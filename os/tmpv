@@ -1,0 +1,72 @@
+diff --git a/os/scheduler/scheduler.c b/os/scheduler/scheduler.c
+index 1779e13..a6f8e92 100755
+--- a/os/scheduler/scheduler.c
++++ b/os/scheduler/scheduler.c
+@@ -15,7 +15,6 @@ pcb* get_running_process(){
+ 
+ VOID process_switch_helper(VOID *oldStackPointer)
+ {
+-  dump_queue();
+ 
+   if (currentRunningProcess != NULL)
+   {
+@@ -26,5 +25,6 @@ VOID process_switch_helper(VOID *oldStackPointer)
+ 
+   currentRunningProcess = nextRunning;
+   currentRunningProcess->state = RUNNING;
++  dump_queue();
+   oldStackPointer = currentRunningProcess->stack;
+ }
+diff --git a/os/shared/kernel_rtx.c b/os/shared/kernel_rtx.c
+index 9a5c427..0f598ae 100755
+--- a/os/shared/kernel_rtx.c
++++ b/os/shared/kernel_rtx.c
+@@ -77,6 +77,7 @@ void* kernel_request_memory_block()
+       rtx_dbug_outs((CHAR *)"===========================================================\r\n");
+       rtx_dbug_outs((CHAR *)"===========================================================\r\n");
+       rtx_dbug_outs((CHAR *)"===========================================================\r\n");
++      rtx_dbug_outs((CHAR *)"no memory==================================================\r\n");
+ 
+ 
+       process_switch();
+diff --git a/os/shared/rtx_test_dummy.c b/os/shared/rtx_test_dummy.c
+index 49516fb..e2f65eb 100755
+--- a/os/shared/rtx_test_dummy.c
++++ b/os/shared/rtx_test_dummy.c
+@@ -22,7 +22,7 @@ void test1()
+     	rtx_dbug_outs((CHAR *)"rtx_test: test1\r\n");
+         /* execute a rtx primitive to test */
+ 		void * message = g_test_fixture.request_memory_block();;
+-        //g_test_fixture.send_message(2, message);
++        g_test_fixture.send_message(2, message);
+     }
+ }
+ 
+@@ -32,13 +32,12 @@ void test2()
+     while (1) 
+     {
+     	rtx_dbug_outs((CHAR *)"rtx_test: test2\r\n");
+-	g_test_fixture.release_processor();
+         /* execute a rtx primitive to test */
+ 		int sender_id;
+-        //void* data = g_test_fixture.receive_message(&sender_id);
+-//		if (g_test_fixture.release_memory_block(data)){
+-//			rtx_dbug_outs((CHAR *)"rtx_test: release fail\r\n");
+-//		}
++        void* data = g_test_fixture.receive_message(&sender_id);
++	if (g_test_fixture.release_memory_block(data)){
++		rtx_dbug_outs((CHAR *)"rtx_test: release fail\r\n");
++	}
+     }
+ }
+ /* third party dummy test process 3 */ 
+@@ -98,7 +97,8 @@ void __attribute__ ((section ("__REGISTER_TEST_PROCS__")))register_test_proc()
+         g_test_proc[i].sz_stack = 2048;
+     }
+ 	g_test_proc[0].priority = 2;
+-	g_test_proc[2].priority = 2;
++	g_test_proc[1].priority = 2;
++
+     g_test_proc[0].entry = test1;
+     g_test_proc[1].entry = test2;
+     g_test_proc[2].entry = test3;

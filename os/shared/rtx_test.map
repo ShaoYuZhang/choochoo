@@ -1,0 +1,128 @@
+
+Allocating common symbols
+Common symbol       size              file
+
+old_stack           0x4               /tmp/ccMhomid.o
+main_stack          0x1000            /tmp/ccMhomid.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+ram              0x10400000         0x00100000
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+LOAD /tmp/ccMhomid.o
+LOAD dbug.o
+LOAD ../test_process/producer_consumer.o
+START GROUP
+LOAD /opt/gcc-coldfire/bin/../lib/gcc/m68k-elf/4.3.2/m5307/libgcc.a
+END GROUP
+                0x00000000                __DYNAMIC = 0x0
+                0x00000000                PROVIDE (hardware_init_hook, 0x0)
+                0x00000000                PROVIDE (_hardware_init_hook, 0x0)
+                0x00000000                PROVIDE (software_init_hook, 0x0)
+                0x00000000                PROVIDE (_software_init_hook, 0x0)
+
+.text           0x10400000      0x79f
+ *(.text)
+ .text          0x10400000       0x1e /tmp/ccMhomid.o
+ *fill*         0x1040001e        0x2 00
+ .text          0x10400020      0x1fc dbug.o
+                0x1040007c                rtx_dbug_out_number
+                0x10400040                rtx_dbug_outs
+                0x10400020                rtx_dbug_out_char
+ .text          0x1040021c      0x50c ../test_process/producer_consumer.o
+                0x1040021c                producer1
+                0x1040027c                consumer
+                0x1040023c                producer2
+                0x104002bc                score_keeper
+                0x1040071e                main
+                0x1040025c                producer3
+                0x1040029c                test5
+                0x10400728                . = ALIGN (0x4)
+                0x10400728                __CTOR_LIST__ = .
+                0x10400728        0x4 LONG 0x0 (((__CTOR_END__ - __CTOR_LIST__) / 0x4) - 0x2)
+ *(.ctors)
+                0x1040072c        0x4 LONG 0x0
+                0x10400730                __CTOR_END__ = .
+                0x10400730                __DTOR_LIST__ = .
+                0x10400730        0x4 LONG 0x0 (((__DTOR_END__ - __DTOR_LIST__) / 0x4) - 0x2)
+ *(.dtors)
+                0x10400734        0x4 LONG 0x0
+                0x10400738                __DTOR_END__ = .
+ *(.rodata*)
+ .rodata        0x10400738        0x4 dbug.o
+ .rodata        0x1040073c       0x53 ../test_process/producer_consumer.o
+ *(.gcc_except_table)
+                0x1040078f                __INIT_SECTION__ = .
+                0x1040078f        0x4 LONG 0x4e560000
+ *(.init)
+                0x10400793        0x2 SHORT 0x4e5e
+                0x10400795        0x2 SHORT 0x4e75
+                0x10400797                __FINI_SECTION__ = .
+                0x10400797        0x4 LONG 0x4e560000
+ *(.fini)
+                0x1040079b        0x2 SHORT 0x4e5e
+                0x1040079d        0x2 SHORT 0x4e75
+                0x1040079f                _etext = .
+ *(.lit)
+
+.data           0x104007a0      0x1be
+ *(.shdata)
+ *(.data)
+ .data          0x104007a0        0x0 /tmp/ccMhomid.o
+ .data          0x104007a0        0x0 dbug.o
+ .data          0x104007a0      0x1be ../test_process/producer_consumer.o
+                0x10400930                PASS_MSG
+                0x10400947                FAIL_MSG
+                0x104007a0                rand
+                0x1040095e                _edata = .
+
+.bss            0x10400960     0x1010
+                0x10400960                __bss_start = .
+ *(.shbss)
+ *(.bss)
+ .bss           0x10400960        0x0 /tmp/ccMhomid.o
+ .bss           0x10400960        0x0 dbug.o
+ .bss           0x10400960        0x0 ../test_process/producer_consumer.o
+ *(COMMON)
+ COMMON         0x10400960     0x1010 /tmp/ccMhomid.o
+                0x10400960                old_stack
+                0x10400970                main_stack
+                0x10401970                _end = ALIGN (0x8)
+                0x10401970                __end = _end
+
+.stab
+ *(.stab)
+
+.stabstr
+ *(.stabstr)
+
+__REGISTER_RTX__
+                0x10300000        0x0
+                0x10300000                __REGISTER_RTX_ENTRY__ = <code 345> (.)
+ *(__REGISTER_RTX__)
+                0x10380000                __REGISTER_TEST_PROCS_ENTRY__ = 0x10380000
+
+__REGISTER_TEST_PROCS__
+                0x10380000       0xd6
+                0x10380000                __REGISTER_TEST_PROCS_ENTRY__ = <code 345> (.)
+ *(__REGISTER_TEST_PROCS__)
+ __REGISTER_TEST_PROCS__
+                0x10380000       0xd6 ../test_process/producer_consumer.o
+                0x10380000                register_test_proc
+
+__RTX_TEST_DATA__
+                0x10500000       0x5c
+ *(__RTX_TEST_DATA__)
+ __RTX_TEST_DATA__
+                0x10500000       0x5c ../test_process/producer_consumer.o
+                0x10500020                g_test_proc
+                0x10500000                g_test_fixture
+OUTPUT(stevee_tests_dummy.bin elf32-m68k)
+
+.comment        0x00000000       0x4e
+ .comment       0x00000000       0x27 dbug.o
+ .comment       0x00000027       0x27 ../test_process/producer_consumer.o
