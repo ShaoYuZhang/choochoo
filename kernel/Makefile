@@ -1,7 +1,10 @@
-CC = gcc
-AS	= as
-CFLAGS  = -c -fPIC -Wall -I. -I../include -mcpu=arm920t -msoft-float -MMD
-LDFLAGS = -init main -Map main.map -N  -T orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2
+CC = /u/wbcowan/gnuarm-4.0.2/arm-elf/bin/gcc
+AS = /u/wbcowan/gnuarm-4.0.2/arm-elf/bin/as
+AR = /u/wbcowan/gnuarm-4.0.2/arm-elf/bin/ar
+LD = /u/wbcowan/gnuarm-4.0.2/arm-elf/bin/ld
+
+CFLAGS  = -c -fPIC -Wall -I. -I../include -mcpu=arm920t -msoft-float -MMD -std=c99
+LDFLAGS = -init main -Map main.map -N  -T orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 
 ASFLAGS	= -mcpu=arm920t -mapcs-32
 
 %.s: %.c
@@ -15,7 +18,8 @@ DEPENDS = ${OBJECTS:.o=.d} # substitute ".o" with ".d"
 ASMS = $(OBJECTS:.o=.s)
 
 all: $(ASMS) main.elf 
-	cp main.elf /u/cs452/public/tftp/ARM/r4cao/
+	chmod 777 main.elf
+	cp main.elf /u/cs452/public/tftp/ARM/kk.elf
 
 main.elf: $(OBJECTS) 
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) -lgcc
