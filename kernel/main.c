@@ -3,6 +3,7 @@
 
 void initialize();
 void kerxit(void* taskDescriptor, void* request);
+void kerent();
 
 int main( int argc, char *argv[] ) {
   bwsetfifo( COM2, OFF );
@@ -27,5 +28,14 @@ void initialize() {
 }
 
 void kerxit(void* taskDescriptor, void* request) {
+  bwprintf(COM2, "kerxit.c: Hello.\n\r" );
+  bwprintf(COM2, "kerxit.c: Activating.\n\r" );
+
+  kerent();
+  bwprintf(COM2, "kerxit.c: Good-bye.\n\r" );
+}
+
+
+void  kerent(){
 }
 

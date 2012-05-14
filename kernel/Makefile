@@ -18,13 +18,13 @@ DEPENDS = ${OBJECTS:.o=.d} # substitute ".o" with ".d"
 ASMS = $(OBJECTS:.o=.s)
 
 all: $(ASMS) main.elf 
-	chmod 777 main.elf
 	cp main.elf /u/cs452/public/tftp/ARM/kk.elf
+	chmod 777 /u/cs452/public/tftp/ARM/kk.elf
 
 main.elf: $(OBJECTS) 
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) -lgcc
 
 clean:
-	-rm -f *.s *.a *.o *.map *.elf *.d
+	-rm -f *.s *.a *.o *.map *.elf *.d /u/cs452/public/tftp/ARM/kk.elf
 
 -include ${DEPENDS} # reads the .d files and reruns dependencies
