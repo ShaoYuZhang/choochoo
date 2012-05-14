@@ -10,21 +10,7 @@ SECTIONS
 {
   . = 0x00218000;
 
-  data . : /* Initialized data. */
-  {
-    _DataStart = . ;
-    *(.data)
-    _DataEnd = . ;
-  } >ram
-
-  bss . : /* Uninitialized data. */
-  {
-    _BssStart = . ;
-    *(.bss)
-    _BssEnd = . ;
-  } >ram
-
-  text . : /* The actual instructions. */
+  .text . : /* The actual instructions. */
   {
     *(.text)
       *(.got)
@@ -32,5 +18,22 @@ SECTIONS
       *(.rodata)
       *(.glue_7)
       *(.glue_7t)
+  } >ram
+
+  .data BLOCK (0x4) : /* Initialized data. */
+  {
+    _DataStart = . ;
+    *(.data)
+    _DataEnd = . ;
+  } >ram
+
+  .bss BLOCK (0x4) : /* Uninitialized data. */
+  {
+    _BssStart = . ;
+    *(.bss)
+    *(COMMON)
+    _BssEnd = . ;
+    _end =  ALIGN (0x8);
+    __end = _end;
   } >ram
 }

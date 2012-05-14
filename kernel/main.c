@@ -4,8 +4,18 @@
 void initialize();
 void kerxit(void* taskDescriptor, void* request);
 void kerent();
+extern char __end;
+extern char* freeMemoryBegin;
 
 int main( int argc, char *argv[] ) {
+  // Assign the start of free memory
+  // (so we can start initializations that require memory.)
+  freeMemoryBegin = &__end + 2; // Add two because __end is used.
+  int diff = ((unsigned int)freeMemoryBegin)%4;
+  if (diff != 0){
+    freeMemoryBegin  += (4-diff);
+  }
+
   bwsetfifo( COM2, OFF );
   bwsetspeed( COM2, 115200);
 

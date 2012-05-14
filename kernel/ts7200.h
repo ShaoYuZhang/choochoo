@@ -1,7 +1,6 @@
 #ifndef TS7200_H_
 #define TS7200_H_
 
-#define NULL 0
 /*
  * ts7200.h - definitions describing the ts7200 peripheral registers
  *
@@ -30,6 +29,8 @@
 
 #define COM1	0
 #define COM2	1
+
+#define NULL 0
 
 #define IRDA_BASE	0x808b0000
 #define UART1_BASE	0x808c0000
