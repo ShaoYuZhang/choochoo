@@ -1,5 +1,6 @@
 #include <ts7200.h>
 #include <bwio.h>
+#include <TaskDescriptor.h>
 
 void initialize();
 void kerxit(void* taskDescriptor, void* request);
