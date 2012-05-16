@@ -13,7 +13,7 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32
 %.o: %.c
 	$(CC) $(CFLAGS) $*.c
 
-OBJECTS = main.o bwio.o memory.o TaskQueue.o Scheduler.o RequestHandler.o
+OBJECTS = main.o bwio.o memory.o TaskQueue.o Scheduler.o RequestHandler.o KernelPrimitive.o
 DEPENDS = ${OBJECTS:.o=.d} # substitute ".o" with ".d"
 ASMS = $(OBJECTS:.o=.s)
 
