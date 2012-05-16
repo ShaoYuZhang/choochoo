@@ -13,5 +13,6 @@ typedef struct TaskQueue {
 void init_priority_queue();
 
 TaskDescriptor* next_ready_task();
+void append_task(TaskDescriptor* td);
 
 #endif

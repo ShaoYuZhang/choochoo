@@ -1,24 +1,24 @@
 #include <ts7200.h>
 #include <TaskQueue.h>
 
-TaskQueue taskPriorityQueues[NUM_PRIORITY];
+TaskQueue taskReadyQueues[NUM_PRIORITY];
 
 void init_priority_queue() {
     for (int i = 0; i < NUM_PRIORITY; ++i) {
-        taskPriorityQueues[i].begin = NULL;
-        taskPriorityQueues[i].end = NULL;
+        taskReadyQueues[i].begin = NULL;
+        taskReadyQueues[i].end = NULL;
     }
 }
 
 TaskDescriptor* next_ready_task() {
     for (int i = 0; i < NUM_PRIORITY; ++i) {
-        if (taskPriorityQueues[i].begin != NULL) {
-            TaskDescriptor* result = taskPriorityQueues[i].begin;
+        if (taskReadyQueues[i].begin != NULL) {
+            TaskDescriptor* result = taskReadyQueues[i].begin;
             result->next = NULL;
 
-            taskPriorityQueues[i].begin = taskPriorityQueues[i].begin->next;
-            if (taskPriorityQueues[i].begin == NULL) {
-                taskPriorityQueues[i].end = NULL;
+            taskReadyQueues[i].begin = taskReadyQueues[i].begin->next;
+            if (taskReadyQueues[i].begin == NULL) {
+                taskReadyQueues[i].end = NULL;
             }
             return result;
         }
@@ -29,11 +29,11 @@ TaskDescriptor* next_ready_task() {
 void append_task(TaskDescriptor* td) {
     td->next = NULL;
     int priority = td->priority;
-    if (taskPriorityQueues[priority].begin == NULL) {
-        taskPriorityQueues[priority].begin = td;
-        taskPriorityQueues[priority].end = td;
+    if (taskReadyQueues[priority].begin == NULL) {
+        taskReadyQueues[priority].begin = td;
+        taskReadyQueues[priority].end = td;
     } else {
-        taskPriorityQueues[priority].end->next = td;
-        taskPriorityQueues[priority].end = td;
+        taskReadyQueues[priority].end->next = td;
+        taskReadyQueues[priority].end = td;
     }
 }

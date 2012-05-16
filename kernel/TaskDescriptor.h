@@ -12,6 +12,7 @@ typedef enum TaskState
 typedef struct TaskDescriptor {
     int tid;
     int priority;
+    TaskState state;
     struct TaskDescriptor* next;
 } TaskDescriptor;
 

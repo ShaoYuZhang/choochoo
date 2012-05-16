@@ -1,6 +1,7 @@
 #include <ts7200.h>
 #include <bwio.h>
 #include <TaskDescriptor.h>
+#include <Scheduler.h>
 
 void initialize();
 void kerxit(void* taskDescriptor, void* request);
@@ -26,7 +27,7 @@ int main( int argc, char *argv[] ) {
   for (int i = 0; i < 4; i++ ) {
 
     // TODO
-    //active = schedule( tds );
+    TaskDescriptor* active = schedule();
 
     kerxit( NULL, NULL); // req is a pointer to a Request
 
