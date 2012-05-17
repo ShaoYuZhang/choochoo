@@ -16,8 +16,6 @@ int kernel_mytid();
 
 int kernel_myparenttid();
 
-void *kernel_malloc(unsigned int size);
-
 void kernel_runloop();
 
 #endif // KERNEL_H_

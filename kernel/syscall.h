@@ -10,8 +10,6 @@
 #define SYSCALL_EXIT 4
 #define SYSCALL_MALLOC 5
 
-
-
 int Create(int priority, func_t code);
 
 int MyTid();

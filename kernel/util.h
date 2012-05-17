@@ -14,7 +14,7 @@
 
 ////////// TYPES
 
-typedef unsigned int *addr;
+typedef unsigned int* addr;
 typedef void (*func_t)();
 
 ////////// VAR ARG

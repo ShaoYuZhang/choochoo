@@ -18,20 +18,20 @@ void kernel_init() {
 
 void handle_swi(volatile register_set* reg) {
 	volatile int *r0 = &reg->r[0];
-	int req_no = *r0;
-	int a1 = reg->r[1];
-	int a2 = reg->r[2];
+	int request = *r0;
+	int arg1 = reg->r[1];
+	int arg2 = reg->r[2];
 
-	switch (req_no) {
+	switch (request) {
 		case SYSCALL_CREATE:
-			*r0 = kernel_createtask(a1, (func_t) a2);
+			*r0 = kernel_createtask(arg1, (func_t) arg2);
       scheduler_move2ready();
 			break;
     case SYSCALL_EXIT:
       scheduler_killme();
       break;
 		default:
-			ERROR("Unknown system call %d (%x)\n", req_no, req_no);
+			ERROR("Unknown system call %d (%x)\n", request, request);
 			break;
 	}
 }
@@ -60,6 +60,8 @@ int kernel_createtask(int priority, func_t code) {
 		return -3;
 	}
 
+  // | -------------->
+  // | TD | stack ->>>>
   addr mem = allocate_user_memory();
 	TaskDescriptor* td = (TaskDescriptor*)mem;
 	td->state = READY;
@@ -68,9 +70,7 @@ int kernel_createtask(int priority, func_t code) {
 	td->registers.r[REG_LR] = (int) Exit;
 	td->registers.r[REG_PC] = (int) code;
 	td->registers.spsr = 0x10;
-	td->heap_base = mem + sizeof(TaskDescriptor);
-	td->heap = td->heap_base;
-	td->registers.r[REG_SP] = ((int) td->heap) + BYTES2WORDS(STACK_SIZE);
+	td->registers.r[REG_SP] = (int) mem + BYTES2WORDS(STACK_SIZE);
 
 	scheduler_ready(td);
 	return td->id;

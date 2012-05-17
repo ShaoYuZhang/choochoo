@@ -27,7 +27,6 @@ asm_handle_swi:
 	ldmfd sp!, {r0-r12, pc} @ restore kernel state
 
 
-@ this code switches to the usermode
 @ r0 is pointer to register_set (task.h) of current task descriptor
 .global asm_switch_to_usermode
 asm_switch_to_usermode:

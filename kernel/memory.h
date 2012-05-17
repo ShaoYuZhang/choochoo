@@ -23,10 +23,6 @@ void mem_reset();
 
 void* kmalloc(unsigned int size); // allocate kernel memory
 
-void* umalloc(unsigned int size); // allocate user memory
-
-void* qmalloc(unsigned int size); // branch allocation based on processor mode
-
 addr allocate_user_memory();
 
 void free_user_memory(addr a);
