@@ -25,8 +25,6 @@ typedef struct TaskDescriptor {
 		unsigned int priority;
 		int parent_id; // should this be a pointer to the parent td?
 		register_set registers; // r0-r12, sp and lr
-		addr heap_base;
-		addr heap;
 		struct TaskDescriptor* prev;
 		struct TaskDescriptor* next;
 		struct TaskDescriptor* scheduleNext;
