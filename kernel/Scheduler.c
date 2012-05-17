@@ -6,6 +6,8 @@ volatile static TaskDescriptor *running;
 volatile static TaskDescriptor *begin;
 volatile static TaskDescriptor *end;
 
+// TODO(cao): I used TaskQueue at first but it crashed.. this simple versions eem to wrok
+
 void scheduler_init() {
 	running = NULL;
   begin = NULL;

@@ -8,6 +8,8 @@
 
 #define ON  1
 #define OFF 0
+#define NULL 0
+
 
 ////////// TYPES
 
@@ -30,7 +32,6 @@ typedef char *va_list;
 ///////////// USEFUL MACROS
 #define TRUE 1
 #define FALSE 0
-#define NULL 0
 #define CRLF "\r\n"
 #define MEM(x) (*(addr)(x))
 #define VMEM(x) (*(volatile addr)(x))
@@ -42,8 +43,11 @@ typedef char *va_list;
 #define ROUND_UP(x, num) ((((unsigned int)x)+(num-1))&~(num-1))
 // turn mask bits on/off in word based on flag (improve with orr/bic?)
 #define BIT_TOGGLE(word, mask, flag) ((word) ^= (-(flag) ^ (word)) & (mask))
+
+
+
 ///////////// DEBUG
-#define ASSERT_ENABLED 1
+#define ASSERT_ENABLED 0
 
 #if ASSERT_ENABLED
 #define ASSERT(X, ...) { \
