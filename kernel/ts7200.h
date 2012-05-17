@@ -1,12 +1,11 @@
-#ifndef TS7200_H_
-#define TS7200_H_
-
+#pragma once
 /*
  * ts7200.h - definitions describing the ts7200 peripheral registers
  *
  * Specific to the TS-7200 ARM evaluation board
  *
  */
+
 
 #define	TIMER1_BASE	0x80810000
 #define	TIMER2_BASE	0x80810020
@@ -21,6 +20,7 @@
 #define CLR_OFFSET	0x0000000c	// no data, WO
 
 
+
 #define LED_ADDRESS	0x80840020
 	#define LED_NONE	0x0
 	#define LED_GREEN	0x1
@@ -29,8 +29,7 @@
 
 #define COM1	0
 #define COM2	1
-
-#define NULL 0
+#define COM_COUNT 2
 
 #define IRDA_BASE	0x808b0000
 #define UART1_BASE	0x808c0000
@@ -86,4 +85,4 @@
 #define UART_HDLCRIB_OFFSET	0x218
 #define UART_HDLCSTS_OFFSET	0x21c
 
-#endif // TS7200_H_
+

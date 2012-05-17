@@ -8,6 +8,39 @@
 #include <ts7200.h>
 #include <bwio.h>
 
+void uart_stopbits(int channel, int bits) {
+	int memptr = UART_BASE(channel) + UART_LCRH_OFFSET;
+	int buf = VMEM(memptr);
+	BIT_TOGGLE(buf, STP2_MASK, bits == 2);
+	VMEM(memptr) = buf;
+}
+
+void uart_databits(int channel, int wlen) {
+	int memptr = UART_BASE(channel) + UART_LCRH_OFFSET;
+	int buf = VMEM(memptr);
+	BIT_TOGGLE(buf, WLEN_MASK, wlen - 5);
+	VMEM(memptr) = buf;
+}
+
+void uart_parity(int channel, int enable) {
+	int memptr = UART_BASE(channel) + UART_LCRH_OFFSET;
+	int buf = VMEM(memptr);
+	BIT_TOGGLE(buf, PEN_MASK, enable);
+	VMEM(memptr) = buf;
+}
+
+void bwioInit() {
+	// init COM1
+	bwsetfifo(COM1, OFF);
+	bwsetspeed(COM1, 2400);
+	uart_stopbits(COM1, 2);
+	uart_databits(COM1, 8);
+	uart_parity(COM1, OFF);
+
+	// init COM2
+	bwsetfifo(COM2, OFF);
+}
+
 /*
  * The UARTs are initialized by RedBoot to the following state
  * 	115,200 bps

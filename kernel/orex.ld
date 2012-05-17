@@ -1,5 +1,3 @@
-ENTRY (main)
-
 MEMORY
 {
   ram : ORIGIN = 0x00000000, LENGTH = 32M
@@ -10,24 +8,27 @@ SECTIONS
 {
   . = 0x00218000;
 
-  .text . : /* The actual instructions. */
+  text . : /* The actual instructions. */
   {
+    _TextStart = .;
+    *(asm_functions)
     *(.text)
-      *(.got)
-      *(.got.plt)
-      *(.rodata)
-      *(.glue_7)
-      *(.glue_7t)
+    _TextEnd = .;
+    *(.got)
+    *(.got.plt)
+    *(.rodata)
+    *(.glue_7)
+    *(.glue_7t)
   } >ram
 
-  .data BLOCK (0x4) : /* Initialized data. */
+  data BLOCK (0x4) : /* Initialized data. */
   {
     _DataStart = . ;
     *(.data)
     _DataEnd = . ;
   } >ram
 
-  .bss BLOCK (0x4) : /* Uninitialized data. */
+  bss BLOCK (0x4) : /* Uninitialized data. */
   {
     _BssStart = . ;
     *(.bss)
@@ -36,4 +37,15 @@ SECTIONS
     _end =  ALIGN (0x8);
     __end = _end;
   } >ram
+
+  kernel_mem . :
+	{
+		_KernelMemStart = .;
+	} >ram
+	
+	_UserMemStart = 0x0300000;
+	_UserMemEnd   = 0x1f00000; 
 }
+
+ENTRY (main)
+
