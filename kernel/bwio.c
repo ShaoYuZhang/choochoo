@@ -285,10 +285,10 @@ void bwformat ( int channel, char *fmt, va_list va ) {
 }
 
 void bwprintf( int channel, char *fmt, ... ) {
-        va_list va;
+  va_list va;
 
-        va_start(va,fmt);
-        bwformat( channel, fmt, va );
-        va_end(va);
+  va_start(va,fmt);
+  bwformat( channel, fmt, va );
+  va_end(va);
 }
 

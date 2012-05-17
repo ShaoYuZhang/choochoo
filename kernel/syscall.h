@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSCALL_H_
+#define SYSCALL_H_
 
 #include <util.h>
 
@@ -22,3 +23,5 @@ void Pass();
 void Exit();
 
 void* malloc(unsigned int size);
+
+#endif SYSCALL_H_

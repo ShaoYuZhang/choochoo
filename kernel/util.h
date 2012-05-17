@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UTIL_H_
+#define UTIL_H_
 
 #include <ts7200.h>
 
@@ -7,8 +8,6 @@
 
 #define ON  1
 #define OFF 0
-
-#define SWI_VECTOR 0x8
 
 ////////// TYPES
 
@@ -66,3 +65,4 @@ typedef char *va_list;
 	bwprintf(1, "\n"); \
 	while(1); \
 }
+#endif // UTIL_H_

@@ -1,10 +1,12 @@
-#pragma once
+#ifndef KERNEL_H_
+#define KERNEL_H_
 
 #include <task.h>
 
-void kernel_init();
 
 void handle_swi(register_set *reg);
+
+void kernel_init();
 
 /*
  * Create allocates and initializes a task descriptor, using the given priority,
@@ -60,3 +62,5 @@ void kernel_exittask();
 void *kernel_malloc(unsigned int size);
 
 void kernel_runloop();
+
+#endif // KERNEL_H_

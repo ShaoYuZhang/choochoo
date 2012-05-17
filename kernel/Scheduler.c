@@ -6,7 +6,6 @@ volatile static TaskDescriptor *running;
 volatile static TaskDescriptor *begin;
 volatile static TaskDescriptor *end;
 
-
 void scheduler_init() {
 	running = NULL;
   begin = NULL;

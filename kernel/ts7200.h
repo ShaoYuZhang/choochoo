@@ -1,10 +1,14 @@
-#pragma once
+#ifndef TS7200_H_
+#define TS7200_H_
 /*
  * ts7200.h - definitions describing the ts7200 peripheral registers
  *
  * Specific to the TS-7200 ARM evaluation board
  *
  */
+
+
+#define SWI_VECTOR 0x8
 
 
 #define	TIMER1_BASE	0x80810000
@@ -86,3 +90,4 @@
 #define UART_HDLCSTS_OFFSET	0x21c
 
 
+#endif // TS7200_H_

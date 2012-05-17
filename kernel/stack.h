@@ -1,6 +1,5 @@
 #ifndef STACK_H_
 #define STACK_H_
-#pragma once
 
 #include <util.h>
 #include <memory.h>
