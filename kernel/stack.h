@@ -11,7 +11,7 @@ typedef struct stack {
 		void* arr[];
 } stack;
 
-static inline stack *stack_new(unsigned int numStack) {
+static inline stack* stack_new(unsigned int numStack) {
 	stack *s = (stack*) qmalloc(sizeof(stack) + sizeof(void*) * numStack);
 	s->top = s->arr;
 	s->min = s->top;

@@ -6,18 +6,22 @@
 
 extern unsigned int _KernelMemStart;
 static addr kernel_heap;
-static stack *umpages;
+
+// List of blocks of memory available for use
+static stack* memChunk;
 
 void mem_reset() {
 	// initialize kernel heap
 	kernel_heap = &_KernelMemStart;
-	// initialize user memory pages
-	umpages = stack_new(NUM_MAX_TASK);
+
+	// Create a stack of memory chunks for storing user info.
+	memChunk = stack_new(NUM_MAX_TASK);
 	for (int i = NUM_MAX_TASK - 1; i != -1; i--) {
-		stack_push(umpages, (void*) (USER_MEM_START + STACK_SIZE * i));
+		stack_push(memChunk, (void*) (USER_MEM_START + STACK_SIZE * i));
 	}
 }
 
+// Kernel space malloc
 void* kmalloc(unsigned int size) {
 	addr rv = kernel_heap;
 	kernel_heap += NEXTHIGHESTWORD(size);
@@ -25,8 +29,9 @@ void* kmalloc(unsigned int size) {
 	return rv;
 }
 
+// User space malloc
 void* umalloc(unsigned int size) {
-	volatile TaskDescriptor *td = scheduler_running();
+	volatile TaskDescriptor* td = scheduler_running();
 	addr rv = td->heap;
 	td->heap += NEXTHIGHESTWORD(size);
 	ASSERT(((unsigned int)td->registers.r[REG_SP]) > (unsigned int)td->heap,
@@ -44,7 +49,7 @@ void* qmalloc(unsigned int size) { // requires size in bytes
 	);
 
 	switch (mode) {
-		//case 0x10: // user
+	// case 0x10: // user
 	//		return malloc(size);
 		case 0x13: // service
 			return kmalloc(size);
@@ -55,13 +60,9 @@ void* qmalloc(unsigned int size) { // requires size in bytes
 }
 
 addr allocate_user_memory() {
-	//td->heap_base = (addr) stack_pop(umpages);
-	//td->heap = td->heap_base;
-	//td->registers.r[REG_SP] = ((int) td->heap) + BYTES2WORDS(STACK_SIZE);
-  return (addr) stack_pop(umpages);
+  return (addr) stack_pop(memChunk);
 }
 
 void free_user_memory(addr a) {
-//	stack_push(umpages, td->heap_base);
-	stack_push(umpages, a);
+	stack_push(memChunk, a);
 }
