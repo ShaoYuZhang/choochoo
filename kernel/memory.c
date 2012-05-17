@@ -12,8 +12,8 @@ void mem_reset() {
 	// initialize kernel heap
 	kernel_heap = &_KernelMemStart;
 	// initialize user memory pages
-	umpages = stack_new(TASK_LIST_SIZE);
-	for (int i = TASK_LIST_SIZE - 1; i != -1; i--) {
+	umpages = stack_new(NUM_MAX_TASK);
+	for (int i = NUM_MAX_TASK - 1; i != -1; i--) {
 		stack_push(umpages, (void*) (USER_MEM_START + STACK_SIZE * i));
 	}
 }

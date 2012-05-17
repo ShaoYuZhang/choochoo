@@ -10,7 +10,7 @@
 // the size of user memory in bytes (64 KB)
 #define STACK_SIZE 65536
 // this is calculated in compile time.
-#define TASK_LIST_SIZE ((USER_MEM_END - USER_MEM_START) / STACK_SIZE)
+#define NUM_MAX_TASK ((USER_MEM_END - USER_MEM_START) / STACK_SIZE)
 
 #define BYTES2WORDS(x) ((x) >> 2)
 

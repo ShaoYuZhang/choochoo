@@ -16,7 +16,7 @@ void scheduler_ready(TaskDescriptor *td);
 
 int scheduler_empty();
 
-TaskDescriptor *scheduler_get();
+volatile TaskDescriptor* scheduler_get();
 
 void scheduler_killme();
 

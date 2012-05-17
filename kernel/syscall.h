@@ -24,4 +24,4 @@ void Exit();
 
 void* malloc(unsigned int size);
 
-#endif SYSCALL_H_
+#endif // SYSCALL_H_

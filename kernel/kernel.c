@@ -17,8 +17,8 @@ void kernel_init() {
 	scheduler_init();
 }
 
-void handle_swi(register_set *reg) {
-	int *r0 = &reg->r[0];
+void handle_swi(volatile register_set* reg) {
+	volatile int *r0 = &reg->r[0];
 	int req_no = *r0;
 	int a1 = reg->r[1];
 	int a2 = reg->r[2];
@@ -32,18 +32,18 @@ void handle_swi(register_set *reg) {
       scheduler_killme();
       break;
 		default:
-			ERROR("unknown system call %d (%x)\n", req_no, req_no);
+			ERROR("Unknown system call %d (%x)\n", req_no, req_no);
 			break;
 	}
 }
 
 void kernel_runloop() {
-	TaskDescriptor *td;
-	register_set *reg;
+	volatile TaskDescriptor *td;
+	volatile register_set* reg;
 
 	while (!scheduler_empty()) {
 		td = scheduler_get();
-		reg = &td->registers;
+		reg = &(td->registers);
 		asm_switch_to_usermode(reg);
 		handle_swi(reg);
 	}

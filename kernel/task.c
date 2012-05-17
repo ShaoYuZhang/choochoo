@@ -1,10 +1,9 @@
 #include <task.h>
 #include <memory.h>
 
-static struct _tag_TaskDescriptor_list {
-	//TaskDescriptor head_taken;
+static struct TaskDescriptors {
 	TaskDescriptor head_free;
-	TaskDescriptor td[TASK_LIST_SIZE];
+	TaskDescriptor td[NUM_MAX_TASK];
 } TaskDescriptors;
 
 #define TD_REMOVE(td) { \
@@ -29,7 +28,7 @@ void td_init() {
 	// put the free descriptors in the free queue
 	TaskDescriptor *td = TaskDescriptors.td;
 
-	for (int i = TASK_LIST_SIZE - 1; i != -1; --i, ++td) {
+	for (int i = NUM_MAX_TASK - 1; i != -1; --i, ++td) {
 		td->id = i;
 		TD_APPEND(head_free, td);
 	}

@@ -33,9 +33,9 @@ int scheduler_empty() {
 	return (begin == NULL);
 }
 
-TaskDescriptor *scheduler_get() {
+volatile TaskDescriptor* scheduler_get() {
   if (begin != NULL) {
-    TaskDescriptor* r = begin;
+    volatile TaskDescriptor* r = begin;
     r->scheduleNext = NULL;
 
     begin = begin->scheduleNext;
