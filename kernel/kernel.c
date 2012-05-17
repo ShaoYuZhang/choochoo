@@ -13,7 +13,6 @@ static void install_interrupt_handlers() {
 void kernel_init() {
 	install_interrupt_handlers();
 	mem_reset();
-	td_init();
 	scheduler_init();
 }
 
@@ -61,19 +60,18 @@ int kernel_createtask(int priority, func_t code) {
 		return -3;
 	}
 
-	TaskDescriptor* td = td_new();
-
-	if (!td) {
-		return -2;
-	}
-
+  addr mem = allocate_user_memory();
+	TaskDescriptor* td = (TaskDescriptor*)mem;
 	td->state = READY;
 	td->priority = priority;
 	td->parent_id = kernel_mytid();
 	td->registers.r[REG_LR] = (int) Exit;
 	td->registers.r[REG_PC] = (int) code;
 	td->registers.spsr = 0x10;
-	allocate_user_memory(td);
+	td->heap_base = mem + sizeof(TaskDescriptor);
+	td->heap = td->heap_base;
+	td->registers.r[REG_SP] = ((int) td->heap) + BYTES2WORDS(STACK_SIZE);
+
 	scheduler_ready(td);
 	return td->id;
 }

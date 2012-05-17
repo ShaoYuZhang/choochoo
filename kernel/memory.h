@@ -27,9 +27,9 @@ void* umalloc(unsigned int size); // allocate user memory
 
 void* qmalloc(unsigned int size); // branch allocation based on processor mode
 
-void allocate_user_memory(TaskDescriptor *td);
+addr allocate_user_memory();
 
-void free_user_memory(TaskDescriptor *td);
+void free_user_memory(addr a);
 
 #endif //MEMORY_H_
 

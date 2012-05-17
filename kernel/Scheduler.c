@@ -49,8 +49,7 @@ volatile TaskDescriptor* scheduler_get() {
 
 void scheduler_killme() {
 	TaskDescriptor *td = (TaskDescriptor*) running;
-	free_user_memory(td);
-	td_free(td);
+	free_user_memory((addr)td);
 }
 
 void scheduler_move2ready() {

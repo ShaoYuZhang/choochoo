@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
   kernel_createtask(1, task1);
 	kernel_runloop();
 
-	bwprintf(COM2, "stil2l4e!!\n");
+	bwprintf(COM2, "worskkk..!!\n");
 	return 0;
 }
 

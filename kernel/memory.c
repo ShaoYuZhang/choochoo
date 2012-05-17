@@ -54,12 +54,14 @@ void* qmalloc(unsigned int size) { // requires size in bytes
 	}
 }
 
-void allocate_user_memory(TaskDescriptor *td) {
-	td->heap_base = (addr) stack_pop(umpages);
-	td->heap = td->heap_base;
-	td->registers.r[REG_SP] = ((int) td->heap) + BYTES2WORDS(STACK_SIZE);
+addr allocate_user_memory() {
+	//td->heap_base = (addr) stack_pop(umpages);
+	//td->heap = td->heap_base;
+	//td->registers.r[REG_SP] = ((int) td->heap) + BYTES2WORDS(STACK_SIZE);
+  return (addr) stack_pop(umpages);
 }
 
-void free_user_memory(TaskDescriptor *td) {
-	stack_push(umpages, td->heap_base);
+void free_user_memory(addr a) {
+//	stack_push(umpages, td->heap_base);
+	stack_push(umpages, a);
 }

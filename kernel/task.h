@@ -32,12 +32,4 @@ typedef struct TaskDescriptor {
 		struct TaskDescriptor* scheduleNext;
 } TaskDescriptor;
 
-void td_init();
-
-TaskDescriptor* td_new();
-
-void td_free(TaskDescriptor *td);
-
-TaskDescriptor *td_find(unsigned int id);
-
 #endif // TASK_H_
