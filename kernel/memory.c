@@ -8,17 +8,20 @@ extern unsigned int _KernelMemStart;
 static addr kernel_heap;
 
 // List of blocks of memory available for use
-static stack* memChunk;
+static TaskDescriptor* freeTaskBlocks[NUM_MAX_TASK];
+static int freeTaskBlocksCount;
 
 void mem_reset() {
-  // initialize kernel heap
-  kernel_heap = &_KernelMemStart+4;
-  bwprintf(COM2, "kernel_heap: %d\n", (int)kernel_heap);
+  freeTaskBlocksCount = NUM_MAX_TASK-1;
+  // Initialize kernel heap
+  kernel_heap = &_KernelMemStart+2;
+  kernel_heap = kernel_heap - (unsigned int)kernel_heap%4 + 4;
+  //bwprintf(COM2, "kernel_heap: %d\n", (int)kernel_heap);
 
   // Create a stack of memory chunks for storing user info.
-  memChunk = stack_new(NUM_MAX_TASK);
-  for (int i = NUM_MAX_TASK - 1; i != -1; i--) {
-    stack_push(memChunk, (void*) (USER_MEM_START + STACK_SIZE * i));
+  for (int i = 0; i < NUM_MAX_TASK; i++) {
+    freeTaskBlocks[i] = (TaskDescriptor*) (USER_MEM_START + STACK_SIZE * i);
+    //stack_push(memChunk, );
   }
 }
 
@@ -31,9 +34,11 @@ void* kmalloc(unsigned int size) {
 }
 
 addr allocate_user_memory() {
-  return (addr) stack_pop(memChunk);
+  ASSERT(freeTaskBlocksCount != -1, "No more task blocks.");
+  return (addr) freeTaskBlocks[freeTaskBlocksCount--];
 }
 
 void free_user_memory(addr a) {
-  stack_push(memChunk, a);
+  freeTaskBlocks[++freeTaskBlocksCount] = (TaskDescriptor*)a;
+  //stack_push(memChunk, a);
 }

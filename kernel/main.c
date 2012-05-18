@@ -4,7 +4,7 @@
 
 static void task2() {
   bwprintf(COM2, "task id: %d, parent's task id: %d\n", MyTid(), MyParentsTid());
-  //Pass();
+  Pass();
   bwprintf(COM2, "task id: %d, parent's task id: %d\n", MyTid(), MyParentsTid());
   bwprintf(COM2, "Second: exiting\n");
 }

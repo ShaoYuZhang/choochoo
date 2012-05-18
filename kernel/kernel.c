@@ -70,7 +70,7 @@ void kernel_runloop() {
 		reg = &(td->registers);
     scheduler_set_running(td);
 		asm_switch_to_usermode(reg);
-    bwputstr(COM2, "in loop\n");
+    //bwputstr(COM2, "in loop\n");
 		handle_swi(reg);
 	}
 }
@@ -89,7 +89,7 @@ int kernel_createtask(int priority, func_t code) {
   // | -------------->
   // | TD | stack ->>>>
   addr mem = allocate_user_memory();
-  bwprintf(COM2, "SP %d\n", (unsigned int)mem );
+  //bwprintf(COM2, "SP %d\n", (unsigned int)mem );
 	TaskDescriptor* td = (TaskDescriptor*)mem;
 	td->state = READY;
 	td->priority = priority;
@@ -100,7 +100,7 @@ int kernel_createtask(int priority, func_t code) {
   unsigned int tmp = (unsigned int)mem + STACK_SIZE;
   tmp = tmp - tmp%4 - 16;
 	td->registers.r[REG_SP] = tmp;
-  bwprintf(COM2, "SP %d\n", td->registers.r[REG_SP]);
+  //bwprintf(COM2, "SP %d\n", td->registers.r[REG_SP]);
 
 	scheduler_append(td);
 	return td->id;
