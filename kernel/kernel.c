@@ -68,6 +68,7 @@ void kernel_runloop() {
 
 	while ((td = scheduler_get())) {
 		reg = &(td->registers);
+    scheduler_set_running(td);
 		asm_switch_to_usermode(reg);
     bwputstr(COM2, "in loop\n");
 		handle_swi(reg);

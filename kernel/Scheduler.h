@@ -18,6 +18,8 @@ int scheduler_empty();
 
 volatile TaskDescriptor* scheduler_get();
 
+void scheduler_set_running(volatile TaskDescriptor* td);
+
 void scheduler_killme();
 
 void scheduler_move2ready();
