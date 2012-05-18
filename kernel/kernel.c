@@ -46,8 +46,7 @@ void kernel_runloop() {
 	volatile TaskDescriptor *td;
 	volatile register_set* reg;
 
-	while (!scheduler_empty()) {
-		td = scheduler_get();
+	while ((td = scheduler_get())) {
 		reg = &(td->registers);
 		asm_switch_to_usermode(reg);
 		handle_swi(reg);
@@ -78,16 +77,16 @@ int kernel_createtask(int priority, func_t code) {
 	td->registers.spsr = 0x10;
 	td->registers.r[REG_SP] = (int) mem + BYTES2WORDS(STACK_SIZE);
 
-	scheduler_ready(td);
+	scheduler_append(td);
 	return td->id;
 }
 
 int kernel_mytid() {
-	volatile TaskDescriptor *td = scheduler_running();
+	volatile TaskDescriptor *td = scheduler_get_running();
 	return td ? td->id : 0xdeadbeef;
 }
 
 int kernel_myparenttid() {
-	volatile TaskDescriptor *td = scheduler_running();
+	volatile TaskDescriptor *td = scheduler_get_running();
 	return td ? td->parent_id : 0xdeadbeef;
 }

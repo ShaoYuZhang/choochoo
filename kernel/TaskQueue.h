@@ -4,14 +4,14 @@
 #include <task.h>
 
 typedef struct TaskQueue {
-    TaskDescriptor* begin;
-    TaskDescriptor* end;
+    volatile TaskDescriptor* begin;
+    volatile TaskDescriptor* end;
 } TaskQueue;
 
-void init_priority_queue();
+void init_ready_queue();
 
-TaskDescriptor* next_ready_task();
+volatile TaskDescriptor* next_ready_task();
 
-void append_task(TaskDescriptor* td);
+void append_task(volatile TaskDescriptor* td);
 
 #endif
