@@ -4,8 +4,6 @@
 
 volatile static TaskDescriptor *currentRunningTask;
 
-// TODO(cao): I used TaskQueue at first but it crashed.. this simple versions eem to wrok
-
 void scheduler_init() {
   init_ready_queue();
 }

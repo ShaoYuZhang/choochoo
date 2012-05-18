@@ -5,12 +5,16 @@
 #include <memory.h>
 #include <syscall.h>
 #include <Scheduler.h>
+#include <bwio.h>
 
 static void install_interrupt_handlers() {
 	INSTALL_INTERRUPT_HANDLER(SWI_VECTOR, asm_handle_swi);
 }
 
+static unsigned int tid_counter;
+
 void kernel_init() {
+  tid_counter = 0;
 	install_interrupt_handlers();
 	mem_reset();
 	scheduler_init();
@@ -21,7 +25,6 @@ void handle_swi(volatile register_set* reg) {
 	int request = *r0;
 	int arg1 = reg->r[1];
 	int arg2 = reg->r[2];
-
 
   // TODO(zhang) branch is ugly
 	switch (request) {
@@ -34,13 +37,13 @@ void handle_swi(volatile register_set* reg) {
     }
     case SYSCALL_MYTID:
     {
-      kernel_mytid();
+      *r0 = kernel_mytid();
       scheduler_move2ready();
       break;
     }
     case SYSCALL_MYPARENTTID:
     {
-      kernel_myparenttid();
+      *r0 = kernel_myparenttid();
       scheduler_move2ready();
       break;
     }
@@ -70,7 +73,7 @@ void kernel_runloop() {
 		reg = &(td->registers);
     scheduler_set_running(td);
 		asm_switch_to_usermode(reg);
-    //bwputstr(COM2, "in loop\n");
+    TaskDescriptor* temp = scheduler_get_running();
 		handle_swi(reg);
 	}
 }
@@ -89,8 +92,12 @@ int kernel_createtask(int priority, func_t code) {
   // | -------------->
   // | TD | stack ->>>>
   addr mem = allocate_user_memory();
+  if (mem == NULL) {
+    return -2;
+  }
   //bwprintf(COM2, "SP %d\n", (unsigned int)mem );
 	TaskDescriptor* td = (TaskDescriptor*)mem;
+  td->id = tid_counter++;
 	td->state = READY;
 	td->priority = priority;
 	td->parent_id = kernel_mytid();

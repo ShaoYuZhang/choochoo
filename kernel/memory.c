@@ -34,8 +34,11 @@ void* kmalloc(unsigned int size) {
 }
 
 addr allocate_user_memory() {
-  ASSERT(freeTaskBlocksCount != -1, "No more task blocks.");
-  return (addr) freeTaskBlocks[freeTaskBlocksCount--];
+  if (freeTaskBlocksCount == -1) {
+    return NULL;
+  } else {
+    return (addr) freeTaskBlocks[freeTaskBlocksCount--];
+  }
 }
 
 void free_user_memory(addr a) {
