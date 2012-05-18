@@ -30,6 +30,12 @@ void handle_swi(volatile register_set* reg) {
     case SYSCALL_EXIT:
       scheduler_killme();
       break;
+    case SYSCALL_MYTID:
+      break;
+    case SYSCALL_MYPARENTTID:
+      break;
+    case SYSCALL_PASS:
+      break;
 		default:
 			ERROR("Unknown system call %d (%x)\n", request, request);
 			break;

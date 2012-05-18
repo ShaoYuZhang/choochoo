@@ -2,8 +2,19 @@
 #include <kernel.h>
 #include <syscall.h>
 
+static void task2() {
+  bwprintf(COM2, "task id: %d, parent's task id: %d\n", MyTid(), MyParentsTid());
+  Pass();
+  bwprintf(COM2, "task id: %d, parent's task id: %d\n", MyTid(), MyParentsTid());
+  bwprintf(COM2, "Second: exiting\n");
+}
+
 static void task1() {
-	bwprintf(COM2, "First: exiting\n");
+  for (int i = 0; i < 4; i++) {
+    int priority = 2 * (i >> 1);
+    bwprintf(COM2, "Created: %d\n", Create(priority, task2));
+  }
+  bwprintf(COM2, "First: exiting\n");
 }
 
 int main(int argc, char* argv[]) {
