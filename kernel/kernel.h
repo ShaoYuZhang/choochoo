@@ -16,6 +16,10 @@ int kernel_mytid();
 
 int kernel_myparenttid();
 
+void kernel_pass();
+
+void kernel_exit();
+
 void kernel_runloop();
 
 #endif // KERNEL_H_
