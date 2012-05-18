@@ -10,9 +10,9 @@
 
 void scheduler_init();
 
-volatile TaskDescriptor *scheduler_running();
+volatile TaskDescriptor *scheduler_get_running();
 
-void scheduler_ready(TaskDescriptor *td);
+void scheduler_append(volatile TaskDescriptor *td);
 
 int scheduler_empty();
 
