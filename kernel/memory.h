@@ -14,7 +14,7 @@
 
 #define BYTES2WORDS(x) ((x) >> 2)
 
-#define NEXTHIGHESTWORD(x) BYTES2WORDS((x) + 3)
+#define NEXTHIGHESTWORD(x) ((x)-(x)%4)
 
 extern int _TextStart;
 extern int _TextEnd;
@@ -28,4 +28,3 @@ addr allocate_user_memory();
 void free_user_memory(addr a);
 
 #endif //MEMORY_H_
-

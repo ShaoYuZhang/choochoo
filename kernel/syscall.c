@@ -15,6 +15,7 @@ static int syscall(int reqid, int a1, int a2, int *args) {
 }
 
 int Create(int priority, func_t code) {
+  bwputstr(COM2, "Creating\n");
 	return syscall(SYSCALL_CREATE, priority, (int) code, NULL);
 }
 

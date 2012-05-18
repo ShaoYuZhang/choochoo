@@ -32,6 +32,8 @@ volatile TaskDescriptor* next_ready_task() {
 void append_task(volatile TaskDescriptor* td) {
   td->next = NULL;
   int priority = td->priority;
+  bwprintf( COM2, "%d\n\r", 5);
+  //bwputc( COM2, 56);
   if (taskReadyQueues[priority].begin == NULL) {
     taskReadyQueues[priority].begin = td;
     taskReadyQueues[priority].end = td;

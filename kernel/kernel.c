@@ -26,26 +26,39 @@ void handle_swi(volatile register_set* reg) {
   // TODO(zhang) branch is ugly
 	switch (request) {
 		case SYSCALL_CREATE:
+    {
+      bwputstr(COM2, "switch correct\n");
 			*r0 = kernel_createtask(arg1, (func_t) arg2);
       scheduler_move2ready();
 			break;
+    }
     case SYSCALL_MYTID:
+    {
       kernel_mytid();
       scheduler_move2ready();
       break;
+    }
     case SYSCALL_MYPARENTTID:
+    {
       kernel_myparenttid();
       scheduler_move2ready();
       break;
+    }
     case SYSCALL_PASS:
+    {
       scheduler_move2ready();
       break;
+    }
     case SYSCALL_EXIT:
+    {
       kernel_exit();
       break;
+    }
 		default:
+    {
 			ERROR("Unknown system call %d (%x)\n", request, request);
 			break;
+    }
 	}
 }
 
@@ -56,6 +69,7 @@ void kernel_runloop() {
 	while ((td = scheduler_get())) {
 		reg = &(td->registers);
 		asm_switch_to_usermode(reg);
+    bwputstr(COM2, "in loop\n");
 		handle_swi(reg);
 	}
 }
@@ -64,7 +78,6 @@ int kernel_createtask(int priority, func_t code) {
 	if (priority < MIN_PRIORITY || priority > MAX_PRIORITY) {
 		return -1;
 	}
-
 	unsigned int codeaddr = (unsigned int)code;
 
 	// probably not in the text region
@@ -75,6 +88,7 @@ int kernel_createtask(int priority, func_t code) {
   // | -------------->
   // | TD | stack ->>>>
   addr mem = allocate_user_memory();
+  bwprintf(COM2, "SP %d\n", (unsigned int)mem );
 	TaskDescriptor* td = (TaskDescriptor*)mem;
 	td->state = READY;
 	td->priority = priority;
@@ -82,7 +96,10 @@ int kernel_createtask(int priority, func_t code) {
 	td->registers.r[REG_LR] = (int) Exit;
 	td->registers.r[REG_PC] = (int) code;
 	td->registers.spsr = 0x10;
-	td->registers.r[REG_SP] = (int) mem + BYTES2WORDS(STACK_SIZE);
+  unsigned int tmp = (unsigned int)mem + STACK_SIZE;
+  tmp = tmp - tmp%4 - 16;
+	td->registers.r[REG_SP] = tmp;
+  bwprintf(COM2, "SP %d\n", td->registers.r[REG_SP]);
 
 	scheduler_append(td);
 	return td->id;

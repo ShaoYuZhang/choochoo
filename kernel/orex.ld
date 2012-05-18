@@ -17,7 +17,6 @@ SECTIONS
     *(.got)
     *(.got.plt)
     *(.rodata)
-    *(.rodata.str1.4)
     *(.glue_7)
     *(.glue_7t)
   } >ram
@@ -35,8 +34,6 @@ SECTIONS
     *(.bss)
     *(COMMON)
     _BssEnd = . ;
-    _end =  ALIGN (0x8);
-    __end = _end;
   } >ram
 
   kernel_mem . :
