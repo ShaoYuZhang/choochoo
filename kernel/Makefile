@@ -3,7 +3,7 @@ AS = as
 AR = ar
 LD = ld
 
-CFLAGS  = -c -fPIC -Wall -I. -mcpu=arm920t -msoft-float -MMD -std=c99 -O2
+CFLAGS  = -c -fPIC -Wall -I. -mcpu=arm920t -msoft-float -MMD -std=c99
 LDFLAGS = -init main -Map main.map -N -T orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 
 ASFLAGS	= -mcpu=arm920t -mapcs-32 -mno-fpu
 
@@ -18,8 +18,8 @@ DEPENDS = ${OBJECTS:.o=.d} # substitute ".o" with ".d"
 ASMS = $(OBJECTS:.o=.s)
 
 all: $(ASMS) main.elf 
-	cp main.elf /u/cs452/public/tftp/ARM/sz.elf
-	chmod 777 /u/cs452/public/tftp/ARM/sz.elf
+	cp main.elf /u/cs452/public/tftp/ARM/${USER}.elf
+	chmod 777 /u/cs452/public/tftp/ARM/${USER}.elf
 
 interrupt.o : interrupt.asm
 	$(AS) $(ASFLAGS) -o $@ $<

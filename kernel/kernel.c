@@ -22,19 +22,26 @@ void handle_swi(volatile register_set* reg) {
 	int arg1 = reg->r[1];
 	int arg2 = reg->r[2];
 
+
+  // TODO(zhang) branch is ugly
 	switch (request) {
 		case SYSCALL_CREATE:
 			*r0 = kernel_createtask(arg1, (func_t) arg2);
       scheduler_move2ready();
 			break;
-    case SYSCALL_EXIT:
-      scheduler_killme();
-      break;
     case SYSCALL_MYTID:
+      kernel_mytid();
+      scheduler_move2ready();
       break;
     case SYSCALL_MYPARENTTID:
+      kernel_myparenttid();
+      scheduler_move2ready();
       break;
     case SYSCALL_PASS:
+      scheduler_move2ready();
+      break;
+    case SYSCALL_EXIT:
+      kernel_exit();
       break;
 		default:
 			ERROR("Unknown system call %d (%x)\n", request, request);
@@ -89,4 +96,8 @@ int kernel_mytid() {
 int kernel_myparenttid() {
 	volatile TaskDescriptor *td = scheduler_get_running();
 	return td ? td->parent_id : 0xdeadbeef;
+}
+
+void kernel_exit() {
+
 }
