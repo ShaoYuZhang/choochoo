@@ -29,6 +29,6 @@ void scheduler_killme() {
 }
 
 void scheduler_move2ready() {
-	ASSERT(running, "no task running to move to ready");
+	ASSERT(currentRunningTask, "no task running to move to ready");
 	scheduler_append(currentRunningTask);
 }

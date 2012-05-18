@@ -12,7 +12,8 @@ static stack* memChunk;
 
 void mem_reset() {
   // initialize kernel heap
-  kernel_heap = &_KernelMemStart;
+  kernel_heap = &_KernelMemStart+4;
+  bwprintf(COM2, "kernel_heap: %d\n", (int)kernel_heap);
 
   // Create a stack of memory chunks for storing user info.
   memChunk = stack_new(NUM_MAX_TASK);

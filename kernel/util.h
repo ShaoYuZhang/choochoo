@@ -48,7 +48,7 @@ typedef char *va_list;
 
 
 ///////////// DEBUG
-#define ASSERT_ENABLED 0
+#define ASSERT_ENABLED 1
 
 #if ASSERT_ENABLED
 #define ASSERT(X, ...) { \
