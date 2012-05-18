@@ -12,7 +12,7 @@ typedef struct stack {
 } stack;
 
 static inline stack* stack_new(unsigned int numStack) {
-  stack *s = (stack*) kmalloc(sizeof(stack) + sizeof(void*) * numStack);
+  stack* s = (stack*) kmalloc(sizeof(stack) + sizeof(void*) * numStack);
   s->top = s->arr;
   s->min = s->top;
   s->max = s->top + numStack;

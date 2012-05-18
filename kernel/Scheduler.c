@@ -10,7 +10,7 @@ void scheduler_init() {
   init_ready_queue();
 }
 
-volatile TaskDescriptor *scheduler_get_running() {
+volatile TaskDescriptor* scheduler_get_running() {
 	return currentRunningTask;
 }
 
@@ -19,7 +19,7 @@ void scheduler_append(volatile TaskDescriptor *td) {
 }
 
 volatile TaskDescriptor* scheduler_get() {
-    return next_ready_task();
+  return next_ready_task();
 }
 
 void scheduler_killme() {
