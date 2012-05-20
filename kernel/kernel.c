@@ -30,7 +30,6 @@ void handle_swi(volatile register_set* reg) {
 	switch (request) {
 		case SYSCALL_CREATE:
     {
-      bwputstr(COM2, "switch correct\n");
 			*r0 = kernel_createtask(arg1, (func_t) arg2);
       scheduler_move2ready();
 			break;
@@ -73,7 +72,6 @@ void kernel_runloop() {
 		reg = &(td->registers);
     scheduler_set_running(td);
 		asm_switch_to_usermode(reg);
-    TaskDescriptor* temp = scheduler_get_running();
 		handle_swi(reg);
 	}
 }

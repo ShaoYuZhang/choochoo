@@ -4,7 +4,7 @@
 #include <ts7200.h>
 #include <task.h>
 
-#define NUM_PRIORITY 10 // 0 = HIGHEST, 9 = LOWEST
+#define NUM_PRIORITY 31 // 0 = HIGHEST, 30 = LOWEST
 #define MAX_PRIORITY (NUM_PRIORITY - 1)
 #define MIN_PRIORITY 0
 
