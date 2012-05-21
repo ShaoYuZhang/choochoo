@@ -2,6 +2,6 @@
 #define INTERRUPT_H_
 
 void asm_handle_swi();
-void asm_switch_to_usermode(volatile register_set *reg);
+void asm_switch_to_usermode(int **sp_pointer);
 
 #endif // INTERRUPT_H_

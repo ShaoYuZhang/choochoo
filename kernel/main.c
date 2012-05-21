@@ -7,6 +7,7 @@ static void task2() {
   Pass();
   bwprintf(COM2, "task id: %d, parent's task id: %d\n", MyTid(), MyParentsTid());
   bwprintf(COM2, "Second: exiting\n");
+  Exit();
 }
 
 static void task1() {
@@ -15,6 +16,7 @@ static void task1() {
     bwprintf(COM2, "Created: %d\n", Create(priority, task2));
   }
   bwprintf(COM2, "First: exiting\n");
+  Exit();
 }
 
 int main(int argc, char* argv[]) {

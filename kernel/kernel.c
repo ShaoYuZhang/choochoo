@@ -20,11 +20,13 @@ void kernel_init() {
 	scheduler_init();
 }
 
-void handle_swi(volatile register_set* reg) {
-	volatile int *r0 = &reg->r[0];
+void handle_swi(int** sp_pointer) {
+  // task stack layout reminder
+  // sp: r0-r12, lr, spsr
+	volatile int *r0 = *sp_pointer;
 	int request = *r0;
-	int arg1 = reg->r[1];
-	int arg2 = reg->r[2];
+	int arg1 = (*sp_pointer)[1];
+	int arg2 = (*sp_pointer)[2];
 
   // TODO(zhang) branch is ugly
 	switch (request) {
@@ -66,13 +68,13 @@ void handle_swi(volatile register_set* reg) {
 
 void kernel_runloop() {
 	volatile TaskDescriptor *td;
-	volatile register_set* reg;
+	int** sp_pointer;
 
 	while ((td = scheduler_get())) {
-		reg = &(td->registers);
+		sp_pointer = (int**)&(td->sp);
     scheduler_set_running(td);
-		asm_switch_to_usermode(reg);
-		handle_swi(reg);
+		asm_switch_to_usermode(sp_pointer);
+		handle_swi(sp_pointer);
 	}
 }
 
@@ -99,13 +101,12 @@ int kernel_createtask(int priority, func_t code) {
 	td->state = READY;
 	td->priority = priority;
 	td->parent_id = kernel_mytid();
-	td->registers.r[REG_LR] = (int) Exit;
-	td->registers.r[REG_PC] = (int) code;
-	td->registers.spsr = 0x10;
   unsigned int tmp = (unsigned int)mem + STACK_SIZE;
   tmp = tmp - tmp%4 - 16;
-	td->registers.r[REG_SP] = tmp;
-  //bwprintf(COM2, "SP %d\n", td->registers.r[REG_SP]);
+  td->sp = (int *)(tmp - 4 * 14); //
+  td->sp[0] = 20;
+  td->sp[13] = (int) code; // LR
+  td->sp[14] = 0x10; //spsr
 
 	scheduler_append(td);
 	return td->id;

@@ -11,7 +11,6 @@ SECTIONS
   text . : /* The actual instructions. */
   {
     _TextStart = .;
-    *(asm_functions)
     *(.text)
     _TextEnd = .;
     *(.got)
@@ -21,14 +20,14 @@ SECTIONS
     *(.glue_7t)
   } >ram
 
-  data BLOCK (0x4) : /* Initialized data. */
+  data . : /* Initialized data. */
   {
     _DataStart = . ;
     *(.data)
     _DataEnd = . ;
   } >ram
 
-  bss BLOCK (0x4) : /* Uninitialized data. */
+  bss . : /* Uninitialized data. */
   {
     _BssStart = . ;
     *(.bss)

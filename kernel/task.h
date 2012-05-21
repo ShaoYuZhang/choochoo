@@ -14,17 +14,12 @@ typedef enum TaskState {
     ZOMBIE
 } TaskState;
 
-typedef struct register_set {
-		int spsr;
-		int r[16]; // r0-r12, sp, lr, pc
-} register_set;
-
 typedef struct TaskDescriptor {
 		int id;
 		TaskState state;
 		unsigned int priority;
 		int parent_id; // should this be a pointer to the parent td?
-		register_set registers; // r0-r12, sp and lr
+		int* sp;
 		volatile struct TaskDescriptor* next;
 } TaskDescriptor;
 

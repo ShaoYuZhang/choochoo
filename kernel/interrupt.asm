@@ -1,4 +1,5 @@
-.section asm_functions
+.text
+.align	2
 .global asm_handle_swi
 @ this code handles swi system call
 @ r0 is request id
@@ -7,44 +8,81 @@
 @ r3 is *args
 asm_handle_swi:
 	@ <) swi was raised so we are in svc mode
-	@ <) sp_svc: [r0 (td_current->registers)], r1-r12, lr_svc, ...
+	@ <) sp_svc: [r0-r12, lr_svc, ..., a0 contains &td->sp]
 	@ <) now lr_svc = pc_usr
 
-	@ inject pc_usr into td_current->registers.r[15]
-	ldr ip, [sp] @ get a pointer to td_current->registers
-	str lr, [ip, #4*16] @ inject, freeing lr_svc for use
+  @ need some scratch registers, storing things on kernal stack
+	stmfd sp!, {r0-r3}
+  mov r0, sp
+	mrs r1, spsr
+  mov r3, lr
 
-	@ store user state
-	stmfa ip, {r0-r12, sp, lr}^ @ stmfa will skip the first item (spsr)
+  @ switch to system mode
+  mrs r2, cpsr
+  bic r2, r2, #0x1F
+  orr r2, r2, #0x1F
+  msr cpsr_c, r2
 
-	@ inject spsr into td_current->registers.spsr
-	mrs lr, spsr @ copy
-	str lr, [ip] @ inject
+	@ store spsr
+  sub sp, sp, #4
+  str r1, [sp] @ spsr
 
-	@ <) task state is completely saved
+  @ store lr
+  mov lr, r3
+
+  @restore scratch registers for user task
+  ldmfd r0, {r0-r3}
+
+	stmfd sp!, {r0-r12, lr} @ store user registers
+
+  mov r0, sp @ need to save sp separately later
+
+  @ switch to svc mode
+  mrs r2, cpsr
+  bic r2, r2, #0x1F
+  orr r2, r2, #0x13
+  msr cpsr_c, r2
+
+  add sp, sp, #4 * 4
+  ldr r1, [sp] @ here lies address of td->sp
+  str r0, [r1] @ update task sp, task state is completely saved
 
 	@ restore kernel state
 	ldmfd sp!, {r0-r12, pc} @ restore kernel state
 
-
-@ r0 is pointer to register_set (task.h) of current task descriptor
+@ r0 is pointer to sp (task.h) of current task descriptor
+.text
+.align	2
 .global asm_switch_to_usermode
 asm_switch_to_usermode:
 	@ save kernel state on stack
 	stmfd sp!, {r0-r12, lr}
-	@ <) sp_svc: [r0 (td_current->registers)], r1-r12, lr_svc, ...
+	@ <) [r0] is sp_usr whose layout is like this: [r0-r12, lr_usr, spsr]
+  @ <) all registers are saved, can be trashed
 
-	@ <) all registers are saved, can be trashed
-	@ <) we will be restoring user state, but will need a scratch register. why not use lr_svc?
+  @ switch to system mode
+  mrs r2, cpsr
+  bic r2, r2, #0x1F
+  orr r2, r2, #0x1F
+  msr cpsr_c, r2
 
-	@ restore spsr
-	ldr lr, [r0] @ load the spsr from td_current->registers, it is the first item
-	msr spsr, lr @ set the spsr
+  ldr sp, [r0]
+  mov r1, sp @store a sp in r1
+  add sp, sp, #4 * 15 @skip r0->r12, lr, spsr
+  ldr r3, [sp, #-4] @load spsr in r3
+  str sp, [r0] @update td->sp
 
-	@ restore registers
-	mov lr, r0 @ copy the pointer to td_current->registers into lr_svc
-	ldmib lr, {r0-r12, sp, lr}^ @ load r0-r15 from register_set into registers and set cpsr
-	ldr lr, [lr, #4*16] @ load pc from register_set
+  @ switch to svc mode
+  mrs r2, cpsr
+  bic r2, r2, #0x1F
+  orr r2, r2, #0x13
+  msr cpsr_c, r2
+
+	@ restore spsr(user mode)
+	msr spsr, r3
+
+	@ restore task registers
+	ldmfd r1, {r0-r12, lr}
 
 	@ resume task
 	movs pc, lr @ go to there

@@ -6,7 +6,7 @@
 // Kernel version of system calls.
 
 // Implement as needed
-void handle_swi(volatile register_set* reg);
+void handle_swi(int** sp_pointer);
 
 void kernel_init();
 
