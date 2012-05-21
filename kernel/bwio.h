@@ -16,6 +16,10 @@ int bwputc( int channel, char c );
 
 int bwgetc( int channel );
 
+int bwputx( int channel, char c );
+
+int bwputr( int channel, unsigned int reg );
+
 int bwputstr( int channel, char *str );
 
 void bwputw( int channel, int n, char fc, char *bf );

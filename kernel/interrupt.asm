@@ -48,14 +48,3 @@ asm_switch_to_usermode:
 
 	@ resume task
 	movs pc, lr @ go to there
-
-
-@ syscall code.
-@ r0 : request id
-@ r1 : arguments array
-.global asm_syscall
-asm_syscall:
-	swi 0
-	@return
-	mov pc, lr
-

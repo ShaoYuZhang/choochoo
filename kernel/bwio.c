@@ -125,6 +125,23 @@ char c2x( char ch ) {
 	return 'a' + ch - 10;
 }
 
+int bwputx( int channel, char c ) {
+	char chh, chl;
+
+	chh = c2x( c / 16 );
+	chl = c2x( c % 16 );
+	bwputc( channel, chh );
+	return bwputc( channel, chl );
+}
+
+int bwputr( int channel, unsigned int reg ) {
+	int byte;
+	char *ch = (char *) &reg;
+
+	for( byte = 3; byte >= 0; byte-- ) bwputx( channel, ch[byte] );
+	return bwputc( channel, ' ' );
+}
+
 int bwputstr( int channel, char *str ) {
 	while( *str ) {
 		if( bwputc( channel, *str ) < 0 ) return -1;

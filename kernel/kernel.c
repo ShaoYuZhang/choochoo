@@ -122,5 +122,6 @@ int kernel_myparenttid() {
 }
 
 void kernel_exit() {
-
+	volatile TaskDescriptor *td = scheduler_get_running();
+  td->state = ZOMBIE;
 }
