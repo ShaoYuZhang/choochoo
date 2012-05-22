@@ -16,9 +16,6 @@
 
 #define NEXTHIGHESTWORD(x) ((x)-(x)%4)
 
-extern int _TextStart;
-extern int _TextEnd;
-
 void mem_reset();
 
 void* kmalloc(unsigned int size); // allocate kernel memory

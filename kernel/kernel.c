@@ -7,6 +7,9 @@
 #include <Scheduler.h>
 #include <bwio.h>
 
+extern int _TextStart;
+extern int _TextEnd;
+
 static void install_interrupt_handlers() {
 	INSTALL_INTERRUPT_HANDLER(SWI_VECTOR, asm_handle_swi);
 }

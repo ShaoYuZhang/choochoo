@@ -11,7 +11,7 @@ void task2() {
 }
 
 void task1() {
-  for (int i = 0; i < 4; i++) {
+  for (int i = 3; i >= 0; i--) {
     int priority = 2 * (i >> 1);
     bwprintf(COM2, "Created: %d\n", Create(priority, task2));
   }

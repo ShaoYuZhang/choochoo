@@ -42,7 +42,7 @@ SECTIONS
 	} >ram
 	
 	_UserMemStart = 0x0300000;
-	_UserMemEnd   = 0x1f00000; 
+	_UserMemEnd   = 0x1900000; 
 }
 
 ENTRY(main)
