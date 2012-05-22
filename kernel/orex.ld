@@ -16,6 +16,7 @@ SECTIONS
     *(.got)
     *(.got.plt)
     *(.rodata)
+    *(.rodata.str1.4)
     *(.glue_7)
     *(.glue_7t)
   } >ram
@@ -44,5 +45,4 @@ SECTIONS
 	_UserMemEnd   = 0x1f00000; 
 }
 
-ENTRY (main)
-
+ENTRY(main)

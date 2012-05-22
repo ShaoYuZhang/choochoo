@@ -6,6 +6,7 @@ volatile static TaskDescriptor *currentRunningTask;
 
 void scheduler_init() {
   init_ready_queue();
+  currentRunningTask = 0;
 }
 
 volatile TaskDescriptor* scheduler_get_running() {
@@ -26,9 +27,6 @@ void scheduler_set_running(volatile TaskDescriptor* td) {
 }
 
 void scheduler_killme() {
-  //TODO remove?
-	//TaskDescriptor *td = currentRunningTask;
-	//free_user_memory((addr)td);
 }
 
 void scheduler_move2ready() {

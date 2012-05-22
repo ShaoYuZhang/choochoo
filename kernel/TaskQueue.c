@@ -1,6 +1,6 @@
 #include <ts7200.h>
-#include <TaskQueue.h>
 #include <Scheduler.h>
+#include <TaskQueue.h>
 #include <bwio.h>
 
 static TaskQueue taskReadyQueues[NUM_PRIORITY];

@@ -2,7 +2,7 @@
 #include <kernel.h>
 #include <syscall.h>
 
-static void task2() {
+void task2() {
   bwprintf(COM2, "task id: %d, parent's task id: %d\n", MyTid(), MyParentsTid());
   Pass();
   bwprintf(COM2, "task id: %d, parent's task id: %d\n", MyTid(), MyParentsTid());
@@ -10,7 +10,7 @@ static void task2() {
   Exit();
 }
 
-static void task1() {
+void task1() {
   for (int i = 0; i < 4; i++) {
     int priority = 2 * (i >> 1);
     bwprintf(COM2, "Created: %d\n", Create(priority, task2));

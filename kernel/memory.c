@@ -1,6 +1,5 @@
 #include <memory.h>
 #include <util.h>
-#include <stack.h>
 #include <Scheduler.h>
 #include <syscall.h>
 
@@ -16,12 +15,10 @@ void mem_reset() {
   // Initialize kernel heap
   kernel_heap = &_KernelMemStart+2;
   kernel_heap = kernel_heap - (unsigned int)kernel_heap%4 + 4;
-  //bwprintf(COM2, "kernel_heap: %d\n", (int)kernel_heap);
 
   // Create a stack of memory chunks for storing user info.
   for (int i = 0; i < NUM_MAX_TASK; i++) {
     freeTaskBlocks[i] = (TaskDescriptor*) (USER_MEM_START + STACK_SIZE * i);
-    //stack_push(memChunk, );
   }
 }
 
@@ -43,5 +40,4 @@ addr allocate_user_memory() {
 
 void free_user_memory(addr a) {
   freeTaskBlocks[++freeTaskBlocksCount] = (TaskDescriptor*)a;
-  //stack_push(memChunk, a);
 }
