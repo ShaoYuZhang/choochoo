@@ -28,7 +28,8 @@ void handle_swi(int** sp_pointer) {
 	int arg1 = (*sp_pointer)[1];
 	int arg2 = (*sp_pointer)[2];
 
-  // TODO(zhang) branch is ugly
+
+  // TODO(zhang) branch is ugly function[request](arg, arg, arg, arg);
 	switch (request) {
 		case SYSCALL_CREATE:
     {
