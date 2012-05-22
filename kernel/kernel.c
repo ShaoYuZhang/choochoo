@@ -104,7 +104,6 @@ int kernel_createtask(int priority, func_t code) {
   unsigned int tmp = (unsigned int)mem + STACK_SIZE;
   tmp = tmp - tmp%4 - 16;
   td->sp = (int *)(tmp - 4 * 14); //
-  td->sp[0] = 20;
   td->sp[13] = (int) code; // LR
   td->sp[14] = 0x10; //spsr
 
