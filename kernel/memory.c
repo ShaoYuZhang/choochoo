@@ -41,3 +41,9 @@ addr allocate_user_memory() {
 void free_user_memory(addr a) {
   freeTaskBlocks[++freeTaskBlocksCount] = (TaskDescriptor*)a;
 }
+
+void memcpy_no_overlap_asm(char* from, char* to, int len) {
+  for (int i = 0; i < len; i++){
+    from[i] = to[i];
+  }
+}

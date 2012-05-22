@@ -86,3 +86,14 @@ asm_switch_to_usermode:
 
 	@ resume task
 	movs pc, lr @ go to there
+
+.text
+.align	2
+.global asm_memcpy_no_overlap
+@ this code handles memcpy
+@ r0 is from_pointer
+@ r1 is to_pointer
+@ r2 is len
+asm_memcpy_no_overlap:
+
+ 
