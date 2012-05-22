@@ -11,11 +11,9 @@
 #define OFF 0
 #define NULL 0
 
-
 ////////// TYPES
 
 typedef unsigned int* addr;
-typedef void (*func_t)();
 
 ////////// VAR ARG
 typedef char *va_list;
@@ -44,8 +42,6 @@ typedef char *va_list;
 #define ROUND_UP(x, num) ((((unsigned int)x)+(num-1))&~(num-1))
 // turn mask bits on/off in word based on flag (improve with orr/bic?)
 #define BIT_TOGGLE(word, mask, flag) ((word) ^= (-(flag) ^ (word)) & (mask))
-
-
 
 ///////////// DEBUG
 #define ASSERT_ENABLED 1

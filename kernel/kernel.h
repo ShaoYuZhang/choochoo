@@ -2,6 +2,7 @@
 #define KERNEL_H_
 
 #include <task.h>
+#include <syscall.h>
 
 // Kernel version of system calls.
 

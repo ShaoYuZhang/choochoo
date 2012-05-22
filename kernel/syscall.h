@@ -3,6 +3,8 @@
 
 #include <util.h>
 
+typedef void (*func_t)();
+
 #define SYSCALL_CREATE 0
 #define SYSCALL_MYTID 1
 #define SYSCALL_MYPARENTTID 2
