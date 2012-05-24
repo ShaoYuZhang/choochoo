@@ -1,7 +1,6 @@
-#include "nameserver.h"
-#include "syscall.h"
+#include "NameServer.h"
 
-#define NUM_TASK_NAMESERVER 20;
+#define NUM_TASK_NAMESERVER 20
 
 static int nameserverTid;
 static char* taskName[NUM_TASK_NAMESERVER];
@@ -25,7 +24,7 @@ static void nameserver_task() {
     if (len == WHO_IS) {
       int found = -1;
       for (int i = 0; i < NUM_TASK_NAMESERVER; i++) {
-        if (equal(msg, taskName[i], msglen)) {
+        if (equal(msg, taskName[i], maxLen)) {
           found = i; break;
         }
       }
@@ -46,4 +45,17 @@ void startNameserver() {
 
 int whoIsNameserver() {
   return nameserverTid;
+}
+
+int RegisterAs(char* name)
+{
+  char reply[64];
+  int r = Send(whoIsNameserver(), name, REGISTER_AS, reply, 64);
+  return *(reply+4);
+}
+
+int WhoIs(char* name) {
+  char reply[64];
+  int r = Send(whoIsNameserver(), name, WHO_IS, reply, 64);
+  return *(reply+4);
 }

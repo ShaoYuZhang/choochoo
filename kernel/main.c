@@ -2,10 +2,10 @@
 #include <kernel.h>
 #include <syscall.h>
 #include <memory.h>
+#include <NameServer.h>
 
 void task1() {
   startNameserver();
-
 }
 
 static char from[]        = "asdfghjklqwertyuio";
@@ -14,7 +14,6 @@ static char destination[] = "1234567890-2345678";
 int main(int argc, char* argv[]) {
 	bwioInit();
 	kernel_init();
-
 
   bwputstr(COM2, from);
   bwputstr(COM2, "\n");
