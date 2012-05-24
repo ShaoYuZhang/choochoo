@@ -14,6 +14,7 @@ volatile TaskDescriptor* scheduler_get_running() {
 }
 
 void scheduler_append(volatile TaskDescriptor *td) {
+	ASSERT(td->state == READY, "Can only append ready tasks");
   append_task(td);
 }
 
@@ -31,3 +32,4 @@ void scheduler_move2ready() {
   currentRunningTask->state = READY;
 	scheduler_append(currentRunningTask);
 }
+

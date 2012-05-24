@@ -6,7 +6,7 @@ typedef enum TaskState {
     READY,
     ZOMBIE,
     SEND_BLOCK,
-    RECIEVE_BLOCK,
+    RECEIVE_BLOCK,
     REPLY_BLOCK
 } TaskState;
 

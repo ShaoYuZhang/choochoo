@@ -10,6 +10,8 @@
 #define ON  1
 #define OFF 0
 #define NULL 0
+#define MASK_HIGHER 0xFFFF0000
+#define MASK_LOWER 0xFFFF
 
 ////////// TYPES
 
