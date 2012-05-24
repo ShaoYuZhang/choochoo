@@ -15,6 +15,7 @@ static void install_interrupt_handlers() {
 }
 
 static unsigned int tid_counter;
+static TaskDescriptor tds[NUM_MAX_TASK];
 
 void kernel_init() {
   tid_counter = 0;
@@ -30,7 +31,9 @@ void handle_swi(int** sp_pointer) {
 	int request = *r0;
 	int arg1 = (*sp_pointer)[1];
 	int arg2 = (*sp_pointer)[2];
-
+	int arg3 = (*sp_pointer)[3];
+	int arg4 = (*sp_pointer)[4];
+	int arg5 = (*sp_pointer)[5];
 
   // TODO(zhang) branch is ugly function[request](arg, arg, arg, arg);
 	switch (request) {
@@ -61,6 +64,18 @@ void handle_swi(int** sp_pointer) {
     {
       kernel_exit();
       break;
+    }
+    case SYSCALL_SEND:
+    {
+
+    }
+    case SYSCALL_RECEIVE:
+    {
+
+    }
+    case SYSCALL_REPLY:
+    {
+
     }
 		default:
     {
@@ -99,8 +114,7 @@ int kernel_createtask(int priority, func_t code) {
   if (mem == NULL) {
     return -2;
   }
-  //bwprintf(COM2, "SP %d\n", (unsigned int)mem );
-	TaskDescriptor* td = (TaskDescriptor*)mem;
+  volatile TaskDescriptor* td = &tds[tid_counter];
   td->id = tid_counter++;
 	td->state = READY;
 	td->priority = priority;
@@ -128,4 +142,31 @@ int kernel_myparenttid() {
 void kernel_exit() {
 	volatile TaskDescriptor *td = scheduler_get_running();
   td->state = ZOMBIE;
+}
+
+int kernel_send(int tid, char *msg, int msglen, char *reply, int replylen) {
+  if (tid >= NUM_MAX_TASK){
+    return -1;
+  }
+
+  if (tid >= tid_counter) {
+    return -2;
+  }
+  volatile TaskDescriptor* receive = &tds[tid];
+
+  if (receive->state == ZOMBIE) {
+    return -2;
+  }
+
+  return 0;
+}
+
+int kernel_receive(int *tid, char *msg, int msglen) {
+
+  return 0;
+}
+
+int kernel_reply(int tid, char* reply, int replylen) {
+
+  return 0;
 }

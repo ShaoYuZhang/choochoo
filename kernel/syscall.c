@@ -35,6 +35,15 @@ void Exit() {
 	syscall(SYSCALL_EXIT, NULL, NULL, NULL);
 }
 
-void* malloc(unsigned int size) {
-	return (void*) syscall(SYSCALL_MALLOC, (int) size, NULL, NULL);
+int Send( int tid, char *msg, int msglen, char *pley, int replylen){
+  return syscall(SYSCALL_SEND, NULL, NULL, NULL);
 }
+
+int Receive(int *tid, char *msg, int msglen) {
+  return syscall(SYSCALL_RECEIVE, NULL, NULL, NULL);
+}
+
+int Reply( int tid, char *reply, int replylen) {
+  return syscall(SYSCALL_REPLY, NULL, NULL, NULL);
+}
+

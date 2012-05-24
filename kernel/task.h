@@ -4,8 +4,10 @@
 typedef enum TaskState {
     ACTIVE,
     READY,
-    BLOCKED,
-    ZOMBIE
+    ZOMBIE,
+    SEND_BLOCK,
+    RECIEVE_BLOCK,
+    REPLY_BLOCK
 } TaskState;
 
 typedef struct TaskDescriptor {
@@ -15,6 +17,7 @@ typedef struct TaskDescriptor {
 		int parent_id; // should this be a pointer to the parent td?
 		int* sp;
 		volatile struct TaskDescriptor* next;
+		volatile struct TaskDescriptor* sendQ;
 } TaskDescriptor;
 
 #endif // TASK_H_

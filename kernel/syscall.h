@@ -10,7 +10,9 @@ typedef void (*func_t)();
 #define SYSCALL_MYPARENTTID 2
 #define SYSCALL_PASS 3
 #define SYSCALL_EXIT 4
-#define SYSCALL_MALLOC 5
+#define SYSCALL_SEND 5
+#define SYSCALL_RECEIVE 6
+#define SYSCALL_REPLY 7
 
 int Create(int priority, func_t code);
 
@@ -22,6 +24,10 @@ void Pass();
 
 void Exit();
 
-void* malloc(unsigned int size);
+int Send( int tid, char *msg, int msglen, char *reply, int replylen);
+
+int Receive(int *tid, char *msg, int msglen);
+
+int Reply( int tid, char *reply, int replylen);
 
 #endif // SYSCALL_H_
