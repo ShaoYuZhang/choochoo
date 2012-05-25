@@ -25,6 +25,7 @@ SECTIONS
   {
     _DataStart = . ;
     *(.data)
+    *(.data.rel)
     _DataEnd = . ;
   } >ram
 

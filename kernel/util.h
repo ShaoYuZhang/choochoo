@@ -10,6 +10,18 @@
 #define ON  1
 #define OFF 0
 
+#define NOT_USED 0
+
+// Also look at the variables in orex.ld
+#define USER_MEM_START	0x300000
+#define USER_MEM_END	0x1900000
+// the size of user memory in bytes (64 KB)
+#define STACK_SIZE 65536
+
+// Artificial limit..
+#define NUM_MAX_TASK 128
+
+
 typedef signed char Tid;
 #define MASK_HIGHER 0xFFFF0000
 #define MASK_LOWER 0xFFFF
