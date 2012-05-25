@@ -2,6 +2,13 @@
 #include <RockPaperScissorsServer.h>
 #include <syscall.h>
 
+// Test situations:
+//    1: normal game play between 2 players randomly (Tests message passing, receive block, send block, name server)
+//    2: normal game play between 8 players randomly (Tests message passing, recever queue in server)
+//    3: 4 players keep playing.., 2 players are stuck waiting for others.
+//        (Tests that tasks that are blocked can be rewoken up.)
+//    4: Print reply message
+
 void client1() {
 
 }

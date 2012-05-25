@@ -9,7 +9,9 @@
 
 #define ON  1
 #define OFF 0
-#define NULL 0
+#define NULL (char*)1
+
+typedef signed char Tid;
 
 ////////// TYPES
 

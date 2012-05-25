@@ -1,5 +1,6 @@
 #include "NameServer.h"
 #include <memory.h>
+#include <string.h>
 
 #define NUM_TASK_NAMESERVER 20
 
@@ -20,6 +21,7 @@ static void nameserver_task() {
   int* tid;
   char msg[16];
   int maxLen = 16;
+  ASSERT(0 == MyTid(), "Nameserver tid is not zero.");
 
   while (1) {
     int len = Receive(tid, msg, maxLen);
@@ -55,15 +57,18 @@ int whoIsNameserver() {
   return nameserverTid;
 }
 
-int RegisterAs(char* name)
-{
-  char reply[64];
-  int r = Send(whoIsNameserver(), name, REGISTER_AS, reply, 64);
-  return *(reply+4);
+int RegisterAs(char* name) {
+  int len = strlen(name);
+  name[len+1] = REGISTER_AS;
+  name[len+2] = '\0';
+
+  char reply[16];
+  Send(NAMESERVER_TID, name, len+3, reply, 16);
+  return *((int*)reply);
 }
 
 int WhoIs(char* name) {
   char reply[64];
-  int r = Send(whoIsNameserver(), name, WHO_IS, reply, 64);
+  int r = Send(NAMESERVER_TID, name, WHO_IS, reply, 64);
   return *(reply+4);
 }
