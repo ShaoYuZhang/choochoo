@@ -7,7 +7,7 @@
 
 typedef struct Task {
 		signed char tid;
-    char name[64];
+    char name[16];
 } Task;
 
 static Task tasks[NUM_TASK_NAMESERVER];
@@ -19,13 +19,12 @@ static void nameserver_task() {
   emptyTaskName = 0;
 
   while (1) {
-    bwputstr(COM2, "Receiving \n");
     int len = Receive(&tid, msg, MSG_LEN);
     char type = msg[len-2];
-    bwprintf(COM2, "Receive: %d\n", len);
-    bwprintf(COM2, "Type: %d\n", (int)type);
-    bwprintf(COM2, "Tid: %d\n", tid);
-    bwprintf(COM2, "len: %d\n", len);
+    //bwprintf(COM2, "Receive: %d\n", len);
+    //bwprintf(COM2, "Type: %d\n", (int)type);
+    //bwprintf(COM2, "Tid: %d\n", tid);
+    //bwprintf(COM2, "len: %d\n", len);
 
     if (type == WHO_IS) {
       int found = -1;
@@ -35,20 +34,20 @@ static void nameserver_task() {
         }
       }
       ASSERT(found != -1, "No task with name found.");
-      bwprintf(COM2, "Found: %d\n", found);
 
       msg[0] = tasks[found].tid;
       msg[1] = '\0';
 
       Reply(tid, msg, 2);
     } else if (type == REGISTER_AS) {
+      bwprintf(COM2, "Registering %d \n", tid);
       tasks[emptyTaskName].tid = (signed char)tid;
       memcpy_no_overlap_asm(msg, tasks[emptyTaskName++].name, len-2);
       ASSERT(emptyTaskName < NUM_TASK_NAMESERVER, "Too many tasks registered with nameserver.");
       msg[0] = '\0';
       Reply(tid, msg, 1);
     } else {
-      ASSERT(FALSE, "Unknown Action.");
+      ASSERT(FALSE, "Unknown NameServer Action.\n");
     }
   }
 }
@@ -62,7 +61,7 @@ int RegisterAs(char* name) {
   int len = strlen(name);
   name[len+1] = REGISTER_AS;
   name[len+2] = '\0';
-  bwprintf( COM2, "%d len\n\r", len);
+  //bwprintf( COM2, "%d len\n\r", len);
 
   char reply;
   Send(NAMESERVER_TID, name, len+3, &reply, 1);

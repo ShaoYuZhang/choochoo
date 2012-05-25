@@ -1,6 +1,7 @@
 #include "RockPaperScissorsServer.h"
 #include <syscall.h>
 #include <bwio.h>
+#include <NameServer.h>
 
 #define MAX_CLIENT 128
 
@@ -20,13 +21,12 @@ signed char waiting_client;
 void replyPlayingPair(int tid1, int tid2) {
   // Initialize the pair to be playing
   PlayingPair* newPair = playing_stack[num_pair_left];
-  newPair->tid1 = tid1;
-  newPair->tid2 = tid2;
+  newPair->tid1 = (signed char)tid1;
+  newPair->tid2 = (signed char)tid2;
 
-  char index[3];
-  index[0] = 'P';
-  index[1] = (char)(newPair - playing_array);
-  index[2] = '\0';
+  char index[2];
+  index[0] = (char)(newPair - playing_array);
+  index[1] = '\0';
   // Ack the clients to start playing, reply with their index playing token.
   int reply;
   reply = Reply(tid1, index, 2);
@@ -38,6 +38,7 @@ void replyWin(PlayingPair* pair) {
   char buffer[2];
   buffer[1] = 0;
   int reply;
+  bwprintf(COM2, "%d %d result.\n", pair->tid1, pair->tid2);
 
   if (result == 1 || result == -2) {
     // Player 2 wins
@@ -60,28 +61,26 @@ void replyWin(PlayingPair* pair) {
   }
 }
 
-void startServerRPS() {
-  for(int i = 0; i < MAX_CLIENT; i++) {
-    playing_array[i].move1 = -1;
-    playing_array[i].move2 = -1;
-    playing_stack[i] = &playing_array[i];
-  }
-  num_pair_left = MAX_CLIENT;
-  waiting_client = -1;
+void serverTask() {
+  bwputstr(COM2, "Creating RPS server\n");
+  RegisterAs(RPS_SERVER_NAME);
+  bwputstr(COM2, "Registerd server\n");
 
+  int tid;
   char msg[32];
-  Tid* tid = (Tid*)NULL;
 
   while (1) {
-    int len = Receive((int*)tid, msg, 32);
-    char type = msg[len-1];
-    bwputc(COM2, type);
+    int len = Receive(&tid, msg, 32);
+    char type = msg[len-2];
+
     if (type == SIGNUP) {
       if (waiting_client == -1) {
-        waiting_client = (char)*tid;
+        waiting_client = (signed char)tid;
+        bwprintf(COM2, "Waiting client: %d\n", (int)tid);
       }
       else {
-        replyPlayingPair(waiting_client, *tid);
+        bwprintf(COM2, "Pairing player: %d\n", (int)tid);
+        replyPlayingPair(waiting_client, tid);
         waiting_client = -1;
         num_pair_left -= 1;
       }
@@ -89,9 +88,10 @@ void startServerRPS() {
     else if (type == PLAY) {
       PlayMessage* play = (PlayMessage*)msg;
       PlayingPair* pair = &playing_array[(int)play->index];
-      if (*tid == pair->tid1) {
+
+      if (tid == pair->tid1) {
         pair->move1 = play->move;
-      } else if (*tid == pair->tid2) {
+      } else if (tid == pair->tid2) {
         pair->move2 = play->move;
       }
 
@@ -100,24 +100,42 @@ void startServerRPS() {
       } else if (pair->move1 == HAS_QUIT || pair->move2 == HAS_QUIT) {
         msg[0] = 'Q';
         msg[1] = '\0';
-        Reply(*tid, msg, 2);
+        Reply(tid, msg, 2);
       }
     }
     else if (type == QUIT) {
       PlayMessage* play = (PlayMessage*)msg;
       PlayingPair* pair = &playing_array[(int)play->index];
-      if (*tid == pair->tid1) {
+      if (tid == pair->tid1) {
         pair->move1 = HAS_QUIT;
-      } else if (*tid == pair->tid2) {
+      } else if (tid == pair->tid2) {
         pair->move2 = HAS_QUIT;
+      }
+
+      if (pair->move2 == HAS_QUIT && pair->move1 == HAS_QUIT) {
+        playing_stack[++num_pair_left] = pair;
+        bwputstr(COM2, "Put stuff akc.\n");
       }
 
       msg[0] = 'A';
       msg[1] = '\0';
-      Reply(*tid, msg, 2);
+      Reply(tid, msg, 2);
     }
     else {
-      bwputstr(COM2, "Unknown message type");
+      bwputstr(COM2, "Unknown RPS Server type\n");
     }
   }
+  Exit();
+}
+
+void startServerRPS() {
+  for (int i = 0; i < MAX_CLIENT; i++) {
+    playing_array[i].move1 = -1;
+    playing_array[i].move2 = -1;
+    playing_stack[i] = &playing_array[i];
+  }
+  num_pair_left = MAX_CLIENT-1;
+  waiting_client = -1;
+
+  Create(2, serverTask);
 }

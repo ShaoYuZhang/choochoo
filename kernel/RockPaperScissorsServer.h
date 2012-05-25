@@ -14,9 +14,11 @@
 #define ROCK 3
 #define HAS_QUIT 10
 
+#define RPS_SERVER_NAME "RPS_SERVER\0\0\0"
+
 typedef struct PlayMessage {
-		char index;
-		char move;
+  char index;
+  char move;
 } PlayMessage;
 
 void startServerRPS();

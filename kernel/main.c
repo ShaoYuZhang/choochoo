@@ -3,23 +3,27 @@
 #include <syscall.h>
 #include <memory.h>
 #include <NameServer.h>
+#include <RockPaperScissorsServer.h>
+#include <RockPaperScissorsClient.h>
 
 void task2();
 
 void task0() {
   bwputstr(COM2, "Start name\n");
   startNameserver();
+  startServerRPS();
+  startClientsRPS();
 
-  bwputstr(COM2, "register\n\r");
-  char* NAME = "TASK0\0\0\0";
-  int reply = RegisterAs(NAME);
-  reply = WhoIs(NAME);
-  bwprintf(COM2, "%d who1 is \n\r", reply);
+  //bwputstr(COM2, "register\n\r");
+  //char* NAME = "TASK0\0\0\0";
+  //int reply = RegisterAs(NAME);
+  //reply = WhoIs(NAME);
+  //bwprintf(COM2, "%d who1 is \n\r", reply);
 
-  int tid2 = Create(2, task2);
-  bwprintf(COM2, "%d tid \n\r", tid2);
-  reply = WhoIs("TASK2");
-  bwprintf(COM2, "%d who2 is \n\r", reply);
+  //int tid2 = Create(2, task2);
+  //bwprintf(COM2, "%d tid \n\r", tid2);
+  //reply = WhoIs("TASK2");
+  //bwprintf(COM2, "%d who2 is \n\r", reply);
 
   //char *a = "Hello\n\r";
   //char b[10];

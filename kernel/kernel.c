@@ -189,7 +189,6 @@ int kernel_send(int reciever_tid, char *msg, int msglen, char *reply, int replyl
     *receiver_return = actual_msglen;
     receiver->state = READY;
     *receiver_tid = sender->id;
-    bwprintf(COM2, "Sending block: %d", sender->id);
     scheduler_append(receiver);
     sender->state = REPLY_BLOCK;
   } else {
@@ -213,7 +212,7 @@ void kernel_receive(int *tid, char *msg, int msglen) {
     receiver->sendQ = receiver->sendQ->next;
 
     volatile int* sender_sp = sender->sp;
-    int sender_tid = (sender_sp[0] & MASK_HIGHER) >> 16;
+    int sender_tid = sender->id;
     char* sender_msg = (char *)sender_sp[1];
     int sender_msglen = (sender_sp[2] & MASK_HIGHER) >> 16;
 
@@ -222,7 +221,6 @@ void kernel_receive(int *tid, char *msg, int msglen) {
     *receiver_return = actual_msglen;
     receiver->state = READY;
     *tid = sender_tid;
-    bwprintf(COM2, "Receive block: %d", sender_tid);
     scheduler_append(receiver);
     sender->state = REPLY_BLOCK;
   } else {

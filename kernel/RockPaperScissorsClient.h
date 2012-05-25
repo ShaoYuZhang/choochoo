@@ -3,11 +3,13 @@
 
 void client1();
 
-int SignUp(signed char server_tid);
+void startClientsRPS();
 
-int Play(signed char server_tid, char index, char move);
+char SignUp(signed char server_tid);
 
-int Quit(signed char server_tid);
+char Play(signed char server_tid, char index, char move);
+
+char Quit(signed char server_tid, char index);
 
 
 #endif // RPS_CLIENT_H_
