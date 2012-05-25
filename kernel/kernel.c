@@ -7,8 +7,16 @@
 #include <Scheduler.h>
 #include <bwio.h>
 
-extern int _TextStart;
-extern int _TextEnd;
+static int (*syscall_handler[8])(const int, const int, const int, const int) = {
+  kernel_createtask,
+  kernel_mytid,
+  kernel_myparenttid,
+  kernel_pass,
+  kernel_reply,
+  kernel_send,
+  kernel_receive,
+  kernel_exit
+};
 
 static void install_interrupt_handlers() {
 	INSTALL_INTERRUPT_HANDLER(SWI_VECTOR, asm_handle_swi);
@@ -26,36 +34,34 @@ void kernel_init() {
 
 void handle_swi(int** sp_pointer) {
   // task stack layout reminder
-  // sp: r0-r12, lr, spsr
-	volatile int *r0 = *sp_pointer;
-	int request = *r0 & MASK_LOWER;
+  // sp: arg0-r12, lr, spsr
+	volatile int *arg0 = *sp_pointer;
+	int request = *arg0 & MASK_LOWER;
 	int arg1 = (*sp_pointer)[1];
 	int arg2 = (*sp_pointer)[2];
 	int arg3 = (*sp_pointer)[3];
 
   // TODO(zhang) branch is ugly function[request](arg, arg, arg, arg);
+  //
+#if 1
 	switch (request) {
 		case SYSCALL_CREATE:
     {
-			*r0 = kernel_createtask(arg1, (func_t) arg2);
-      scheduler_move2ready();
+			*arg0 = kernel_createtask(arg1, (func_t) arg2);
 			break;
     }
     case SYSCALL_MYTID:
     {
-      *r0 = kernel_mytid();
-      scheduler_move2ready();
+      *arg0 = kernel_mytid();
       break;
     }
     case SYSCALL_MYPARENTTID:
     {
-      *r0 = kernel_myparenttid();
-      scheduler_move2ready();
+      *arg0 = kernel_myparenttid();
       break;
     }
     case SYSCALL_PASS:
     {
-      scheduler_move2ready();
       break;
     }
     case SYSCALL_EXIT:
@@ -65,10 +71,10 @@ void handle_swi(int** sp_pointer) {
     }
     case SYSCALL_SEND:
     {
-      int tid = (*r0 & MASK_HIGHER) >> 16;
+      int tid = (*arg0 & MASK_HIGHER) >> 16;
       int msglen = (arg2 & MASK_HIGHER) >> 16;
       int replylen = arg2 & MASK_LOWER;
-      *r0 = kernel_send(tid, (char *)arg1, msglen, (char *)arg3, replylen);
+      *arg0 = kernel_send(tid, (char *)arg1, msglen, (char *)arg3, replylen);
       break;
     }
     case SYSCALL_RECEIVE:
@@ -78,8 +84,7 @@ void handle_swi(int** sp_pointer) {
     }
     case SYSCALL_REPLY:
     {
-      *r0 = kernel_reply(arg1, (char *)arg2, arg3);
-      scheduler_move2ready();
+      *arg0 = kernel_reply(arg1, (char *)arg2, arg3);
       break;
     }
 		default:
@@ -88,6 +93,11 @@ void handle_swi(int** sp_pointer) {
 			break;
     }
 	}
+#endif
+
+  if (request <= SYSCALL_REPLY) {
+    scheduler_move2ready();
+  }
 }
 
 void kernel_runloop() {
@@ -105,22 +115,13 @@ void kernel_runloop() {
 }
 
 int kernel_createtask(int priority, func_t code) {
-	if (priority < MIN_PRIORITY || priority > MAX_PRIORITY) {
-		return -1;
-	}
-	unsigned int codeaddr = (unsigned int)code;
-
-	// probably not in the text region
-	if (codeaddr < (unsigned int)&_TextStart || codeaddr >= (unsigned int)&_TextEnd ) {
-		return -3;
-	}
-
   // | -------------->
   // | TD | stack ->>>>
   addr mem = allocate_user_memory();
   if (mem == NULL) {
     return -2;
   }
+
   volatile TaskDescriptor* td = &tds[tid_counter];
   td->id = tid_counter++;
 	td->state = READY;
@@ -228,7 +229,8 @@ void kernel_receive(int *tid, char *msg, int msglen) {
   }
 }
 
-int kernel_reply(int tid, char* reply, int replylen) {
+int kernel_reply(int tid, int arg2, int replylen) {
+  char* reply = (char*) arg2;
   if (tid >= NUM_MAX_TASK){
     return -1;
   }
@@ -255,3 +257,5 @@ int kernel_reply(int tid, char* reply, int replylen) {
   scheduler_append(sender);
   return 0;
 }
+
+void kernel_pass(int n1, int n2, int n3, int n4) {}
