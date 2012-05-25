@@ -15,8 +15,8 @@ static const int MultiplyDeBruijnBitPosition[32] =
 
 void init_ready_queue() {
   for (int i = 0; i < NUM_PRIORITY; ++i) {
-    taskReadyQueues[i].begin = NULL;
-    taskReadyQueues[i].end = NULL;
+    taskReadyQueues[i].begin = (TaskDescriptor*)NULL;
+    taskReadyQueues[i].end = (TaskDescriptor*)NULL;
   }
   queueFullMask = 0;
 }
@@ -24,27 +24,27 @@ void init_ready_queue() {
 volatile TaskDescriptor* next_ready_task() {
   // hack http://stackoverflow.com/questions/757059/position-of-least-significant-bit-that-is-set
   int i = MultiplyDeBruijnBitPosition[((queueFullMask & -queueFullMask) * 0x077CB531U) >> 27]; //
-  if (taskReadyQueues[i].begin != NULL) {
+  if (taskReadyQueues[i].begin != (TaskDescriptor*)NULL) {
     volatile TaskDescriptor* result = taskReadyQueues[i].begin;
     taskReadyQueues[i].begin = taskReadyQueues[i].begin->next;
 
-    if (taskReadyQueues[i].begin == NULL) {
-      taskReadyQueues[i].end = NULL;
+    if (taskReadyQueues[i].begin == (TaskDescriptor*)NULL) {
+      taskReadyQueues[i].end = (TaskDescriptor*)NULL;
       queueFullMask &= (~(1 << i));
     }
 
-    result->next = NULL;
+    result->next = (TaskDescriptor*)NULL;
     return result;
   }
 
-  return NULL;
+  return (TaskDescriptor*)NULL;
 }
 
 void append_task(volatile TaskDescriptor* td) {
-  td->next = NULL;
+  td->next = (TaskDescriptor*)NULL;
   int priority = td->priority;
   queueFullMask |= 1 << priority;
-  if (taskReadyQueues[priority].begin == NULL) {
+  if (taskReadyQueues[priority].begin == (TaskDescriptor*)NULL) {
     taskReadyQueues[priority].begin = td;
     taskReadyQueues[priority].end = td;
   } else {

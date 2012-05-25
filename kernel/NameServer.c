@@ -18,7 +18,7 @@ int equal(char* a, char* b, int l){
 }
 
 static void nameserver_task() {
-  int* tid;
+  int* tid = (int*)NULL;
   char msg[16];
   int maxLen = 16;
   ASSERT(0 == MyTid(), "Nameserver tid is not zero.");
@@ -53,10 +53,6 @@ void startNameserver() {
   nameserverTid = Create(1, nameserver_task);
 }
 
-int whoIsNameserver() {
-  return nameserverTid;
-}
-
 int RegisterAs(char* name) {
   int len = strlen(name);
   name[len+1] = REGISTER_AS;
@@ -68,7 +64,11 @@ int RegisterAs(char* name) {
 }
 
 int WhoIs(char* name) {
-  char reply[64];
-  int r = Send(NAMESERVER_TID, name, WHO_IS, reply, 64);
-  return *(reply+4);
+  int len = strlen(name);
+  name[len+1] = WHO_IS;
+  name[len+2] = '\0';
+
+  char reply[16];
+  Send(NAMESERVER_TID, name, len+3, reply, 16);
+  return *((int*)reply);
 }

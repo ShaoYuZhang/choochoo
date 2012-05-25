@@ -21,6 +21,12 @@ void kernel_pass();
 
 void kernel_exit();
 
+int kernel_send(int tid, char *msg, int msglen, char *reply, int replylen);
+
+void kernel_receive(int *tid, char *msg, int msglen);
+
+int kernel_reply(int tid, char* reply, int replylen);
+
 void kernel_runloop();
 
 #endif // KERNEL_H_

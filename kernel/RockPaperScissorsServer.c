@@ -70,10 +70,10 @@ void startServerRPS() {
   waiting_client = -1;
 
   char msg[32];
-  int* tid = NULL;
+  Tid* tid = (Tid*)NULL;
 
   while (1) {
-    int len = Receive(tid, msg, 32);
+    int len = Receive((int*)tid, msg, 32);
     char type = msg[len-1];
     bwputc(COM2, type);
     if (type == SIGNUP) {

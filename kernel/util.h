@@ -9,13 +9,15 @@
 
 #define ON  1
 #define OFF 0
-#define NULL (char*)1
 
 typedef signed char Tid;
+#define MASK_HIGHER 0xFFFF0000
+#define MASK_LOWER 0xFFFF
 
 ////////// TYPES
 
 typedef unsigned int* addr;
+#define NULL (addr)1
 
 ////////// VAR ARG
 typedef char *va_list;
