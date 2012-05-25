@@ -26,7 +26,7 @@ int Create(int priority, func_t code) {
 		return -1;
 	}
   // probably not in the text region
-	if (code < (func_t)&_TextStart || code >= (func_t)&_TextEnd ) {
+	if (code < (func_t)&_TextStart || code >= (func_t)&_TextEnd) {
     return -3;
 	}
 	return syscall(SYSCALL_CREATE, priority, (int) code, 0);
