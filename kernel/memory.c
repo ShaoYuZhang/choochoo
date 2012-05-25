@@ -48,6 +48,6 @@ void free_user_memory(addr a) {
 
 void memcpy_no_overlap_asm(char* from, char* to, int len) {
   for (int i = 0; i < len; i++){
-    from[i] = to[i];
+    to[i] = from[i];
   }
 }

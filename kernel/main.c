@@ -6,14 +6,31 @@
 
 void task1() {
   //startNameserver();
-  int a;
-  bwprintf(COM2, "1Stack:%d\n", (int)&a);
+
+  char *a = "Hello\n\r";
+  char b[10];
+  int temp = Send(1, a, 8, b, 10);
+  bwprintf( COM2, "%d char replied\n\r", temp);
+  bwputstr( COM2, b);
   Exit();
 }
 
 void task2() {
   int a;
-  bwprintf(COM2, "2Stack:%d\n", (int)&a);
+  char b[10];
+  int temp = Receive( &a, b, 10);
+  bwprintf( COM2, "%d char received\n\r", temp);
+  bwprintf( COM2, "from task %d\n\r", a);
+  bwputstr( COM2, b);
+
+  char *c = "Hey\n\r";
+  Reply(0, c, 6);
+
+  Exit();
+}
+
+void task3() {
+
   Exit();
 }
 
