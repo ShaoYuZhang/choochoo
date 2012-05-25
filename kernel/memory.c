@@ -1,4 +1,5 @@
 #include <memory.h>
+#include <bwio.h>
 #include <util.h>
 #include <Scheduler.h>
 #include <syscall.h>
@@ -34,7 +35,10 @@ addr allocate_user_memory() {
   if (freeTaskBlocksCount == -1) {
     return NULL;
   } else {
-    return (addr) freeTaskBlocks[freeTaskBlocksCount--];
+    addr tmp = (addr) freeTaskBlocks[freeTaskBlocksCount--];
+    bwprintf(COM2, "Address:%d\0", (int)tmp);
+    bwputstr(COM2, "-----:\n" );
+    return tmp;
   }
 }
 

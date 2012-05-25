@@ -9,4 +9,15 @@ inline int strlen(char* name) {
   return c - name;
 }
 
+int equal(char* a, char* b, int l){
+  for(int i = 0; i < l ; i++){
+    if (a[i] != b[i] ){
+      return 0;
+    }
+  }
+  return 1;
+}
+
+
+
 #endif //STRING_H_

@@ -3,34 +3,24 @@
 #include <string.h>
 
 #define NUM_TASK_NAMESERVER 20
+#define MSG_LEN 8
 
-static int nameserverTid;
 static char taskName[NUM_TASK_NAMESERVER][128];
 static int emptyTaskName;
 
-int equal(char* a, char* b, int l){
-  for(int i = 0; i < l ; i++){
-    if (a[i] != b[i] ){
-      return 0;
-    }
-  }
-  return 1;
-}
-
 static void nameserver_task() {
   int* tid = (int*)NULL;
-  char msg[16];
-  int maxLen = 16;
-  ASSERT(0 == MyTid(), "Nameserver tid is not zero.");
+  char msg[MSG_LEN];
+  emptyTaskName = 0;
 
   while (1) {
-    int len = Receive(tid, msg, maxLen);
+    int len = Receive(tid, msg, MSG_LEN);
     char type = msg[len-2];
 
     if (type == WHO_IS) {
       int found = -1;
       for (int i = 0; i < NUM_TASK_NAMESERVER; i++) {
-        if (equal(msg, taskName[i], maxLen)) {
+        if (equal(msg, taskName[i], MSG_LEN)) {
           found = i; break;
         }
       }
@@ -39,18 +29,19 @@ static void nameserver_task() {
       *result = found;
       Reply(*tid, msg, 4);
     } else if (type == REGISTER_AS) {
-      memcpy_no_overlap_asm(msg, taskName[emptyTaskName], len-2);
+      memcpy_no_overlap_asm(msg, taskName[emptyTaskName++], len-2);
+      ASSERT(emptyTaskName < NUM_TASK_NAMESERVER, "Too many tasks registered with nameserver.");
       msg[0] = '\0';
       Reply(*tid, msg, 1);
     } else {
-      bwputstr(COM2, "Unknown aciton.");
-      break;
+      ASSERT(FALSE, "Unknown Action.");
     }
   }
 }
 
 void startNameserver() {
-  nameserverTid = Create(1, nameserver_task);
+  int nameserverTid = Create(1, nameserver_task);
+  ASSERT(NAMESERVER_TID == nameserverTid, "Nameserver tid is not zero.");
 }
 
 int RegisterAs(char* name) {
