@@ -4,6 +4,8 @@
 #include <memory.h>
 #include <NameServer.h>
 
+void task2();
+
 void task0() {
   startNameserver();
 
@@ -11,7 +13,14 @@ void task0() {
   char* NAME = "TASK0\0\0\0";
   int reply = RegisterAs(NAME);
   reply = WhoIs(NAME);
-  bwprintf(COM2, "%d who is \n\r", reply);
+  bwprintf(COM2, "%d who1 is \n\r", reply);
+
+  int tid2 = Create(2, task2);
+  bwprintf(COM2, "%d tid \n\r", tid2);
+  reply = WhoIs("TASK2");
+  bwprintf(COM2, "%d who2 is \n\r", reply);
+
+
 
   //char *a = "Hello\n\r";
   //char b[10];
@@ -22,6 +31,9 @@ void task0() {
 }
 
 void task2() {
+  char* NAME = "TASK2\0\0\0";
+  int reply = RegisterAs(NAME);
+
   int a;
   char b[10];
   int temp = Receive( &a, b, 10);

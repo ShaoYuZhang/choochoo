@@ -3,9 +3,15 @@
 #include <string.h>
 
 #define NUM_TASK_NAMESERVER 20
-#define MSG_LEN 8
+#define MSG_LEN 16
 
-static char taskName[NUM_TASK_NAMESERVER][128];
+typedef struct Task {
+		signed char tid;
+    char name[64];
+} Task;
+
+
+static Task tasks[NUM_TASK_NAMESERVER];
 static int emptyTaskName;
 
 static void nameserver_task() {
@@ -14,6 +20,7 @@ static void nameserver_task() {
   emptyTaskName = 0;
 
   while (1) {
+    bwputstr(COM2, "Receiving \n");
     int len = Receive(&tid, msg, MSG_LEN);
     char type = msg[len-2];
     bwprintf(COM2, "Receive: %d\n", len);
@@ -23,20 +30,21 @@ static void nameserver_task() {
 
     if (type == WHO_IS) {
       int found = -1;
-      bwprintf(COM2, "Found: %d\n", found);
       for (int i = 0; i < emptyTaskName; i++) {
-        if (equal(msg, taskName[i], len-2)) {
+        if (equal(msg, tasks[i].name, len-2)) {
           found = i; break;
         }
       }
       ASSERT(found != -1, "No task with name found.");
       bwprintf(COM2, "Found: %d\n", found);
 
-      int* result = (int*)msg;
-      *result = found;
-      Reply(tid, msg, 4);
+      msg[0] = tasks[found].tid;
+      msg[1] = '\0';
+
+      Reply(tid, msg, 2);
     } else if (type == REGISTER_AS) {
-      memcpy_no_overlap_asm(msg, taskName[emptyTaskName++], len-2);
+      tasks[emptyTaskName].tid = (signed char)tid;
+      memcpy_no_overlap_asm(msg, tasks[emptyTaskName++].name, len-2);
       ASSERT(emptyTaskName < NUM_TASK_NAMESERVER, "Too many tasks registered with nameserver.");
       msg[0] = '\0';
       Reply(tid, msg, 1);
@@ -67,7 +75,7 @@ int WhoIs(char* name) {
   name[len+1] = WHO_IS;
   name[len+2] = '\0';
 
-  char reply[5];
-  Send(NAMESERVER_TID, name, len+3, reply, 5);
-  return *((int*)reply);
+  char reply[2];
+  Send(NAMESERVER_TID, name, len+3, reply, 2);
+  return (int)(reply[0]);
 }
