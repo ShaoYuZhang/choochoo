@@ -17,7 +17,7 @@ typedef signed char Tid;
 ////////// TYPES
 
 typedef unsigned int* addr;
-#define NULL (addr)0
+#define NULL (addr) 1
 
 ////////// VAR ARG
 typedef char *va_list;
