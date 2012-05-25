@@ -5,7 +5,7 @@
 
 #define REGISTER_AS  79
 #define WHO_IS       81
-#define NAMESERVER_TID 0
+#define NAMESERVER_TID 1
 
 void startNameserver();
 

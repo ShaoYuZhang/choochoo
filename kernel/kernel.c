@@ -73,7 +73,7 @@ void handle_swi(int** sp_pointer) {
     }
     case SYSCALL_RECEIVE:
     {
-      kernel_receive((int *)arg1, (char *)arg2, arg3);
+      kernel_receive((int*)arg1, (char*)arg2, arg3);
       break;
     }
     case SYSCALL_REPLY:
@@ -153,25 +153,25 @@ void kernel_exit() {
   td->state = ZOMBIE;
 }
 
-int kernel_send(int tid, char *msg, int msglen, char *reply, int replylen) {
+int kernel_send(int reciever_tid, char *msg, int msglen, char *reply, int replylen) {
   volatile TaskDescriptor *sender = scheduler_get_running();
 
   int return_val = 0 ;
-  if (tid >= NUM_MAX_TASK){
+  if (reciever_tid >= NUM_MAX_TASK){
     return_val = -1;
   }
 
-  if (tid >= tid_counter) {
+  if (reciever_tid >= tid_counter) {
     return_val = -2;
   }
-  volatile TaskDescriptor* receiver = &tds[tid];
-  ASSERT(sender->id != tid, "Sending message to self.");
+  volatile TaskDescriptor* receiver = &tds[reciever_tid];
+  ASSERT(sender->id != reciever_tid, "Sending message to self.");
 
   if (receiver->state == ZOMBIE) {
     return_val = -2;
   }
 
-  if (return_val != 0){
+  if (return_val != 0) {
     scheduler_move2ready();
     return return_val;
   }
@@ -180,15 +180,16 @@ int kernel_send(int tid, char *msg, int msglen, char *reply, int replylen) {
     // need to wake up receiver, so need params from reciever
     volatile int* receiver_sp = receiver->sp;
     volatile int* receiver_return = receiver_sp;
-    int* receiver_tid = (int *)receiver_sp[1];
-    char* receiver_msg = (char *)receiver_sp[2];
+    int* receiver_tid = (int*) receiver_sp[1];
+    char* receiver_msg = (char*)receiver_sp[2];
     int receiver_msglen = receiver_sp[3];
     int actual_msglen = msglen < receiver_msglen ? msglen : receiver_msglen;
     memcpy_no_overlap_asm(msg, receiver_msg, actual_msglen);
 
     *receiver_return = actual_msglen;
     receiver->state = READY;
-    *receiver_tid = tid;
+    *receiver_tid = sender->id;
+    bwprintf(COM2, "Sending block: %d", sender->id);
     scheduler_append(receiver);
     sender->state = REPLY_BLOCK;
   } else {
@@ -221,6 +222,7 @@ void kernel_receive(int *tid, char *msg, int msglen) {
     *receiver_return = actual_msglen;
     receiver->state = READY;
     *tid = sender_tid;
+    bwprintf(COM2, "Receive block: %d", sender_tid);
     scheduler_append(receiver);
     sender->state = REPLY_BLOCK;
   } else {

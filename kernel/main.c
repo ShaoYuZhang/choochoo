@@ -4,15 +4,20 @@
 #include <memory.h>
 #include <NameServer.h>
 
-void task1() {
-  //startNameserver();
+void task0() {
+  startNameserver();
 
+  bwputstr(COM2, "register\n\r");
+  char* NAME = "TASK0\0\0\0";
+  int reply = RegisterAs(NAME);
+  reply = WhoIs(NAME);
+  bwprintf(COM2, "%d who is \n\r", reply);
 
-  char *a = "Hello\n\r";
-  char b[10];
-  int temp = Send(1, a, 8, b, 10);
-  bwprintf( COM2, "%d char replied\n\r", temp);
-  bwputstr( COM2, b);
+  //char *a = "Hello\n\r";
+  //char b[10];
+  //int temp = Send(1, a, 8, b, 10);
+  //bwprintf( COM2, "%d char replied\n\r", temp);
+  //bwputstr( COM2, b);
   Exit();
 }
 
@@ -51,8 +56,8 @@ int main(int argc, char* argv[]) {
   //bwputstr(COM2, from);
   //bwputstr(COM2, "\n");
   //bwputstr(COM2, destination);
-  kernel_createtask(2, task1);
-  kernel_createtask(2, task2);
+  kernel_createtask(2, task0);
+  //kernel_createtask(2, task2);
   //kernel_createtask(3, task3);
 	kernel_runloop();
 	return 0;
