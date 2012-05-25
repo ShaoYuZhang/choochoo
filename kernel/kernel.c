@@ -96,7 +96,7 @@ void kernel_runloop() {
 
   // TODO: when all tasks blocked.. this exits.
   //       should be when all task are in ZOMBIE
-	while ((td = scheduler_get())) {
+	while ((td = scheduler_get()) != (TaskDescriptor *)NULL) {
 		sp_pointer = (int**)&(td->sp);
     scheduler_set_running(td);
 		asm_switch_to_usermode(sp_pointer);
@@ -140,12 +140,12 @@ int kernel_createtask(int priority, func_t code) {
 
 int kernel_mytid() {
 	volatile TaskDescriptor *td = scheduler_get_running();
-	return td ? td->id : 0xdeadbeef;
+	return td != (TaskDescriptor *)NULL ? td->id : 0xdeadbeef;
 }
 
 int kernel_myparenttid() {
 	volatile TaskDescriptor *td = scheduler_get_running();
-	return td ? td->parent_id : 0xdeadbeef;
+	return td != (TaskDescriptor *)NULL ? td->parent_id : 0xdeadbeef;
 }
 
 void kernel_exit() {
