@@ -6,7 +6,7 @@ volatile static TaskDescriptor *currentRunningTask;
 
 void scheduler_init() {
   init_ready_queue();
-  currentRunningTask = NULL;
+  currentRunningTask = (TaskDescriptor*)NULL;
 }
 
 volatile TaskDescriptor* scheduler_get_running() {

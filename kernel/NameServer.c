@@ -10,7 +10,6 @@ typedef struct Task {
     char name[64];
 } Task;
 
-
 static Task tasks[NUM_TASK_NAMESERVER];
 static int emptyTaskName;
 

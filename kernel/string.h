@@ -1,9 +1,11 @@
 #ifndef STRING_H_
 #define STRING_H_
 
+#include <util.h>
+
 inline int strlen(char* name) {
   char* c = name;
-  while (*c) {
+  while (*c != '\0') {
     c++;
   }
   return c - name;

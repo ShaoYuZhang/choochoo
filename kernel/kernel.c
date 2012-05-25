@@ -208,7 +208,7 @@ int kernel_send(int reciever_tid, char *msg, int msglen, char *reply, int replyl
 void kernel_receive(int *tid, char *msg, int msglen) {
   volatile TaskDescriptor *receiver = scheduler_get_running();
   volatile int* receiver_return = receiver->sp;
-  if (receiver->sendQ) {
+  if (receiver->sendQ != (TaskDescriptor*)NULL) {
     volatile TaskDescriptor *sender = receiver->sendQ;
     receiver->sendQ = receiver->sendQ->next;
 

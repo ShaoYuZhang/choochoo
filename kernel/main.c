@@ -7,6 +7,7 @@
 void task2();
 
 void task0() {
+  bwputstr(COM2, "Start name\n");
   startNameserver();
 
   bwputstr(COM2, "register\n\r");
@@ -19,8 +20,6 @@ void task0() {
   bwprintf(COM2, "%d tid \n\r", tid2);
   reply = WhoIs("TASK2");
   bwprintf(COM2, "%d who2 is \n\r", reply);
-
-
 
   //char *a = "Hello\n\r";
   //char b[10];
