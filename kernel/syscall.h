@@ -9,10 +9,10 @@ typedef void (*func_t)();
 #define SYSCALL_MYTID 1
 #define SYSCALL_MYPARENTTID 2
 #define SYSCALL_PASS 3
-#define SYSCALL_EXIT 4
+#define SYSCALL_REPLY 4
 #define SYSCALL_SEND 5
 #define SYSCALL_RECEIVE 6
-#define SYSCALL_REPLY 7
+#define SYSCALL_EXIT 7
 
 int Create(int priority, func_t code);
 

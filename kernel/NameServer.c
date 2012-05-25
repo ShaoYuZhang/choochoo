@@ -53,7 +53,7 @@ static void nameserver_task() {
 
 void startNameserver() {
   int nameserverTid = Create(1, nameserver_task);
-  ASSERT(NAMESERVER_TID == nameserverTid, "Nameserver tid is expected.");
+  ASSERT(NAMESERVER_TID == nameserverTid, "Nameserver tid is not as expected.");
 }
 
 int RegisterAs(char* name) {

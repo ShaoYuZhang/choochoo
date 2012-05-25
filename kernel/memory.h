@@ -4,15 +4,6 @@
 #include <util.h>
 #include <task.h>
 
-// Also look at the variables in orex.ld
-#define USER_MEM_START	0x300000
-#define USER_MEM_END	0x1900000
-// the size of user memory in bytes (64 KB)
-#define STACK_SIZE 65536
-
-// Artificial limit..
-#define NUM_MAX_TASK 128
-
 #define BYTES2WORDS(x) ((x) >> 2)
 #define NEXTHIGHESTWORD(x) ((x)-(x)%4)
 
