@@ -122,7 +122,6 @@ int kernel_createtask(int priority, func_t code) {
     return -2;
   }
   volatile TaskDescriptor* td = &tds[tid_counter];
-  bwprintf(COM2, "Id:%d\0", (int)td->id);
   td->id = tid_counter++;
 	td->state = READY;
 	td->priority = priority;

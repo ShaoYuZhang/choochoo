@@ -36,7 +36,7 @@ addr allocate_user_memory() {
     return NULL;
   } else {
     addr tmp = (addr) freeTaskBlocks[freeTaskBlocksCount--];
-    bwprintf(COM2, "Address:%d\0", (int)tmp);
+    bwprintf(COM2, "Address:%d  ", (int)tmp);
     bwputstr(COM2, "-----:\n" );
     return tmp;
   }
