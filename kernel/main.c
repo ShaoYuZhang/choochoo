@@ -7,6 +7,7 @@
 void task1() {
   //startNameserver();
 
+
   char *a = "Hello\n\r";
   char b[10];
   int temp = Send(1, a, 8, b, 10);
@@ -50,7 +51,7 @@ int main(int argc, char* argv[]) {
   //bwputstr(COM2, from);
   //bwputstr(COM2, "\n");
   //bwputstr(COM2, destination);
-  kernel_createtask(3, task1);
+  kernel_createtask(2, task1);
   kernel_createtask(2, task2);
   //kernel_createtask(3, task3);
 	kernel_runloop();
