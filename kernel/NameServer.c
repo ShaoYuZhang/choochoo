@@ -1,9 +1,11 @@
 #include "NameServer.h"
+#include <memory.h>
 
 #define NUM_TASK_NAMESERVER 20
 
 static int nameserverTid;
-static char* taskName[NUM_TASK_NAMESERVER];
+static char taskName[NUM_TASK_NAMESERVER][128];
+static int emptyTaskName;
 
 int equal(char* a, char* b, int l){
   for(int i = 0; i < l ; i++){
@@ -16,12 +18,14 @@ int equal(char* a, char* b, int l){
 
 static void nameserver_task() {
   int* tid;
-  char msg[128];
-  int maxLen = 128;
+  char msg[16];
+  int maxLen = 16;
 
   while (1) {
     int len = Receive(tid, msg, maxLen);
-    if (len == WHO_IS) {
+    char type = msg[len-2];
+
+    if (type == WHO_IS) {
       int found = -1;
       for (int i = 0; i < NUM_TASK_NAMESERVER; i++) {
         if (equal(msg, taskName[i], maxLen)) {
@@ -32,8 +36,12 @@ static void nameserver_task() {
       int* result = (int*)msg;
       *result = found;
       Reply(*tid, msg, 4);
-    } else if (len == REGISTER_AS) {
+    } else if (type == REGISTER_AS) {
+      memcpy_no_overlap_asm(msg, taskName[emptyTaskName], len-2);
+      msg[0] = '\0';
+      Reply(*tid, msg, 1);
     } else {
+      bwputstr(COM2, "Unknown aciton.");
       break;
     }
   }
