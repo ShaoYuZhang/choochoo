@@ -13,6 +13,7 @@ typedef void (*func_t)();
 #define SYSCALL_SEND 5
 #define SYSCALL_RECEIVE 6
 #define SYSCALL_EXIT 7
+#define LAST_SYSCALL 8
 
 int Create(int priority, func_t code);
 

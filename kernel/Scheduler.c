@@ -28,7 +28,7 @@ void scheduler_set_running(volatile TaskDescriptor* td) {
 }
 
 void scheduler_move2ready() {
-	ASSERT(currentRunningTask, "no task running to move to ready");
+	ASSERT(currentRunningTask, "No task running to move to ready");
   currentRunningTask->state = READY;
 	scheduler_append(currentRunningTask);
 }

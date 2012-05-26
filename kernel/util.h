@@ -63,7 +63,7 @@ typedef char *va_list;
 
 ///////////// DEBUG
 #define ASSERT_ENABLED 1
-#define MORE_CHECKING 0
+#define MORE_CHECKING 1
 
 #if ASSERT_ENABLED
 #define ASSERT(X, ...) { \

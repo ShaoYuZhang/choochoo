@@ -35,11 +35,13 @@ void kernel_init() {
 void handle_swi(int** sp_pointer) {
   // task stack layout reminder
   // sp: arg0-r12, lr, spsr
-	volatile int *arg0 = *sp_pointer;
+	int *arg0 = *sp_pointer;
 	int request = *arg0 & MASK_LOWER;
 	int arg1 = (*sp_pointer)[1];
 	int arg2 = (*sp_pointer)[2];
 	int arg3 = (*sp_pointer)[3];
+
+  ASSERT(request >= 0 && request < LAST_SYSCALL, "System call not in range.");
   (*syscall_handler[request])(arg0, arg1, arg2, arg3);
 
 //	switch (request) {
@@ -133,9 +135,7 @@ void kernel_createtask(int* returnPtr, int priority, func_t code) {
 	kernel_mytid(&(td->parent_id));
   td->next = (TaskDescriptor*)NULL;
   td->sendQ = (TaskDescriptor*)NULL;
-  unsigned int tmp = (unsigned int)mem + STACK_SIZE;
-  tmp = tmp - tmp%4 - 16;
-  td->sp = (int *)(tmp - 4 * 14); //
+  td->sp = (unsigned int*)(mem + STACK_SIZE);
   td->sp[13] = (int) code; // LR
   td->sp[14] = 0x10; //spsr
 
