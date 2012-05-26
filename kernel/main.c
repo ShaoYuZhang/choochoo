@@ -71,7 +71,8 @@ int main(int argc, char* argv[]) {
   //bwputstr(COM2, from);
   //bwputstr(COM2, "\n");
   //bwputstr(COM2, destination);
-  kernel_createtask(2, task0);
+  int returnVal;
+  kernel_createtask(&returnVal, 2, task0);
   //kernel_createtask(2, task2);
   //kernel_createtask(3, task3);
 	kernel_runloop();

@@ -3,18 +3,20 @@
 #include <string.h>
 
 #define NUM_TASK_NAMESERVER 20
-#define MSG_LEN 15
+#define MSG_LEN 16
 
 typedef struct Task {
 		signed char tid;
-    char name[MSG_LEN];
+    char name[16];
 } Task;
 
+static Task tasks[NUM_TASK_NAMESERVER];
+static int emptyTaskName;
+
 static void nameserver_task() {
-  Task tasks[NUM_TASK_NAMESERVER];
   int tid = -1;
   char msg[MSG_LEN];
-  int emptyTaskName = 0;
+  emptyTaskName = 0;
 
   while (1) {
     int len = Receive(&tid, msg, MSG_LEN);
@@ -38,8 +40,7 @@ static void nameserver_task() {
 
       Reply(tid, msg, 2);
     } else if (type == REGISTER_AS) {
-      //bwprintf(COM2, "Registering %d \n", tid);
-      //bwprintf(COM2, "Len %d \n", len-2);
+      bwprintf(COM2, "Registering %d \n", tid);
       tasks[emptyTaskName].tid = (signed char)tid;
       memcpy_no_overlap_asm(msg, tasks[emptyTaskName++].name, len-2);
       ASSERT(emptyTaskName < NUM_TASK_NAMESERVER, "Too many tasks registered with nameserver.");
@@ -53,7 +54,7 @@ static void nameserver_task() {
 
 void startNameserver() {
   int nameserverTid = Create(1, nameserver_task);
-  ASSERT(NAMESERVER_TID == nameserverTid, "Nameserver tid is not as expected.");
+  ASSERT(NAMESERVER_TID == nameserverTid, "Nameserver tid is expected.");
 }
 
 int RegisterAs(char* name) {

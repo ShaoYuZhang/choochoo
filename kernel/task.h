@@ -10,7 +10,6 @@ typedef enum TaskState {
     REPLY_BLOCK
 } TaskState;
 
-// TODO, optimize descriptor for size?
 typedef struct TaskDescriptor {
 		int id;
 		TaskState state;

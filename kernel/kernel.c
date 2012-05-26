@@ -40,60 +40,64 @@ void handle_swi(int** sp_pointer) {
 	int arg1 = (*sp_pointer)[1];
 	int arg2 = (*sp_pointer)[2];
 	int arg3 = (*sp_pointer)[3];
+  (*syscall_handler[request])(arg0, arg1, arg2, arg3);
 
-  // TODO(zhang) branch is ugly function[request](arg, arg, arg, arg);
-  //
-#if 1
-	switch (request) {
-		case SYSCALL_CREATE:
-    {
-			*arg0 = kernel_createtask(arg1, (func_t) arg2);
-			break;
-    }
-    case SYSCALL_MYTID:
-    {
-      *arg0 = kernel_mytid();
-      break;
-    }
-    case SYSCALL_MYPARENTTID:
-    {
-      *arg0 = kernel_myparenttid();
-      break;
-    }
-    case SYSCALL_PASS:
-    {
-      break;
-    }
-    case SYSCALL_EXIT:
-    {
-      kernel_exit();
-      break;
-    }
-    case SYSCALL_SEND:
-    {
-      int tid = (*arg0 & MASK_HIGHER) >> 16;
-      int msglen = (arg2 & MASK_HIGHER) >> 16;
-      int replylen = arg2 & MASK_LOWER;
-      *arg0 = kernel_send(tid, (char *)arg1, msglen, (char *)arg3, replylen);
-      break;
-    }
-    case SYSCALL_RECEIVE:
-    {
-      kernel_receive((int*)arg1, (char*)arg2, arg3);
-      break;
-    }
-    case SYSCALL_REPLY:
-    {
-      *arg0 = kernel_reply(arg1, (char *)arg2, arg3);
-      break;
-    }
-		default:
-    {
-			ERROR("Unknown system call %d (%x)\n", request, request);
-			break;
-    }
-	}
-#endif
+//	switch (request) {
+//		case SYSCALL_CREATE:
+//    {
+//			//kernel_createtask(arg0, arg1, (func_t) arg2);
+//      (*syscall_handler[SYSCALL_CREATE])(arg0, arg1, arg2, arg3);
+//			break;
+//    }
+//    case SYSCALL_MYTID:
+//    {
+//      //kernel_mytid(arg0);
+//      (*syscall_handler[SYSCALL_MYTID])(arg0, arg1, arg2, arg3);
+//      break;
+//    }
+//    case SYSCALL_MYPARENTTID:
+//    {
+//      //kernel_myparenttid(arg0);
+//      (*syscall_handler[SYSCALL_MYPARENTTID])(arg0, arg1, arg2, arg3);
+//      break;
+//    }
+//    case SYSCALL_PASS:
+//    {
+//      (*syscall_handler[SYSCALL_PASS])(arg0, arg1, arg2, arg3);
+//      break;
+//    }
+//    case SYSCALL_EXIT:
+//    {
+//      //kernel_exit();
+//      (*syscall_handler[SYSCALL_EXIT])(arg0, arg1, arg2, arg3);
+//      break;
+//    }
+//    case SYSCALL_SEND:
+//    {
+//      //kernel_send(arg0, arg1, arg2);
+//      (*syscall_handler[SYSCALL_SEND])(arg0, arg1, arg2, arg3);
+//      break;
+//    }
+//    case SYSCALL_RECEIVE:
+//    {
+//      //kernel_receive(arg0, arg1, arg2, arg3);
+//      (*syscall_handler[SYSCALL_RECEIVE])(arg0, arg1, arg2, arg3);
+//      break;
+//    }
+//    case SYSCALL_REPLY:
+//    {
+//      //*arg0 = kernel_reply(arg1, (char*)arg2, arg3);
+//      (*syscall_handler[SYSCALL_REPLY])(arg0, arg1, arg2, arg3);
+//      break;
+//    }
+//		default:
+//    {
+//			ERROR("Unknown system call %d (%x)\n", request, request);
+//      ASSERT(FALSE, "");
+//
+//			break;
+//    }
+//	}
 
   if (request <= SYSCALL_REPLY) {
     scheduler_move2ready();
@@ -114,19 +118,19 @@ void kernel_runloop() {
 	}
 }
 
-int kernel_createtask(int priority, func_t code) {
+//int kernel_createtask(int priority, func_t code) {
+void kernel_createtask(int* returnPtr, int priority, func_t code) {
   // | -------------->
   // | TD | stack ->>>>
   addr mem = allocate_user_memory();
   if (mem == NULL) {
-    return -2;
+    *returnPtr = -2;
   }
-
   volatile TaskDescriptor* td = &tds[tid_counter];
   td->id = tid_counter++;
 	td->state = READY;
 	td->priority = priority;
-	td->parent_id = kernel_mytid();
+	kernel_mytid(&(td->parent_id));
   td->next = (TaskDescriptor*)NULL;
   td->sendQ = (TaskDescriptor*)NULL;
   unsigned int tmp = (unsigned int)mem + STACK_SIZE;
@@ -136,17 +140,17 @@ int kernel_createtask(int priority, func_t code) {
   td->sp[14] = 0x10; //spsr
 
 	scheduler_append(td);
-	return td->id;
+	*returnPtr = td->id;
 }
 
-int kernel_mytid() {
+void kernel_mytid(int* returnVal) {
 	volatile TaskDescriptor *td = scheduler_get_running();
-	return td != (TaskDescriptor *)NULL ? td->id : 0xdeadbeef;
+	*returnVal = (td != (TaskDescriptor *)NULL ? td->id : 0xdeadbeef);
 }
 
-int kernel_myparenttid() {
+void kernel_myparenttid(int* returnVal) {
 	volatile TaskDescriptor *td = scheduler_get_running();
-	return td != (TaskDescriptor *)NULL ? td->parent_id : 0xdeadbeef;
+	*returnVal = (td != (TaskDescriptor *)NULL ? td->parent_id : 0xdeadbeef);
 }
 
 void kernel_exit() {
@@ -154,30 +158,20 @@ void kernel_exit() {
   td->state = ZOMBIE;
 }
 
-int kernel_send(int reciever_tid, char *msg, int msglen, char *reply, int replylen) {
-  volatile TaskDescriptor *sender = scheduler_get_running();
+void kernel_send(int* arg0, char *msg, int arg2) {
+  int receiver_tid = (*arg0 & MASK_HIGHER) >> 16;
+  volatile TaskDescriptor* sender = scheduler_get_running();
+  volatile TaskDescriptor* receiver = &tds[receiver_tid];
 
-  int return_val = 0 ;
-  if (reciever_tid >= NUM_MAX_TASK){
-    return_val = -1;
-  }
-
-  if (reciever_tid >= tid_counter) {
-    return_val = -2;
-  }
-  volatile TaskDescriptor* receiver = &tds[reciever_tid];
-  ASSERT(sender->id != reciever_tid, "Sending message to self.");
-
-  if (receiver->state == ZOMBIE) {
-    return_val = -2;
-  }
-
-  if (return_val != 0) {
+  if (receiver_tid >= tid_counter || receiver->state == ZOMBIE) {
     scheduler_move2ready();
-    return return_val;
+    *arg0 = -2;
+    return;
   }
+  ASSERT(sender->id != receiver_tid, "Sending message to self.");
 
   if (receiver->state == SEND_BLOCK) {
+    int msglen = (arg2 & MASK_HIGHER) >> 16;
     // need to wake up receiver, so need params from reciever
     volatile int* receiver_sp = receiver->sp;
     volatile int* receiver_return = receiver_sp;
@@ -202,11 +196,14 @@ int kernel_send(int reciever_tid, char *msg, int msglen, char *reply, int replyl
   }
 
   // note: will get overwritten later
-  return 0;
+  *arg0 = 0;
 }
 
-void kernel_receive(int *tid, char *msg, int msglen) {
-  volatile TaskDescriptor *receiver = scheduler_get_running();
+void kernel_receive(int not_used, int arg1, int arg2, int msglen) {
+  bwputstr(COM2, "MMMM\n");
+  int*  tid = (int*)  arg1;
+  char* msg = (char*) arg2;
+  volatile TaskDescriptor* receiver = scheduler_get_running();
   volatile int* receiver_return = receiver->sp;
   if (receiver->sendQ != (TaskDescriptor*)NULL) {
     volatile TaskDescriptor *sender = receiver->sendQ;
@@ -225,24 +222,22 @@ void kernel_receive(int *tid, char *msg, int msglen) {
     scheduler_append(receiver);
     sender->state = REPLY_BLOCK;
   } else {
+    // TODO, bad.. what about reply buffer
     receiver->state = SEND_BLOCK;
   }
 }
 
-int kernel_reply(int tid, int arg2, int replylen) {
-  char* reply = (char*) arg2;
-  if (tid >= NUM_MAX_TASK){
-    return -1;
-  }
-
+void kernel_reply(int* returnVal, int tid, char* reply, int replylen) {
   if (tid >= tid_counter) {
-    return -2;
+    *returnVal = -2;
+    return;
   }
 
   volatile TaskDescriptor* sender = &tds[tid];
 
   if (sender->state != REPLY_BLOCK) {
-    return -3;
+    *returnVal = -3;
+    return;
   }
 
   volatile int* sender_sp = sender->sp;
@@ -255,7 +250,7 @@ int kernel_reply(int tid, int arg2, int replylen) {
   *sender_return = actual_replylen;
   sender->state = READY;
   scheduler_append(sender);
-  return 0;
+  *returnVal = 0;
 }
 
-void kernel_pass(int n1, int n2, int n3, int n4) {}
+void kernel_pass(){ }

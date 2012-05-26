@@ -10,7 +10,9 @@
 #define ON  1
 #define OFF 0
 
-#define NOT_USED 0
+#define NUM_PRIORITY 31 // 0 = HIGHEST, 30 = LOWEST
+#define MAX_PRIORITY (NUM_PRIORITY - 1)
+#define MIN_PRIORITY 0
 
 // Also look at the variables in orex.ld
 #define USER_MEM_START	0x300000
@@ -61,6 +63,7 @@ typedef char *va_list;
 
 ///////////// DEBUG
 #define ASSERT_ENABLED 1
+#define MORE_CHECKING 0
 
 #if ASSERT_ENABLED
 #define ASSERT(X, ...) { \

@@ -21,6 +21,9 @@ void startClientsRPS() {
 }
 
 void client1() {
+
+  bwprintf(COM2, "%d MY ID\n", MyTid());
+
   signed char server = (signed char)WhoIs(RPS_SERVER_NAME);
   bwprintf(COM2, "%d RPS SERVER \n", (int)server);
 

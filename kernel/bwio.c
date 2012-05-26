@@ -47,13 +47,13 @@ void bwioInit() {
  * 	fifos enabled
  */
 int bwsetfifo( int channel, int state ) {
-	volatile int *line, buf;
+	int *line, buf;
 	switch( channel ) {
 	case COM1:
-    line = (volatile int *)( UART1_BASE + UART_LCRH_OFFSET );
+    line = (int *)( UART1_BASE + UART_LCRH_OFFSET );
     break;
   case COM2:
-    line = (volatile int *)( UART2_BASE + UART_LCRH_OFFSET );
+    line = (int *)( UART2_BASE + UART_LCRH_OFFSET );
     break;
   default:
     return -1;
@@ -66,17 +66,17 @@ int bwsetfifo( int channel, int state ) {
 }
 
 int bwsetspeed( int channel, int speed ) {
-	volatile int *high, *mid, *low;
+	int *high, *mid, *low;
 	switch( channel ) {
 	case COM1:
-		high = (volatile int *)( UART1_BASE + UART_LCRH_OFFSET );
-		mid = (volatile int *)( UART1_BASE + UART_LCRM_OFFSET );
-		low = (volatile int *)( UART1_BASE + UART_LCRL_OFFSET );
+		high = (int *)( UART1_BASE + UART_LCRH_OFFSET );
+		mid = (int *)( UART1_BASE + UART_LCRM_OFFSET );
+		low = (int *)( UART1_BASE + UART_LCRL_OFFSET );
 	        break;
 	case COM2:
-		high = (volatile int *)( UART2_BASE + UART_LCRH_OFFSET );
-		mid = (volatile int *)( UART2_BASE + UART_LCRM_OFFSET );
-		low = (volatile int *)( UART2_BASE + UART_LCRL_OFFSET );
+		high = (int *)( UART2_BASE + UART_LCRH_OFFSET );
+		mid = (int *)( UART2_BASE + UART_LCRM_OFFSET );
+		low = (int *)( UART2_BASE + UART_LCRL_OFFSET );
 	        break;
 	default:
 	        return -1;
@@ -102,12 +102,12 @@ int bwputc( int channel, char c ) {
 	volatile int *flags, *data;
 	switch( channel ) {
 	case COM1:
-		flags = (volatile int *)( UART1_BASE + UART_FLAG_OFFSET );
-		data = (volatile int *)( UART1_BASE + UART_DATA_OFFSET );
+		flags = (int *)( UART1_BASE + UART_FLAG_OFFSET );
+		data = (int *)( UART1_BASE + UART_DATA_OFFSET );
 		break;
 	case COM2:
-		flags = (volatile int *)( UART2_BASE + UART_FLAG_OFFSET );
-		data = (volatile int *)( UART2_BASE + UART_DATA_OFFSET );
+		flags = (int *)( UART2_BASE + UART_FLAG_OFFSET );
+		data = (int *)( UART2_BASE + UART_DATA_OFFSET );
 		break;
 	default:
 		return -1;
@@ -158,17 +158,17 @@ void bwputw( int channel, int n, char fc, char *bf ) {
 }
 
 int bwgetc( int channel ) {
-	volatile int *flags, *data;
+	int *flags, *data;
 	unsigned char c;
 
 	switch( channel ) {
 	case COM1:
-		flags = (volatile int *)( UART1_BASE + UART_FLAG_OFFSET );
-		data = (volatile int *)( UART1_BASE + UART_DATA_OFFSET );
+		flags = (int *)( UART1_BASE + UART_FLAG_OFFSET );
+		data = (int *)( UART1_BASE + UART_DATA_OFFSET );
 		break;
 	case COM2:
-		flags = (volatile int *)( UART2_BASE + UART_FLAG_OFFSET );
-		data = (volatile int *)( UART2_BASE + UART_DATA_OFFSET );
+		flags = (int *)( UART2_BASE + UART_FLAG_OFFSET );
+		data = (int *)( UART2_BASE + UART_DATA_OFFSET );
 		break;
 	default:
 		return -1;
