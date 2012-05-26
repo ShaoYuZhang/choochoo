@@ -9,13 +9,10 @@
 
 void mem_reset();
 
-void* kmalloc(unsigned int size); // allocate kernel memory
-
 addr allocate_user_memory();
 
 void free_user_memory(addr a);
 
-//void memcpy_no_overlap_simple(char* from, char* to, int len);
 void memcpy_no_overlap_asm(char* from, char* to, int len);
 
 #endif //MEMORY_H_

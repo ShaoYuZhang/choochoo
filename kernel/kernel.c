@@ -7,7 +7,7 @@
 #include <Scheduler.h>
 #include <bwio.h>
 
-static int (*syscall_handler[8])(const int, const int, const int, const int) = {
+static void (*syscall_handler[8])(const int, const int, const int, const int) = {
   kernel_createtask,
   kernel_mytid,
   kernel_myparenttid,

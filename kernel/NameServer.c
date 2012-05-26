@@ -3,22 +3,20 @@
 #include <string.h>
 
 #define NUM_TASK_NAMESERVER 20
-#define MSG_LEN 16
+#define MSG_LEN 15
 
 typedef struct Task {
 		signed char tid;
-    char name[16];
+    char name[MSG_LEN];
 } Task;
 
-static Task tasks[NUM_TASK_NAMESERVER];
-static int emptyTaskName;
-
 static void nameserver_task() {
-  int tid = -1;
+  Task tasks[NUM_TASK_NAMESERVER];
   char msg[MSG_LEN];
-  emptyTaskName = 0;
+  static int emptyTaskName = 0;
 
   while (1) {
+    int tid = -1;
     int len = Receive(&tid, msg, MSG_LEN);
     char type = msg[len-2];
     //bwprintf(COM2, "Receive: %d\n", len);
@@ -61,7 +59,6 @@ int RegisterAs(char* name) {
   int len = strlen(name);
   name[len+1] = REGISTER_AS;
   name[len+2] = '\0';
-  //bwprintf( COM2, "%d len\n\r", len);
 
   char reply;
   Send(NAMESERVER_TID, name, len+3, &reply, 1);
@@ -69,7 +66,7 @@ int RegisterAs(char* name) {
 }
 
 int WhoIs(char* name) {
-  int len = strlen(name);
+  const int len = strlen(name);
   name[len+1] = WHO_IS;
   name[len+2] = '\0';
 
