@@ -30,7 +30,7 @@ void client1() {
   char index = SignUp(server);
   bwprintf(COM2, "%d Client Index \n", (int)index);
 
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < 2000; i++) {
     int result;
     if (MyTid()%2) {
       Pass();
@@ -48,7 +48,7 @@ void client1() {
 }
 
 char SignUp(signed char server_tid) {
-  char message[2];
+  char message[4];
   message[0] = SIGNUP;
   message[1] = '\0';
 

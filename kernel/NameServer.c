@@ -3,7 +3,7 @@
 #include <string.h>
 
 #define NUM_TASK_NAMESERVER 20
-#define MSG_LEN 15
+#define MSG_LEN 19
 
 typedef struct Task {
 		signed char tid;
@@ -13,7 +13,7 @@ typedef struct Task {
 static void nameserver_task() {
   Task tasks[NUM_TASK_NAMESERVER];
   char msg[MSG_LEN];
-  static int emptyTaskName = 0;
+  int emptyTaskName = 0;
 
   while (1) {
     int tid = -1;

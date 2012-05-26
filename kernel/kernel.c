@@ -32,83 +32,79 @@ void kernel_init() {
 	scheduler_init();
 }
 
-void handle_swi(int** sp_pointer) {
-  // task stack layout reminder
-  // sp: arg0-r12, lr, spsr
-	int *arg0 = *sp_pointer;
-	int request = *arg0 & MASK_LOWER;
-	int arg1 = (*sp_pointer)[1];
-	int arg2 = (*sp_pointer)[2];
-	int arg3 = (*sp_pointer)[3];
-
-  ASSERT(request >= 0 && request < LAST_SYSCALL, "System call not in range.");
-  (*syscall_handler[request])(arg0, arg1, arg2, arg3);
-
-//	switch (request) {
-//		case SYSCALL_CREATE:
-//    {
-//			//kernel_createtask(arg0, arg1, (func_t) arg2);
-//      (*syscall_handler[SYSCALL_CREATE])(arg0, arg1, arg2, arg3);
-//			break;
-//    }
-//    case SYSCALL_MYTID:
-//    {
-//      //kernel_mytid(arg0);
-//      (*syscall_handler[SYSCALL_MYTID])(arg0, arg1, arg2, arg3);
-//      break;
-//    }
-//    case SYSCALL_MYPARENTTID:
-//    {
-//      //kernel_myparenttid(arg0);
-//      (*syscall_handler[SYSCALL_MYPARENTTID])(arg0, arg1, arg2, arg3);
-//      break;
-//    }
-//    case SYSCALL_PASS:
-//    {
-//      (*syscall_handler[SYSCALL_PASS])(arg0, arg1, arg2, arg3);
-//      break;
-//    }
-//    case SYSCALL_EXIT:
-//    {
-//      //kernel_exit();
-//      (*syscall_handler[SYSCALL_EXIT])(arg0, arg1, arg2, arg3);
-//      break;
-//    }
-//    case SYSCALL_SEND:
-//    {
-//      //kernel_send(arg0, arg1, arg2);
-//      (*syscall_handler[SYSCALL_SEND])(arg0, arg1, arg2, arg3);
-//      break;
-//    }
-//    case SYSCALL_RECEIVE:
-//    {
-//      //kernel_receive(arg0, arg1, arg2, arg3);
-//      (*syscall_handler[SYSCALL_RECEIVE])(arg0, arg1, arg2, arg3);
-//      break;
-//    }
-//    case SYSCALL_REPLY:
-//    {
-//      //*arg0 = kernel_reply(arg1, (char*)arg2, arg3);
-//      (*syscall_handler[SYSCALL_REPLY])(arg0, arg1, arg2, arg3);
-//      break;
-//    }
-//		default:
-//    {
-//			ERROR("Unknown system call %d (%x)\n", request, request);
-//      ASSERT(FALSE, "");
+//void handle_swi(int** sp_pointer) {
+//  // task stack layout reminder
+//  // sp: arg0-r12, lr, spsr
+//	int *arg0 = *sp_pointer;
+//	int request = *arg0 & MASK_LOWER;
+//	int arg1 = (*sp_pointer)[1];
+//	int arg2 = (*sp_pointer)[2];
+//	int arg3 = (*sp_pointer)[3];
 //
-//			break;
-//    }
-//	}
-
-  if (request <= SYSCALL_REPLY) {
-    scheduler_move2ready();
-  }
-}
+////  (*syscall_handler[request])(arg0, arg1, arg2, arg3);
+//
+////	switch (request) {
+////		case SYSCALL_CREATE:
+////    {
+////			//kernel_createtask(arg0, arg1, (func_t) arg2);
+////      (*syscall_handler[SYSCALL_CREATE])(arg0, arg1, arg2, arg3);
+////			break;
+////    }
+////    case SYSCALL_MYTID:
+////    {
+////      //kernel_mytid(arg0);
+////      (*syscall_handler[SYSCALL_MYTID])(arg0, arg1, arg2, arg3);
+////      break;
+////    }
+////    case SYSCALL_MYPARENTTID:
+////    {
+////      //kernel_myparenttid(arg0);
+////      (*syscall_handler[SYSCALL_MYPARENTTID])(arg0, arg1, arg2, arg3);
+////      break;
+////    }
+////    case SYSCALL_PASS:
+////    {
+////      (*syscall_handler[SYSCALL_PASS])(arg0, arg1, arg2, arg3);
+////      break;
+////    }
+////    case SYSCALL_EXIT:
+////    {
+////      //kernel_exit();
+////      (*syscall_handler[SYSCALL_EXIT])(arg0, arg1, arg2, arg3);
+////      break;
+////    }
+////    case SYSCALL_SEND:
+////    {
+////      //kernel_send(arg0, arg1, arg2);
+////      (*syscall_handler[SYSCALL_SEND])(arg0, arg1, arg2, arg3);
+////      break;
+////    }
+////    case SYSCALL_RECEIVE:
+////    {
+////      //kernel_receive(arg0, arg1, arg2, arg3);
+////      (*syscall_handler[SYSCALL_RECEIVE])(arg0, arg1, arg2, arg3);
+////      break;
+////    }
+////    case SYSCALL_REPLY:
+////    {
+////      //*arg0 = kernel_reply(arg1, (char*)arg2, arg3);
+////      (*syscall_handler[SYSCALL_REPLY])(arg0, arg1, arg2, arg3);
+////      break;
+////    }
+////		default:
+////    {
+////			ERROR("Unknown system call %d (%x)\n", request, request);
+////      ASSERT(FALSE, "");
+////
+////			break;
+////    }
+////	}
+//
+//}
 
 void kernel_runloop() {
 	volatile TaskDescriptor *td;
-	int** sp_pointer;
+	volatile int** sp_pointer;
 
   // TODO: when all tasks blocked.. this exits.
   //       should be when all task are in ZOMBIE
@@ -116,7 +112,16 @@ void kernel_runloop() {
 		sp_pointer = (int**)&(td->sp);
     scheduler_set_running(td);
 		asm_switch_to_usermode(sp_pointer);
-		handle_swi(sp_pointer);
+
+    int *arg0 = *sp_pointer;
+    int request = *arg0 & MASK_LOWER;
+
+    ASSERT(request >= 0 && request < LAST_SYSCALL, "System call not in range.");
+    (*syscall_handler[request])(*sp_pointer, (*sp_pointer)[1], (*sp_pointer)[2], (*sp_pointer)[3]);
+
+    if (request <= SYSCALL_REPLY) {
+      scheduler_move2ready();
+    }
 	}
 }
 
