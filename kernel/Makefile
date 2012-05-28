@@ -4,7 +4,7 @@ AR = ar
 LD = ld
 
 # CANNOT enalbe finline-function due to syscall file messing up.
-CFLAGS  = -c -fPIC -Wall -I. -mcpu=arm920t -msoft-float -MMD -std=c99 -O2 #-finline-functions , -funswitch-loops, -fpredictive-commoning, -fgcse-after-reload and -ftree-vectorize options.
+CFLAGS  = -c -fPIC -Wall -I. -mcpu=arm920t -msoft-float -MMD -std=c99 -O3 #-finline-functions , -funswitch-loops, -fpredictive-commoning, -fgcse-after-reload and -ftree-vectorize options.
 LDFLAGS = -init main -Map main.map -N -T orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 
 ASFLAGS	= -mcpu=arm920t -mapcs-32 -mno-fpu
 

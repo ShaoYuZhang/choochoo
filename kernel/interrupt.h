@@ -3,6 +3,6 @@
 
 void asm_handle_swi();
 void asm_switch_to_usermode(int **sp_pointer);
-void asm_memcpy_no_overlap(char* from, char* to, int len);
+int  asm_syscall(int reqid, int a1, int a2, int a3);
 
 #endif // INTERRUPT_H_
