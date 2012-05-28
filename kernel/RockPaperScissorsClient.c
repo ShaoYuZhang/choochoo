@@ -8,41 +8,48 @@
 //    2: normal game play between 8 players randomly (Tests message passing, recever queue in server)
 //    3: 4 players keep playing.., 2 players are stuck waiting for others.
 //        (Tests that tasks that are blocked can be rewoken up.)
-//    4: Print reply message
-//    5: Differing priorities between server client. Result should be the same
 
 void startClientsRPS() {
   Create(2, client1);
   Create(2, client1);
-  Create(2, client1);
-  Create(2, client1);
-  Create(2, client1);
-  Create(2, client1);
+}
+
+void printResult(int result, int tid) {
+  if (result == WIN) {
+    bwprintf(COM2, "-----Client%d heard from server that it WON\n", tid);
+  } else if (result == LOSE) {
+    bwprintf(COM2, "-----Client%d heard from server that it LOST\n", tid);
+  } else if (result == TIE) {
+    bwprintf(COM2, "-----Client%d heard from server that it TIED\n", tid);
+  }
 }
 
 void client1() {
-
-  bwprintf(COM2, "%d MY ID\n", MyTid());
-
+  int result;
+  bwprintf(COM2, "-----Client begins:\n");
+  int mytid = MyTid();
+  bwprintf(COM2, "-----Client got tid:%d\n", mytid);
   signed char server = (signed char)WhoIs(RPS_SERVER_NAME);
-  bwprintf(COM2, "%d RPS SERVER \n", (int)server);
+  bwprintf(COM2, "-----Client%d got server with tid:%d\n", mytid, (int)server);
 
   char index = SignUp(server);
-  bwprintf(COM2, "%d Client Index \n", (int)index);
+  bwprintf(COM2, "-----Client%d signed up with server\n", mytid, (int)index);
 
-  for (int i = 0; i < 2; i++) {
-    int result;
-    if (MyTid()%2) {
-      Pass();
-      result = Play(server, index, ROCK);
+  int move = mytid;
+  for (int i = 0; i < 3; i++) {
+    move += mytid;
+    if (move%3 == 0) {
+      bwprintf(COM2, "-----Client%d is playing SCISSORS\n", mytid);
+    } else if (move%3 == 1) {
+      bwprintf(COM2, "-----Client%d is playing PAPER\n", mytid);
     } else {
-      result = Play(server, index, PAPER);
+      bwprintf(COM2, "-----Client%d is playing ROCK\n", mytid);
     }
-    bwprintf(COM2, "%d Client Result \n", (int)result);
+    result = Play(server, index, move%3);
+    printResult(result, mytid);
   }
 
-  int result = Quit(server, index);
-
+  result = Quit(server, index);
 
   Exit();
 }

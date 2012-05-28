@@ -205,7 +205,6 @@ void kernel_send(int* arg0, char *msg, int arg2) {
 }
 
 void kernel_receive(int not_used, int arg1, int arg2, int msglen) {
-  bwputstr(COM2, "MMMM\n");
   int*  tid = (int*)  arg1;
   char* msg = (char*) arg2;
   volatile TaskDescriptor* receiver = scheduler_get_running();
@@ -258,4 +257,5 @@ void kernel_reply(int* returnVal, int tid, char* reply, int replylen) {
   *returnVal = 0;
 }
 
-void kernel_pass(){ }
+void kernel_pass(){
+}

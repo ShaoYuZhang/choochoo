@@ -13,7 +13,7 @@ typedef struct Task {
 static void nameserver_task() {
   Task tasks[NUM_TASK_NAMESERVER];
   char msg[MSG_LEN];
-  int emptyTaskName = 0;
+  int emptyTaskName = -1;
 
   while (1) {
     int tid = -1;
@@ -26,7 +26,7 @@ static void nameserver_task() {
 
     if (type == WHO_IS) {
       int found = -1;
-      for (int i = 0; i < emptyTaskName; i++) {
+      for (int i = 0; i <= emptyTaskName; i++) {
         if (equal(msg, tasks[i].name, len-2)) {
           found = i; break;
         }
@@ -38,10 +38,10 @@ static void nameserver_task() {
 
       Reply(tid, msg, 2);
     } else if (type == REGISTER_AS) {
-      bwprintf(COM2, "Registering %d \n", tid);
+      bwprintf(COM2, "Registering %d with name %s \n", tid, msg);
+      ASSERT(emptyTaskName < NUM_TASK_NAMESERVER, "Too many tasks registered with nameserver.");
       tasks[emptyTaskName].tid = (signed char)tid;
       memcpy_no_overlap_asm(msg, tasks[emptyTaskName++].name, len-2);
-      ASSERT(emptyTaskName < NUM_TASK_NAMESERVER, "Too many tasks registered with nameserver.");
       msg[0] = '\0';
       Reply(tid, msg, 1);
     } else {

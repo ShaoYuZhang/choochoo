@@ -158,17 +158,17 @@ void bwputw( int channel, int n, char fc, char *bf ) {
 }
 
 int bwgetc( int channel ) {
-	int *flags, *data;
+	volatile int *flags, *data;
 	unsigned char c;
 
 	switch( channel ) {
 	case COM1:
-		flags = (int *)( UART1_BASE + UART_FLAG_OFFSET );
-		data = (int *)( UART1_BASE + UART_DATA_OFFSET );
+		flags = (volatile int *)( UART1_BASE + UART_FLAG_OFFSET );
+		data = (volatile int *)( UART1_BASE + UART_DATA_OFFSET );
 		break;
 	case COM2:
-		flags = (int *)( UART2_BASE + UART_FLAG_OFFSET );
-		data = (int *)( UART2_BASE + UART_DATA_OFFSET );
+		flags = (volatile int *)( UART2_BASE + UART_FLAG_OFFSET );
+		data = (volatile int *)( UART2_BASE + UART_DATA_OFFSET );
 		break;
 	default:
 		return -1;

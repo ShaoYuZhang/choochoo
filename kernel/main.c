@@ -9,7 +9,7 @@
 void task2();
 
 void task0() {
-  bwputstr(COM2, "Start name\n");
+  bwputstr(COM2, "Running task0\n");
   startNameserver();
   startServerRPS();
   startClientsRPS();
@@ -50,28 +50,12 @@ void task2() {
   Exit();
 }
 
-void task3() {
-
-  Exit();
-}
-
 int main(int argc, char* argv[]) {
 	bwioInit();
 	kernel_init();
 
-  //bwputstr(COM2, from);
-  //bwputstr(COM2, "\n");
-  //bwputstr(COM2, destination);
-  //memcpy_no_overlap_simple(from, destination, 18);
-  //equal(from, destination, 16);
-  //bwputstr(COM2, "copied...\n");
-  //bwputstr(COM2, from);
-  //bwputstr(COM2, "\n");
-  //bwputstr(COM2, destination);
   int returnVal;
-  kernel_createtask(&returnVal, 2, task0);
-  //kernel_createtask(2, task2);
-  //kernel_createtask(3, task3);
+  kernel_createtask(&returnVal, 1, task0);
 	kernel_runloop();
 	return 0;
 }

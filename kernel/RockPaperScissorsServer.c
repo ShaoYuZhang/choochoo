@@ -35,12 +35,16 @@ void replyPlayingPair(int tid1, int tid2) {
 
 void replyWin(PlayingPair* pair) {
   signed char result = pair->move1 - pair->move2;
+  pair->move1 = -1;
+  pair->move2 = -1;
   char buffer[2];
   buffer[1] = 0;
   int reply;
-  bwprintf(COM2, "%d %d result.\n", pair->tid1, pair->tid2);
 
+  bwputstr(COM2, "----------------------------------------------------\n");
   if (result == 1 || result == -2) {
+    bwprintf(COM2, "%d beats %d.\n", pair->tid2, pair->tid1);
+    bwgetc(COM2);
     // Player 2 wins
     buffer[0] = LOSE;
     reply = Reply(pair->tid1, buffer, 2);
@@ -48,26 +52,35 @@ void replyWin(PlayingPair* pair) {
     reply = Reply(pair->tid2, buffer, 2);
   }
   else if (result == -1 || result == 2) {
+    bwprintf(COM2, "%d beats %d.\n", pair->tid1, pair->tid2);
+    bwgetc(COM2);
     // Player 1 wins
     buffer[0] = WIN;
     reply = Reply(pair->tid1, buffer, 2);
     buffer[0] = LOSE;
     reply = Reply(pair->tid2, buffer, 2);
   } else {
+    bwprintf(COM2, "%d and %d tied.\n", pair->tid1, pair->tid2);
+    bwgetc(COM2);
     // Tie
     buffer[0] = TIE;
     reply = Reply(pair->tid1, buffer, 2);
+    buffer[0] = TIE;
     reply = Reply(pair->tid2, buffer, 2);
   }
 }
 
 void serverTask() {
-  bwputstr(COM2, "Creating RPS server\n");
+  bwputstr(COM2, "Server says Starting RPS server\n");
   RegisterAs(RPS_SERVER_NAME);
-  bwputstr(COM2, "Registerd server\n");
+  bwputstr(COM2, "Server says Registerd server.\n");
 
   int tid;
   char msg[32];
+  Pass();
+  Pass();
+
+  bwputstr(COM2, "Server says Begin receiving message.\n");
 
   while (1) {
     int len = Receive(&tid, msg, 32);
@@ -76,10 +89,11 @@ void serverTask() {
     if (type == SIGNUP) {
       if (waiting_client == -1) {
         waiting_client = (signed char)tid;
-        bwprintf(COM2, "Waiting client: %d\n", (int)tid);
+        bwprintf(COM2, "Server says client%d does not have partner\n", (int)tid);
       }
       else {
-        bwprintf(COM2, "Pairing player: %d\n", (int)tid);
+        bwprintf(COM2, "Server says client%d is now playing with %d\n",
+            (int)tid, (int)waiting_client);
         replyPlayingPair(waiting_client, tid);
         waiting_client = -1;
         num_pair_left -= 1;
@@ -114,7 +128,6 @@ void serverTask() {
 
       if (pair->move2 == HAS_QUIT && pair->move1 == HAS_QUIT) {
         playing_stack[++num_pair_left] = pair;
-        bwputstr(COM2, "Put stuff akc.\n");
       }
 
       msg[0] = 'A';
