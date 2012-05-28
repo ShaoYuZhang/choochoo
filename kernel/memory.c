@@ -4,16 +4,12 @@
 #include <Scheduler.h>
 #include <syscall.h>
 
-static addr kernel_heap;
-
 // List of blocks of memory available for use
 static TaskDescriptor* freeTaskBlocks[NUM_MAX_TASK];
 static int freeTaskBlocksCount;
 
 void mem_reset() {
   freeTaskBlocksCount = NUM_MAX_TASK-1;
-  // Initialize kernel heap
-  kernel_heap = kernel_heap - (unsigned int)kernel_heap%4 + 4;
 
   // Create a stack of memory chunks for storing user info.
   for (int i = 0; i < NUM_MAX_TASK; i++) {

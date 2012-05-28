@@ -55,9 +55,6 @@ void task3() {
   Exit();
 }
 
-static char from[]        = "asdfghjklqwertyuio";
-static char destination[] = "1234567890-2345678";
-
 int main(int argc, char* argv[]) {
 	bwioInit();
 	kernel_init();

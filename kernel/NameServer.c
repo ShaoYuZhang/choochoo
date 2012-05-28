@@ -3,7 +3,7 @@
 #include <string.h>
 
 #define NUM_TASK_NAMESERVER 20
-#define MSG_LEN 19
+#define MSG_LEN 31
 
 typedef struct Task {
 		signed char tid;
