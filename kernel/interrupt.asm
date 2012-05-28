@@ -86,3 +86,11 @@ asm_switch_to_usermode:
 
 	@ resume task
 	movs pc, lr @ go to there
+
+.text
+.align	2
+.global asm_syscall
+asm_syscall:
+	stmfd	sp!, {lr}
+  swi 0
+	ldmfd	sp!, {pc}

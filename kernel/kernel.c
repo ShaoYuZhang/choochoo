@@ -199,9 +199,6 @@ void kernel_send(int* arg0, char *msg, int arg2) {
     *currentTD = sender;
     sender->state = RECEIVE_BLOCK;
   }
-
-  // note: will get overwritten later
-  *arg0 = 0;
 }
 
 void kernel_receive(int not_used, int arg1, int arg2, int msglen) {
@@ -226,7 +223,7 @@ void kernel_receive(int not_used, int arg1, int arg2, int msglen) {
     scheduler_append(receiver);
     sender->state = REPLY_BLOCK;
   } else {
-    // TODO, bad.. what about reply buffer
+    // NOTE, parameters for sending task is saved on its stack
     receiver->state = SEND_BLOCK;
   }
 }
