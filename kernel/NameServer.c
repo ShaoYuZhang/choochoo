@@ -13,7 +13,7 @@ typedef struct Task {
 static void nameserver_task() {
   Task tasks[NUM_TASK_NAMESERVER];
   char msg[MSG_LEN];
-  int emptyTaskName = -1;
+  int emptyTaskName = 0;
 
   while (1) {
     int tid = -1;
@@ -26,7 +26,7 @@ static void nameserver_task() {
 
     if (type == WHO_IS) {
       int found = -1;
-      for (int i = 0; i <= emptyTaskName; i++) {
+      for (int i = 0; i < emptyTaskName; i++) {
         if (equal(msg, tasks[i].name, len-2)) {
           found = i; break;
         }
