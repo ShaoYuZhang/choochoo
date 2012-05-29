@@ -33,38 +33,12 @@ void timing2() {
   Exit();
 }
 
-void task0() {
-  bwputstr(COM2, "Running task0\n");
-  startNameserver();
-  startServerRPS();
-  startClientsRPS();
-
-  //bwputstr(COM2, "register\n\r");
-  //char* NAME = "TASK0\0\0\0";
-  //int reply = RegisterAs(NAME);
-  //reply = WhoIs(NAME);
-  //bwprintf(COM2, "%d who1 is \n\r", reply);
-
-  //int tid2 = Create(2, task2);
-  //bwprintf(COM2, "%d tid \n\r", tid2);
-  //reply = WhoIs("TASK2");
-  //bwprintf(COM2, "%d who2 is \n\r", reply);
-
-  //char *a = "Hello\n\r";
-  //char b[10];
-  //int temp = Send(1, a, 8, b, 10);
-  //bwprintf( COM2, "%d char replied\n\r", temp);
-  //bwputstr( COM2, b);
-  Exit();
-}
-
 int main(int argc, char* argv[]) {
 	bwioInit();
 	kernel_init();
 
   int returnVal;
-  kernel_createtask(&returnVal, 1, task0);
-#if timing_
+
   int *timer_control = (int *)(TIMER3_BASE + CRTL_OFFSET);
 
   int control = *timer_control;
@@ -74,23 +48,9 @@ int main(int argc, char* argv[]) {
 
   *timer_control = control;
 
-  //bwputstr(COM2, from);
-  //bwputstr(COM2, "\n");
-  //bwputstr(COM2, destination);
-  //memcpy_no_overlap_simple(from, destination, 18);
-  //equal(from, destination, 16);
-  //bwputstr(COM2, "copied...\n");
-  //bwputstr(COM2, from);
-  //bwputstr(COM2, "\n");
-  //bwputstr(COM2, destination);
-  int returnVal;
-  kernel_createtask(&returnVal, 2, task0);
-  //kernel_createtask(&returnVal, 1, timing1);
-  //kernel_createtask(&returnVal, 1, timing2);
-  //kernel_createtask(2, task2);
-  //kernel_createtask(3, task3);
->>>>>>> eee5965ec4ed8d15813dad51ab9a4f11a15e71c9
-#endif
+  kernel_createtask(&returnVal, 1, timing1);
+  kernel_createtask(&returnVal, 1, timing2);
+
 	kernel_runloop();
 	return 0;
 }
