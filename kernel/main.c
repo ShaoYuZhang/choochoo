@@ -3,8 +3,7 @@
 #include <syscall.h>
 #include <memory.h>
 #include <NameServer.h>
-#include <RockPaperScissorsServer.h>
-#include <RockPaperScissorsClient.h>
+#include <idle.h>
 
 void timing2();
 
