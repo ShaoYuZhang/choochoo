@@ -23,11 +23,15 @@ asm_handle_swi:
   orr r2, r2, #0x1F
   msr cpsr_c, r2
 
+	@ store lr
+  sub sp, sp, #4
+  str lr, [sp] @ lr
+
 	@ store spsr
   sub sp, sp, #4
   str r1, [sp] @ spsr
 
-  @ store lr
+  @ store lr_svc, trash lr_usr
   mov lr, r3
 
   @restore scratch registers for user task
@@ -68,9 +72,9 @@ asm_switch_to_usermode:
 
   ldr sp, [r0]
   mov r1, sp @store a sp in r1
-  add sp, sp, #4 * 15 @skip r0->r12, lr, spsr
-  ldr r3, [sp, #-4] @load spsr in r3
-  str sp, [r0] @update td->sp
+  add sp, sp, #4 * 16 @skip r0->r12, lr, spsr
+  ldr r3, [sp, #-8] @load spsr in r3
+  ldr lr, [sp, #-4] @load lr in r0
 
   @ switch to svc mode
   mrs r2, cpsr
@@ -82,15 +86,11 @@ asm_switch_to_usermode:
 	msr spsr, r3
 
 	@ restore task registers
-	ldmfd r1, {r0-r12, lr}
-
-	@ resume task
-	movs pc, lr @ go to there
+	ldmfd r1, {r0-r12, pc}^
 
 .text
 .align	2
 .global asm_syscall
 asm_syscall:
-	stmfd	sp!, {lr}
   swi 0
-	ldmfd	sp!, {pc}
+	mov pc, lr

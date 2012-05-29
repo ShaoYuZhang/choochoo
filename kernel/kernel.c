@@ -140,9 +140,10 @@ void kernel_createtask(int* returnPtr, int priority, func_t code) {
 	kernel_mytid(&(td->parent_id));
   td->next = (TaskDescriptor*)NULL;
   td->sendQ = (TaskDescriptor*)NULL;
-  td->sp = (unsigned int*)(mem + STACK_SIZE);
-  td->sp[13] = (int) code; // LR
+  td->sp = (unsigned int*)(mem + STACK_SIZE) - 16; // Bottom of stack are fake register values
+  td->sp[13] = (int) code; // LR_SVC
   td->sp[14] = 0x10; //spsr
+  td->sp[15] = (int) Exit; // LR_USR
 
 	scheduler_append(td);
 	*returnPtr = td->id;
