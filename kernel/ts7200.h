@@ -7,7 +7,6 @@
  *
  */
 
-#define INT_MASK(irq) (1 << (irq & 0x1f))
 
 #define SWI_VECTOR 0x8
 #define HWI_VECTOR 0x18
@@ -20,8 +19,16 @@
 #define SOFTINTCLEAR 0x1c
 #define INT_ENABLE 0x10
 
-
-#define TIMER_INT_MASK 4
+// Common interrupt enable mask on VIC1
+#define TC1OI 4
+#define TC2OI 5
+#define UART1RXINTR1 23
+#define UART1TXINTR1 24
+#define UART2RXINTR2 25
+#define UART2TXINTR2 26
+#define TC3OI 51
+#define INT_UART1 52
+#define INT_UART2 54
 
 #define	TIMER1_BASE	0x80810000
 #define	TIMER2_BASE	0x80810020

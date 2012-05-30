@@ -27,7 +27,7 @@ void kernel_receive(int* not_used, int tid, int msg, int msglen);
 
 void kernel_reply(int* returnVal , int tid, int arg2, int replylen);
 
-void kernel_awaitevent(int* returnVal, int eventType);
+void kernel_awaitevent(int* returnVal, int eventType, int, int);
 
 void kernel_runloop();
 

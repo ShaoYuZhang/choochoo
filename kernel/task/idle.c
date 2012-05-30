@@ -4,5 +4,5 @@
 #include <syscall.h>
 
 void startIdleTask() {
-  int idle_tid = Create(MAX_PRIORITY, idle_task);
+  Create(MAX_PRIORITY, idle_task);
 }

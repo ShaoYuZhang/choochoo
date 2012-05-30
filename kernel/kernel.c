@@ -23,6 +23,7 @@ static void (*syscall_handler[LAST_SYSCALL])(int*, int, int, int) = {
 
 static unsigned int tid_counter;
 static TaskDescriptor tds[NUM_MAX_TASK];
+static volatile TaskDescriptor* eventWaitingTask[64];
 
 static void install_interrupt_handlers() {
 	INSTALL_INTERRUPT_HANDLER(SWI_VECTOR, asm_handle_swi);
@@ -30,8 +31,10 @@ static void install_interrupt_handlers() {
 
   // Use IRQ
   VMEM(VIC1 + INTSELECT_OFFSET) = 0;
+  VMEM(VIC2 + INTSELECT_OFFSET) = 0;
   // Clear all interrupts
   VMEM(VIC1 + INTENCLR_OFFSET) = ~0;
+  VMEM(VIC2 + INTENCLR_OFFSET) = ~0;
 }
 
 // TODO test.
@@ -49,20 +52,40 @@ static void uninstall_interrupt_handlers() {
   VMEM(VIC2 + INTENCLR_OFFSET) = ~0;
 }
 
-static volatile TaskDescriptor* waiter;
-
 void kernel_init() {
   tid_counter = 0;
-  waiter = NULL;
 	install_interrupt_handlers();
 	mem_reset();
 	scheduler_init();
+  for (int i = 0; i < 64; i++) {
+    eventWaitingTask[i] = (TaskDescriptor*) NULL;
+  }
 }
 
 void kernel_close() {
 	uninstall_interrupt_handlers();
 }
 
+void kernel_handle_interrupt() {
+  int VIC1Status = VMEM(VIC1);
+  //int VIC2Status = VMEM(VIC2);
+
+  int event = 0;
+  int returnVal = 0;
+
+  if (VIC1Status & (1 << TC1OI)) {
+    VMEM(TIMER1_BASE + CLR_OFFSET) = 0;
+    event = TC1OI;
+  }
+
+  volatile TaskDescriptor* subscriber = eventWaitingTask[event];
+  eventWaitingTask[event] = (TaskDescriptor*)NULL;
+  if (subscriber != (TaskDescriptor*)NULL) {
+    *(subscriber->sp) = returnVal;
+    subscriber->state = READY;
+    scheduler_append(subscriber);
+  }
+}
 void kernel_runloop() {
 	volatile TaskDescriptor *td;
 	int** sp_pointer;
@@ -85,17 +108,12 @@ void kernel_runloop() {
         scheduler_move2ready();
       }
     } else {
-      VMEM(TIMER1_BASE + CLR_OFFSET) = 0;
       scheduler_move2ready();
-      //VMEM(TIMER1_BASE + CRTL_OFFSET) &= ~ENABLE_MASK; // stop
-      if (waiter != NULL) {
-        waiter->state = READY;
-        scheduler_append(waiter);
-      }
-      //INSTALL_INTERRUPT_HANDLER(HWI_VECTOR, bad_code);
+      kernel_handle_interrupt();
     }
 	} // End kernel loop;
 }
+
 
 void kernel_createtask(int* returnPtr, int priority, int code, int notUsed) {
   addr mem = allocate_user_memory();
@@ -227,9 +245,16 @@ void kernel_reply(int* returnVal, int tid, int reply, int replylen) {
 
 void kernel_pass(){}
 
-void kernel_awaitevent(int* returnVal, int eventType) {
+void kernel_awaitevent(int* returnVal, int eventType, int notUsed1, int notUsed2) {
+  if (eventType >= 64 || eventType < 0) {
+    *returnVal = -1;
+    return;
+  }
+  if (eventWaitingTask[eventType] != (TaskDescriptor*)NULL) {
+    *returnVal = -4;
+    return;
+  }
 	volatile TaskDescriptor *td = scheduler_get_running();
   td->state = EVENT_BLOCK;
-  waiter = td;
-  *returnVal = 0;
+  eventWaitingTask[eventType] = td;
 }

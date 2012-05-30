@@ -74,7 +74,7 @@ void timeserver_task() {
       // Reply to applicable queues...
       while (taskQueueLen) {
         if (taskQueue[basePos & TIMER_SERVER_SIZE_MOD].time <= counter) {
-          Reply(taskQueue[basePos & TIMER_SERVER_SIZE_MOD].tid, NULL, 0);
+          Reply(taskQueue[basePos & TIMER_SERVER_SIZE_MOD].tid, (char *)NULL, 0);
           taskQueue[basePos & TIMER_SERVER_SIZE_MOD].time = -1;
           basePos = (basePos+1) & TIMER_SERVER_SIZE_MOD;
           taskQueueLen--;
@@ -142,12 +142,12 @@ void timernotifier_task() {
 
   // Enables timer interrupt.
   // TODO, move to kernel.
-  int irqmask = INT_MASK(TIMER_INT_MASK);
+  int irqmask = 1 << TC1OI;
   VMEM(VIC1 + INT_ENABLE) = irqmask;
 
   int counter = 0;
   for (;;) {
-    AwaitEvent(0);
+    AwaitEvent(TC1OI);
     Send(parent, (char*)NULL, 0, (char*)NULL, 0);
     counter++;
     if (counter % 20 == 0) {
