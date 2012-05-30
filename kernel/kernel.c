@@ -38,6 +38,7 @@ static void install_interrupt_handlers() {
 }
 
 static volatile TaskDescriptor* waiter;
+
 void kernel_init() {
   tid_counter = 0;
   waiter = NULL;

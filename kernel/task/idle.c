@@ -1,5 +1,6 @@
 #include <idle.h>
 #include <util.h>
+#include <syscall.h>
 
 static void idle_task() {
   while (1) {

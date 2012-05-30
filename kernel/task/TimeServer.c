@@ -1,6 +1,7 @@
 #include "TimeServer.h"
-#include <TimeNotifier.h>
 #include <util.h>
+#include <syscall.h>
+#include <NameServer.h>
 
 #define TIMER_SERVER_SIZE 16 // WARNING: must be power of 2
 #define TIMER_SERVER_SIZE_MOD 15
@@ -16,25 +17,24 @@ static int timeServerTid;
 static RegisteredTask taskQueue[TIMER_SERVER_SIZE];
 static int taskQueueLen;
 
-static int taskQueuePosition;
 int Delay(int ticks) {
-  ASSERT(tick < 0x00ffffff);
+  ASSERT(ticks < 0x00ffffff, "Cannot delay this much");
   ticks |= 0xf0000000;
 
-  Send(timeServerTid, &ticks, 4, NULL, 0);
+  return Send(timeServerTid, (char*)&ticks, 4, (char*)1, 0);
 }
 
 int Time() {
   int time = -1;
-  Send(timeServerTid, NULL, 0, &time, 4);
+  Send(timeServerTid, (char*)1, 0, (char*)&time, 4);
   return time;
 }
 
 int DelayUntil(int ticks) {
-  ASSERT(tick < 0x00ffffff);
+  ASSERT(ticks < 0x00ffffff, "Canot Delay until.. this much");
   ticks |= 0x0f000000;
 
-  Send(timeServerTid, &ticks, 4, NULL, 0);
+  return Send(timeServerTid, (char*)&ticks, 4, (char*)NULL, 0);
 }
 
 void timeserver_task() {
@@ -45,26 +45,33 @@ void timeserver_task() {
   VMEM(TIMER1_BASE + CRTL_OFFSET) |= CLKSEL_MASK; // 508Khz clock
   VMEM(TIMER1_BASE + CRTL_OFFSET) |= ENABLE_MASK; // start
 
-  int notifierId = Create(1, timernotifier_task);
   int counter = 0;
   int basePos = 0;
 
   // Initialize sorted list of tasks.
+  taskQueueLen = 0;
   for (int i = 0; i < TIMER_SERVER_SIZE; i++) {
     taskQueue[i].tid = -1;
   }
-  taskQueueLen = 0;
+
+  // Enables timer interrupt.
+  int irqmask = INT_MASK(TIMER_INT_MASK);
+  VMEM(VIC1 + INT_ENABLE) = irqmask;
+
+  int notifierId = Create(1, timernotifier_task);
 
   // Start serving..
   for (;;) {
     int msgBuff = -1;
     int tid = -1;
-    int len = Receive(&tid, &msgBuff, 4);
+    bwputstr(COM2, "h");
+    //int len = Receive(&tid, (char*)&msgBuff, 4);
     ASSERT(len == 0 || len == 4, "Bad message to time server.");
 
     if (tid == notifierId) {
       counter += 1;
 
+#if 0
       // Reply to applicable queues...
       while (taskQueueLen) {
         if (taskQueue[basePos & TIMER_SERVER_SIZE_MOD].time <= counter) {
@@ -78,12 +85,14 @@ void timeserver_task() {
           break;
         }
       }
-
-
+#endif
+      bwprintf(COM2, "%d\n", counter);
     } else if (len == 0) {
+      ASSERT(0, "WHAT");
       // Timing request
-      Reply(tid, &counter, 4);
+      Reply(tid, (char*)&counter, 4);
     } else {
+      ASSERT(0, "WHAT");
       if (msgBuff | 0xf0000000) {
         // Delay message
         msgBuff += counter;
@@ -118,7 +127,7 @@ void timeserver_task() {
       ASSERT(taskQueueLen != TIMER_SERVER_SIZE, "MAX BUFFER");
       taskQueueLen++;
     }
-  }
+  } // End of serve loop
 }
 
 int createTimerserver() {
@@ -127,10 +136,14 @@ int createTimerserver() {
 }
 
 void timernotifier_task() {
-  int tid = WhoIs(NAME_TIMESERVER);
+  int tid = MyParentsTid();
 
+  int counter = 0;
   for (;;) {
-    AwaitEvent()..
-    Send(tid, NULL, 0, NULL, 0);
+    AwaitEvent(0);
+    //Send(tid, (char*)NULL, 0, (char*)NULL, 0);
+    if (counter % 1000 == 0) {
+      bwputstr(COM2, "no\n");
+    }
   }
 }

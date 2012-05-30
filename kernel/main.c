@@ -3,6 +3,7 @@
 #include <syscall.h>
 #include <memory.h>
 #include <NameServer.h>
+#include <TimeServer.h>
 #include <idle.h>
 
 void generateTimeInterrupt() {
@@ -13,8 +14,8 @@ void generateTimeInterrupt() {
   VMEM(TIMER1_BASE + CRTL_OFFSET) |= CLKSEL_MASK; // 508Khz clock
   VMEM(TIMER1_BASE + CRTL_OFFSET) |= ENABLE_MASK; // start
 
-  int irqmask = INT_MASK(TIMER_INT_MASK);
   // Enables timer interrupt.
+  int irqmask = INT_MASK(TIMER_INT_MASK);
   VMEM(VIC1 + INT_ENABLE) = irqmask;
 
   for (int i = 0; i < 2000; i++) {
@@ -101,8 +102,9 @@ int main(int argc, char* argv[]) {
 
   //*timer_control = control;
 
-  kernel_createtask((int)&returnVal, 2, task1, 0);
-  kernel_createtask((int)&returnVal, 1, clockUpdate, 0);
+  //int clockServerId = createTimerserver();
+  kernel_createtask((int)&returnVal, 2, timeserver_task, 0);
+  //kernel_createtask((int)&returnVal, 1, clockUpdate, 0);
 
 	kernel_runloop();
 	return 0;

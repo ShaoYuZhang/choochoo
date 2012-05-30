@@ -18,5 +18,7 @@ int DelayUntil(int ticks);
 
 void timernotifier_task();
 
+void timeserver_task();
+
 
 #endif // TIMESERVER_H_
