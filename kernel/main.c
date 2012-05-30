@@ -8,8 +8,21 @@
 
 void task1() {
   startNameServerTask();
-  startTimeServerTask();
+
+  int timerServerTid = startTimeServerTask();
   startIdleTask();
+
+  int checkId = WhoIs(TIMESERVER_NAME);
+
+  ASSERT(checkId  == timerServerTid, "WHAT>>>>");
+  bwputstr(COM2, "okay\n");
+
+
+  for (;;) {
+    Delay(10, checkId);
+    int time = Time(checkId);
+    bwprintf(COM2, "time: %d\n", time);
+  }
 
   Exit();
 }
@@ -20,9 +33,8 @@ int main(int argc, char* argv[]) {
 
   int returnVal;
 
-  kernel_createtask((int)&returnVal, 1, task1, 0);
+  kernel_createtask((int*)&returnVal, 1, (int)task1, 0);
 
 	kernel_runloop();
 	return 0;
 }
-

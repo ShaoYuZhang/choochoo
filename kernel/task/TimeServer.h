@@ -1,24 +1,19 @@
 #ifndef TIMESERVER_H_
 #define TIMESERVER_H_
 
-int startTimerServerTask();
+#define TIMESERVER_NAME "TS\0"
+
+int startTimeServerTask();
 
 // Returns.
 // 0 – success.
 //-1 – if the clock server task id inside the wrapper is invalid.
 //-2 – if the clock server task id inside the wrapper is not the id of the clock server
-int Delay(int ticks);
+int Delay(int ticks, int timeServerTid);
 
-// Returns:
 // number of 10ms ticks since the clock server was started.
-int Time();
+int Time(int timeServerTid);
 
-// Returns
-int DelayUntil(int ticks);
-
-void timernotifier_task();
-
-void timeserver_task();
-
+int DelayUntil(int ticks, int timeServerTid);
 
 #endif // TIMESERVER_H_

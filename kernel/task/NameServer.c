@@ -18,7 +18,7 @@ static void nameserver_task() {
   while (1) {
     int tid = -1;
     int len = Receive(&tid, msg, MSG_LEN);
-    char type = msg[len-2];
+    char type = msg[len-1];
     //bwprintf(COM2, "Receive: %d\n", len);
     //bwprintf(COM2, "Type: %d\n", (int)type);
     //bwprintf(COM2, "Tid: %d\n", tid);
@@ -34,9 +34,8 @@ static void nameserver_task() {
       ASSERT(found != -1, "No task with name found.");
 
       msg[0] = tasks[found].tid;
-      msg[1] = '\0';
 
-      Reply(tid, msg, 2);
+      Reply(tid, msg, 1);
     } else if (type == REGISTER_AS) {
       bwprintf(COM2, "Registering %d with name %s \n", tid, msg);
       ASSERT(emptyTaskName < NUM_TASK_NAMESERVER, "Too many tasks registered with nameserver.");
@@ -58,19 +57,17 @@ void startNameServerTask() {
 int RegisterAs(char* name) {
   int len = strlen(name);
   name[len+1] = REGISTER_AS;
-  name[len+2] = '\0';
 
   char reply;
-  Send(NAMESERVER_TID, name, len+3, &reply, 1);
+  Send(NAMESERVER_TID, name, len+2, &reply, 1);
   return 0;
 }
 
 int WhoIs(char* name) {
   const int len = strlen(name);
   name[len+1] = WHO_IS;
-  name[len+2] = '\0';
 
-  char reply[2];
-  Send(NAMESERVER_TID, name, len+3, reply, 2);
-  return (int)(reply[0]);
+  char reply;
+  Send(NAMESERVER_TID, name, len+2, &reply, 1);
+  return (int)reply;
 }
