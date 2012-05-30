@@ -7,7 +7,7 @@
 #define WHO_IS       81
 #define NAMESERVER_TID 1
 
-void startNameserver();
+void startNameServerTask();
 
 int RegisterAs(char* name);
 

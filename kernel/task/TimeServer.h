@@ -1,7 +1,7 @@
 #ifndef TIMESERVER_H_
 #define TIMESERVER_H_
 
-int createTimeserver();
+int startTimerServerTask();
 
 // Returns.
 // 0 – success.

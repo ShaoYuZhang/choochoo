@@ -50,7 +50,7 @@ static void nameserver_task() {
   }
 }
 
-void startNameserver() {
+void startNameServerTask() {
   int nameserverTid = Create(1, nameserver_task);
   ASSERT(NAMESERVER_TID == nameserverTid, "Nameserver tid is expected.");
 }

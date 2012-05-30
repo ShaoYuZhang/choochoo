@@ -54,22 +54,18 @@ void timeserver_task() {
     taskQueue[i].tid = -1;
   }
 
-  // Enables timer interrupt.
-  int irqmask = INT_MASK(TIMER_INT_MASK);
-  VMEM(VIC1 + INT_ENABLE) = irqmask;
-
   int notifierId = Create(1, timernotifier_task);
 
   // Start serving..
   for (;;) {
     int msgBuff = -1;
     int tid = -1;
-    bwputstr(COM2, "h");
-    //int len = Receive(&tid, (char*)&msgBuff, 4);
+    int len = Receive(&tid, (char*)&msgBuff, 4);
     ASSERT(len == 0 || len == 4, "Bad message to time server.");
 
     if (tid == notifierId) {
       counter += 1;
+      Reply(tid, NULL, 0);
 
 #if 0
       // Reply to applicable queues...
@@ -86,7 +82,8 @@ void timeserver_task() {
         }
       }
 #endif
-      bwprintf(COM2, "%d\n", counter);
+      if (counter%1000 == 0)
+        bwprintf(COM2, "%d\n", counter);
     } else if (len == 0) {
       ASSERT(0, "WHAT");
       // Timing request
@@ -130,18 +127,24 @@ void timeserver_task() {
   } // End of serve loop
 }
 
-int createTimerserver() {
+int startTimeServerTask() {
   timeServerTid = Create(1, timeserver_task);
   return timeServerTid;
 }
 
 void timernotifier_task() {
-  int tid = MyParentsTid();
+  int parent = MyParentsTid();
+
+  // Enables timer interrupt.
+  // TODO, move to kernel.
+  int irqmask = INT_MASK(TIMER_INT_MASK);
+  VMEM(VIC1 + INT_ENABLE) = irqmask;
 
   int counter = 0;
   for (;;) {
     AwaitEvent(0);
-    //Send(tid, (char*)NULL, 0, (char*)NULL, 0);
+    Send(parent, (char*)NULL, 0, (char*)NULL, 0);
+    counter++;
     if (counter % 1000 == 0) {
       bwputstr(COM2, "no\n");
     }

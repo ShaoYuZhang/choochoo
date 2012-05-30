@@ -6,6 +6,8 @@
 #include <syscall.h>
 #include <Scheduler.h>
 #include <bwio.h>
+#include <NameServer.h>
+#include <TimeServer.h>
 
 static void (*syscall_handler[LAST_SYSCALL])(int*, int, int, int) = {
   kernel_createtask,
