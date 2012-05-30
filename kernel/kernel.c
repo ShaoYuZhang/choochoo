@@ -7,7 +7,7 @@
 #include <Scheduler.h>
 #include <bwio.h>
 
-static void (*syscall_handler[8])(int*, int, int, int) = {
+static void (*syscall_handler[LAST_SYSCALL])(int*, int, int, int) = {
   kernel_createtask,
   kernel_mytid,
   kernel_myparenttid,
@@ -15,20 +15,16 @@ static void (*syscall_handler[8])(int*, int, int, int) = {
   kernel_reply,
   kernel_send,
   kernel_receive,
-  kernel_exit
+  kernel_exit,
+  kernel_awaitevent
 };
 
 static unsigned int tid_counter;
 static TaskDescriptor tds[NUM_MAX_TASK];
 
-static void handle_hwi() {
-  bwputstr(COM2, "hardware interrupt\n");
-  VMEM(VIC1 + SOFTINTCLEAR) = 0;
-}
-
 static void install_interrupt_handlers() {
 	INSTALL_INTERRUPT_HANDLER(SWI_VECTOR, asm_handle_swi);
-	INSTALL_INTERRUPT_HANDLER(HWI_VECTOR, handle_hwi);
+	INSTALL_INTERRUPT_HANDLER(HWI_VECTOR, asm_handle_hwi);
 
   // Diable timers
 //  VMEM(TIMER1_BASE + CRTL_OFFSET) &= ~ENABLE_MASK;
@@ -41,8 +37,10 @@ static void install_interrupt_handlers() {
   VMEM(VIC1 + INTENCLR_OFFSET) = ~0;
 }
 
+static volatile TaskDescriptor* waiter;
 void kernel_init() {
   tid_counter = 0;
+  waiter = NULL;
 	install_interrupt_handlers();
 	mem_reset();
 	scheduler_init();
@@ -52,24 +50,32 @@ void kernel_runloop() {
 	volatile TaskDescriptor *td;
 	int** sp_pointer;
 
-
 	while ((td = scheduler_get()) != (TaskDescriptor *)NULL) {
 		sp_pointer = (int**)&(td->sp);
     scheduler_set_running(td);
-		asm_switch_to_usermode(sp_pointer);
+		int is_interrupt = asm_switch_to_usermode(sp_pointer);
+    if (!is_interrupt) {
+      int *arg0 = *sp_pointer;
+      int request = *arg0 & MASK_LOWER;
 
-    int *arg0 = *sp_pointer;
-    int request = *arg0 & MASK_LOWER;
+      ASSERT(request >= 0 && request < LAST_SYSCALL, "System call not in range.");
+      (*syscall_handler[request])(*sp_pointer,
+                                  (*sp_pointer)[1],
+                                  (*sp_pointer)[2],
+                                  (*sp_pointer)[3]);
 
-    bwprintf(COM2, "kernel mode.");
-    ASSERT(request >= 0 && request < LAST_SYSCALL, "System call not in range.");
-    (*syscall_handler[request])(*sp_pointer,
-                                (*sp_pointer)[1],
-                                (*sp_pointer)[2],
-                                (*sp_pointer)[3]);
-
-    if (request <= SYSCALL_REPLY) {
+      if (request <= SYSCALL_REPLY) {
+        scheduler_move2ready();
+      }
+    } else {
+      VMEM(TIMER1_BASE + CLR_OFFSET) = 0;
       scheduler_move2ready();
+      //VMEM(TIMER1_BASE + CRTL_OFFSET) &= ~ENABLE_MASK; // stop
+      if (waiter != NULL) {
+        waiter->state = READY;
+        scheduler_append(waiter);
+      }
+      //INSTALL_INTERRUPT_HANDLER(HWI_VECTOR, bad_code);
     }
 	}
 }
@@ -203,4 +209,11 @@ void kernel_reply(int* returnVal, int tid, int reply, int replylen) {
 }
 
 void kernel_pass(){
+}
+
+void kernel_awaitevent(int* returnVal, int eventType) {
+	volatile TaskDescriptor *td = scheduler_get_running();
+  td->state = EVENT_BLOCK;
+  waiter = td;
+  *returnVal = 0;
 }

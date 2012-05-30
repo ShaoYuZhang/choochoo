@@ -13,7 +13,8 @@ typedef void (*func_t)();
 #define SYSCALL_SEND 5
 #define SYSCALL_RECEIVE 6
 #define SYSCALL_EXIT 7
-#define LAST_SYSCALL 8
+#define SYSCALL_AWAITEVENT 8
+#define LAST_SYSCALL 9
 
 int Create(int priority, func_t code);
 
@@ -30,5 +31,7 @@ int Send( int tid, char *msg, int msglen, char *reply, int replylen);
 int Receive(int *tid, char *msg, int msglen);
 
 int Reply( int tid, char *reply, int replylen);
+
+int AwaitEvent(int eventType);
 
 #endif // SYSCALL_H_

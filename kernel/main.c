@@ -15,7 +15,7 @@ void generateTimeInterrupt() {
 
   int irqmask = INT_MASK(TIMER_INT_MASK);
   // Enables timer interrupt.
-  VMEM(VIC2 + INT_ENABLE) = irqmask;
+  VMEM(VIC1 + INT_ENABLE) = irqmask;
 
   for (int i = 0; i < 2000; i++) {
     //VMEM(VIC1 + SOFTINT) = i;
@@ -56,6 +56,36 @@ void timing2() {
   Exit();
 }
 
+void task1() {
+  // Enable on device
+
+  VMEM(TIMER1_BASE + CRTL_OFFSET) &= ~ENABLE_MASK; // stop timer
+  VMEM(TIMER1_BASE + LDR_OFFSET)   = 508;
+  VMEM(TIMER1_BASE + CRTL_OFFSET) |= MODE_MASK; // pre-load mode
+  VMEM(TIMER1_BASE + CRTL_OFFSET) |= CLKSEL_MASK; // 508Khz clock
+  VMEM(TIMER1_BASE + CRTL_OFFSET) |= ENABLE_MASK; // start
+
+  int irqmask = INT_MASK(TIMER_INT_MASK);
+  // Enables timer interrupt.
+  VMEM(VIC1 + INT_ENABLE) = irqmask;
+  while (1) {
+
+  }
+  Exit();
+}
+
+static int counter;
+void clockUpdate() {
+  counter = 0;
+  while (1) {
+    AwaitEvent(1);
+    counter++;
+    if (counter % 1000 == 0) {
+      bwprintf ( COM2, "la\n\r");
+    }
+  }
+}
+
 int main(int argc, char* argv[]) {
 	bwioInit();
 	kernel_init();
@@ -71,8 +101,8 @@ int main(int argc, char* argv[]) {
 
   //*timer_control = control;
 
-  kernel_createtask((int)&returnVal, 1, generateTimeInterrupt, 0);
-//  kernel_createtask(&returnVal, 1, timing2);
+  kernel_createtask((int)&returnVal, 2, task1, 0);
+  kernel_createtask((int)&returnVal, 1, clockUpdate, 0);
 
 	kernel_runloop();
 	return 0;

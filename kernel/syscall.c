@@ -70,3 +70,7 @@ int Reply( int tid, char *reply, int replylen) {
   return asm_syscall(SYSCALL_REPLY, tid, (int)reply, replylen);
 }
 
+int AwaitEvent(int eventType){
+  asm_syscall(SYSCALL_AWAITEVENT, eventType, 0, 0);
+  return 1;
+}

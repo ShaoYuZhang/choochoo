@@ -7,7 +7,8 @@ typedef enum TaskState {
     ZOMBIE,
     SEND_BLOCK,
     RECEIVE_BLOCK,
-    REPLY_BLOCK
+    REPLY_BLOCK,
+    EVENT_BLOCK
 } TaskState;
 
 typedef struct TaskDescriptor {
