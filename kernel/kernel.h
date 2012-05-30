@@ -11,21 +11,21 @@ void handle_swi(int** sp_pointer);
 
 void kernel_init();
 
-void kernel_createtask(int* returnPtr, int priority, func_t code);
+void kernel_createtask(int* returnPtr, int priority, int code, int notUsed);
 
-void kernel_mytid(int* returnVal);
+void kernel_mytid(int* returnVal, int, int, int);
 
-void kernel_myparenttid(int* returnVal);
+void kernel_myparenttid(int* returnVal, int, int, int);
 
 void kernel_pass();
 
 void kernel_exit();
 
-void kernel_send(int* arg0, char* arg1, int arg2);
+void kernel_send(int* arg0, int msg, int arg2p, int);
 
-void kernel_receive(int not_used, int tid, int msg, int msglen);
+void kernel_receive(int* not_used, int tid, int msg, int msglen);
 
-void kernel_reply(int* returnVal , int tid, char* arg2, int replylen);
+void kernel_reply(int* returnVal , int tid, int arg2, int replylen);
 
 void kernel_runloop();
 

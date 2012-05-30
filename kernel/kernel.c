@@ -7,7 +7,7 @@
 #include <Scheduler.h>
 #include <bwio.h>
 
-static void (*syscall_handler[8])(const int, const int, const int, const int) = {
+static void (*syscall_handler[8])(int*, int, int, int) = {
   kernel_createtask,
   kernel_mytid,
   kernel_myparenttid,
@@ -39,7 +39,6 @@ static void install_interrupt_handlers() {
   VMEM(VIC1 + INTSELECT_OFFSET) = 0;
   // Clear all interrupts
   VMEM(VIC1 + INTENCLR_OFFSET) = ~0;
-  VMEM(VIC1 + INTENCLR_OFFSET) = ~0;
 }
 
 void kernel_init() {
@@ -51,7 +50,7 @@ void kernel_init() {
 
 void kernel_runloop() {
 	volatile TaskDescriptor *td;
-	volatile int** sp_pointer;
+	int** sp_pointer;
 
 
 	while ((td = scheduler_get()) != (TaskDescriptor *)NULL) {
@@ -64,7 +63,10 @@ void kernel_runloop() {
 
     bwprintf(COM2, "kernel mode.");
     ASSERT(request >= 0 && request < LAST_SYSCALL, "System call not in range.");
-    (*syscall_handler[request])(*sp_pointer, (*sp_pointer)[1], (*sp_pointer)[2], (*sp_pointer)[3]);
+    (*syscall_handler[request])(*sp_pointer,
+                                (*sp_pointer)[1],
+                                (*sp_pointer)[2],
+                                (*sp_pointer)[3]);
 
     if (request <= SYSCALL_REPLY) {
       scheduler_move2ready();
@@ -72,9 +74,7 @@ void kernel_runloop() {
 	}
 }
 
-void kernel_createtask(int* returnPtr, int priority, func_t code) {
-  // | -------------->
-  // | TD | stack ->>>>
+void kernel_createtask(int* returnPtr, int priority, int code, int notUsed) {
   addr mem = allocate_user_memory();
   if (mem == NULL) {
     *returnPtr = -2;
@@ -83,11 +83,11 @@ void kernel_createtask(int* returnPtr, int priority, func_t code) {
   td->id = tid_counter++;
 	td->state = READY;
 	td->priority = priority;
-	kernel_mytid(&(td->parent_id));
+	kernel_mytid((int*)&(td->parent_id), 0, 0, 0);
   td->next = (TaskDescriptor*)NULL;
   td->sendQ = (TaskDescriptor*)NULL;
-  td->sp = (unsigned int*)(mem + STACK_SIZE) - 16; // Bottom of stack are fake register values
-  td->sp[13] = (int) code; // PC_USR
+  td->sp = (int*)(mem + STACK_SIZE) - 16; // Bottom of stack are fake register values
+  td->sp[13] = code; // PC_USR
   td->sp[14] = 0x50; // spsr, enabled IRQ interrupt, disable FIQ
   td->sp[15] = (int) Exit; // LR_USR
 
@@ -95,12 +95,12 @@ void kernel_createtask(int* returnPtr, int priority, func_t code) {
 	*returnPtr = td->id;
 }
 
-void kernel_mytid(int* returnVal) {
+void kernel_mytid(int* returnVal, int notUsed1, int notUsed2, int notUsed3) {
 	volatile TaskDescriptor *td = scheduler_get_running();
 	*returnVal = (td != (TaskDescriptor *)NULL ? td->id : 0xdeadbeef);
 }
 
-void kernel_myparenttid(int* returnVal) {
+void kernel_myparenttid(int* returnVal, int notUsed1, int notUsed2, int notUsed3) {
 	volatile TaskDescriptor *td = scheduler_get_running();
 	*returnVal = (td != (TaskDescriptor *)NULL ? td->parent_id : 0xdeadbeef);
 }
@@ -110,20 +110,21 @@ void kernel_exit() {
   td->state = ZOMBIE;
 }
 
-void kernel_send(int* arg0, char *msg, int arg2) {
-  int receiver_tid = (*arg0 & MASK_HIGHER) >> 16;
+void kernel_send(int* returnVal, int msg, int arg3, int notUsed) {
+  // returnVal also holds receive tid =D
+  int receiver_tid = (*returnVal & MASK_HIGHER) >> 16;
   volatile TaskDescriptor* sender = scheduler_get_running();
   volatile TaskDescriptor* receiver = &tds[receiver_tid];
 
   if (receiver_tid >= tid_counter || receiver->state == ZOMBIE) {
     scheduler_move2ready();
-    *arg0 = -2;
+    *returnVal = -2;
     return;
   }
   ASSERT(sender->id != receiver_tid, "Sending message to self.");
 
   if (receiver->state == SEND_BLOCK) {
-    int msglen = (arg2 & MASK_HIGHER) >> 16;
+    int msglen = (arg3 & MASK_HIGHER) >> 16;
     // need to wake up receiver, so need params from reciever
     volatile int* receiver_sp = receiver->sp;
     volatile int* receiver_return = receiver_sp;
@@ -131,7 +132,7 @@ void kernel_send(int* arg0, char *msg, int arg2) {
     char* receiver_msg = (char*)receiver_sp[2];
     int receiver_msglen = receiver_sp[3];
     int actual_msglen = msglen < receiver_msglen ? msglen : receiver_msglen;
-    memcpy_no_overlap_asm(msg, receiver_msg, actual_msglen);
+    memcpy_no_overlap_asm((char*)msg, receiver_msg, actual_msglen);
 
     *receiver_return = actual_msglen;
     receiver->state = READY;
@@ -148,7 +149,7 @@ void kernel_send(int* arg0, char *msg, int arg2) {
   }
 }
 
-void kernel_receive(int not_used, int arg1, int arg2, int msglen) {
+void kernel_receive(int* notUsed, int arg1, int arg2, int msglen) {
   int*  tid = (int*)  arg1;
   char* msg = (char*) arg2;
   volatile TaskDescriptor* receiver = scheduler_get_running();
@@ -175,7 +176,7 @@ void kernel_receive(int not_used, int arg1, int arg2, int msglen) {
   }
 }
 
-void kernel_reply(int* returnVal, int tid, char* reply, int replylen) {
+void kernel_reply(int* returnVal, int tid, int reply, int replylen) {
   if (tid >= tid_counter) {
     *returnVal = -2;
     return;
@@ -194,7 +195,7 @@ void kernel_reply(int* returnVal, int tid, char* reply, int replylen) {
   int sender_replylen= sender_sp[2] & MASK_LOWER;
 
   int actual_replylen = replylen < sender_replylen ? replylen: sender_replylen;
-  memcpy_no_overlap_asm(reply, sender_reply, actual_replylen);
+  memcpy_no_overlap_asm((char*)reply, sender_reply, actual_replylen);
   *sender_return = actual_replylen;
   sender->state = READY;
   scheduler_append(sender);

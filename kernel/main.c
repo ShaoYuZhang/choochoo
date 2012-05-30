@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
 
   //*timer_control = control;
 
-  kernel_createtask(&returnVal, 1, generateTimeInterrupt);
+  kernel_createtask((int)&returnVal, 1, generateTimeInterrupt, 0);
 //  kernel_createtask(&returnVal, 1, timing2);
 
 	kernel_runloop();
