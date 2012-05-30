@@ -12,6 +12,8 @@
 #define SWI_VECTOR 0x8
 #define HWI_VECTOR 0x18
 #define VIC1 0x800B0000
+#define VIC2 0x800C0000
+
 #define INTSELECT_OFFSET 0x0c
 #define INTENCLR_OFFSET 0x14
 #define SOFTINT 0x18

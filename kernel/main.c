@@ -7,18 +7,18 @@
 
 void generateTimeInterrupt() {
   // Enable on device
-  VMEM(TIMER3_BASE + CRTL_OFFSET) &= ~ENABLE_MASK; // stop timer
-  VMEM(TIMER3_BASE + LDR_OFFSET) = ~0;
-  VMEM(TIMER3_BASE + CRTL_OFFSET) &= ~MODE_MASK; // free-running mode
-  VMEM(TIMER3_BASE + CRTL_OFFSET) |= CLKSEL_MASK; // 508Khz clock
-  VMEM(TIMER3_BASE + CRTL_OFFSET) |= ENABLE_MASK; // start
+  VMEM(TIMER1_BASE + CRTL_OFFSET) &= ~ENABLE_MASK; // stop timer
+  VMEM(TIMER1_BASE + LDR_OFFSET)   = 508;
+  VMEM(TIMER1_BASE + CRTL_OFFSET) |= MODE_MASK; // pre-load mode
+  VMEM(TIMER1_BASE + CRTL_OFFSET) |= CLKSEL_MASK; // 508Khz clock
+  VMEM(TIMER1_BASE + CRTL_OFFSET) |= ENABLE_MASK; // start
 
   int irqmask = INT_MASK(TIMER_INT_MASK);
   // Enables timer interrupt.
-  VMEM(VIC1 + INT_ENABLE) = irqmask;
+  VMEM(VIC2 + INT_ENABLE) = irqmask;
 
   for (int i = 0; i < 2000; i++) {
-    VMEM(VIC1 + SOFTINT) = i;
+    //VMEM(VIC1 + SOFTINT) = i;
    // bwprintf(COM2, "Waiting..%x %x\n", VMEM(VIC1 + SOFTINT), VMEM(VIC1 + 0));
    if (i%200 == 0) {
       bwprintf(COM2, "Waiting..\n");

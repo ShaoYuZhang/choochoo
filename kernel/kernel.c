@@ -88,7 +88,7 @@ void kernel_createtask(int* returnPtr, int priority, func_t code) {
   td->sendQ = (TaskDescriptor*)NULL;
   td->sp = (unsigned int*)(mem + STACK_SIZE) - 16; // Bottom of stack are fake register values
   td->sp[13] = (int) code; // PC_USR
-  td->sp[14] = 0x10; // spsr, enabled interrupt
+  td->sp[14] = 0x50; // spsr, enabled IRQ interrupt, disable FIQ
   td->sp[15] = (int) Exit; // LR_USR
 
 	scheduler_append(td);
