@@ -4,17 +4,17 @@ AR = ar
 LD = ld
 
 # CANNOT enalbe finline-function due to syscall file messing up.
-CFLAGS  = -c -fPIC -Wall -I. -mcpu=arm920t -msoft-float -MMD -std=c99 -O3 #-finline-functions , -funswitch-loops, -fpredictive-commoning, -fgcse-after-reload and -ftree-vectorize options.
+CFLAGS  = -c -fPIC -Wall -I. -Itask/. -mcpu=arm920t -msoft-float -MMD -std=c99 -O3 #-finline-functions , -funswitch-loops, -fpredictive-commoning, -fgcse-after-reload and -ftree-vectorize options.
 LDFLAGS = -init main -Map main.map -N -T orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 
 ASFLAGS	= -mcpu=arm920t -mapcs-32 -mno-fpu
 
 %.s: %.c
-	$(CC) -S $(CFLAGS) $*.c
+	$(CC) -S $(CFLAGS) $*.c -o $@ $<
 
 %.o: %.c
-	$(CC) $(CFLAGS) $*.c
+	$(CC) $(CFLAGS) $*.c -o $@ $<
 
-OBJECTS = main.o bwio.o memory.o kernel.o syscall.o Scheduler.o TaskQueue.o NameServer.o idle.o
+OBJECTS = main.o bwio.o memory.o kernel.o syscall.o Scheduler.o TaskQueue.o task/NameServer.o task/idle.o
 DEPENDS = ${OBJECTS:.o=.d} # substitute ".o" with ".d"
 ASMS = $(OBJECTS:.o=.s)
 
@@ -29,6 +29,6 @@ main.elf: $(OBJECTS) interrupt.o orex.ld
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) interrupt.o -lgcc
 
 clean:
-	-rm -f *.s *.a *.o *.map *.elf *.d /u/cs452/public/tftp/ARM/${USER}.elf
+	-rm -f *.s task/*.s *.o task/*.o *.map *.elf task/*.d *.d /u/cs452/public/tftp/ARM/${USER}.elf
 
 -include ${DEPENDS} # reads the .d files and reruns dependencies
