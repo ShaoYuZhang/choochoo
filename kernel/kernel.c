@@ -18,12 +18,29 @@ static void (*syscall_handler[8])(const int, const int, const int, const int) = 
   kernel_exit
 };
 
-static void install_interrupt_handlers() {
-	INSTALL_INTERRUPT_HANDLER(SWI_VECTOR, asm_handle_swi);
-}
-
 static unsigned int tid_counter;
 static TaskDescriptor tds[NUM_MAX_TASK];
+
+static void handle_hwi() {
+  bwputstr(COM2, "hardware interrupt\n");
+  VMEM(VIC1 + SOFTINTCLEAR) = 0;
+}
+
+static void install_interrupt_handlers() {
+	INSTALL_INTERRUPT_HANDLER(SWI_VECTOR, asm_handle_swi);
+	INSTALL_INTERRUPT_HANDLER(HWI_VECTOR, handle_hwi);
+
+  // Diable timers
+//  VMEM(TIMER1_BASE + CRTL_OFFSET) &= ~ENABLE_MASK;
+//  VMEM(TIMER2_BASE + CRTL_OFFSET) &= ~ENABLE_MASK;
+//  VMEM(TIMER3_BASE + CRTL_OFFSET) &= ~ENABLE_MASK;
+
+  // Use IRQ
+  VMEM(VIC1 + INTSELECT_OFFSET) = 0;
+  // Clear all interrupts
+  VMEM(VIC1 + INTENCLR_OFFSET) = ~0;
+  VMEM(VIC1 + INTENCLR_OFFSET) = ~0;
+}
 
 void kernel_init() {
   tid_counter = 0;
@@ -46,6 +63,7 @@ void kernel_runloop() {
     int *arg0 = *sp_pointer;
     int request = *arg0 & MASK_LOWER;
 
+    bwprintf(COM2, "kernel mode.");
     ASSERT(request >= 0 && request < LAST_SYSCALL, "System call not in range.");
     (*syscall_handler[request])(*sp_pointer, (*sp_pointer)[1], (*sp_pointer)[2], (*sp_pointer)[3]);
 
@@ -55,7 +73,6 @@ void kernel_runloop() {
 	}
 }
 
-//int kernel_createtask(int priority, func_t code) {
 void kernel_createtask(int* returnPtr, int priority, func_t code) {
   // | -------------->
   // | TD | stack ->>>>
@@ -71,8 +88,8 @@ void kernel_createtask(int* returnPtr, int priority, func_t code) {
   td->next = (TaskDescriptor*)NULL;
   td->sendQ = (TaskDescriptor*)NULL;
   td->sp = (unsigned int*)(mem + STACK_SIZE) - 16; // Bottom of stack are fake register values
-  td->sp[13] = (int) code; // LR_SVC
-  td->sp[14] = 0x10; //spsr
+  td->sp[13] = (int) code; // PC_USR
+  td->sp[14] = 0x10; // spsr, enabled interrupt
   td->sp[15] = (int) Exit; // LR_USR
 
 	scheduler_append(td);

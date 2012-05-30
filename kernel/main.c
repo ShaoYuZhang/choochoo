@@ -3,9 +3,31 @@
 #include <syscall.h>
 #include <memory.h>
 #include <NameServer.h>
-#include <RockPaperScissorsServer.h>
-#include <RockPaperScissorsClient.h>
 
+void generateTimeInterrupt() {
+  // Enable on device
+  VMEM(TIMER3_BASE + CRTL_OFFSET) &= ~ENABLE_MASK; // stop timer
+  VMEM(TIMER3_BASE + LDR_OFFSET) = ~0;
+  VMEM(TIMER3_BASE + CRTL_OFFSET) &= ~MODE_MASK; // free-running mode
+  VMEM(TIMER3_BASE + CRTL_OFFSET) |= CLKSEL_MASK; // 508Khz clock
+  VMEM(TIMER3_BASE + CRTL_OFFSET) |= ENABLE_MASK; // start
+
+  int irqmask = INT_MASK(TIMER_INT_MASK);
+  // Enables timer interrupt.
+  VMEM(VIC1 + INT_ENABLE) = irqmask;
+
+  for (int i = 0; i < 2000; i++) {
+    VMEM(VIC1 + SOFTINT) = i;
+   // bwprintf(COM2, "Waiting..%x %x\n", VMEM(VIC1 + SOFTINT), VMEM(VIC1 + 0));
+   if (i%200 == 0) {
+      bwprintf(COM2, "Waiting..\n");
+   }
+   // , VMEM(VIC1 + SOFTINT), VMEM(VIC1 + 0));
+    //print_cpsr();
+  }
+
+  Exit();
+}
 void timing2();
 
 void timing1() {
@@ -39,17 +61,17 @@ int main(int argc, char* argv[]) {
 
   int returnVal;
 
-  int *timer_control = (int *)(TIMER3_BASE + CRTL_OFFSET);
+  //int *timer_control = (int *)(TIMER3_BASE + CRTL_OFFSET);
 
-  int control = *timer_control;
-  control = control | CLKSEL_MASK; //USE higher freq clock
-  control = control & (~MODE_MASK); // period mode
-  control = control | ENABLE_MASK; // enable
+  //int control = *timer_control;
+  //control = control | CLKSEL_MASK; //USE higher freq clock
+  //control = control & (~MODE_MASK); // period mode
+  //control = control | ENABLE_MASK; // enable
 
-  *timer_control = control;
+  //*timer_control = control;
 
-  kernel_createtask(&returnVal, 1, timing1);
-  kernel_createtask(&returnVal, 1, timing2);
+  kernel_createtask(&returnVal, 1, generateTimeInterrupt);
+//  kernel_createtask(&returnVal, 1, timing2);
 
 	kernel_runloop();
 	return 0;

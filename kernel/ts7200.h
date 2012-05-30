@@ -7,9 +7,19 @@
  *
  */
 
+#define INT_MASK(irq) (1 << (irq & 0x1f))
 
 #define SWI_VECTOR 0x8
+#define HWI_VECTOR 0x18
+#define VIC1 0x800B0000
+#define INTSELECT_OFFSET 0x0c
+#define INTENCLR_OFFSET 0x14
+#define SOFTINT 0x18
+#define SOFTINTCLEAR 0x1c
+#define INT_ENABLE 0x10
 
+
+#define TIMER_INT_MASK 4
 
 #define	TIMER1_BASE	0x80810000
 #define	TIMER2_BASE	0x80810020
