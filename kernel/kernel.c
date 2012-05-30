@@ -28,15 +28,25 @@ static void install_interrupt_handlers() {
 	INSTALL_INTERRUPT_HANDLER(SWI_VECTOR, asm_handle_swi);
 	INSTALL_INTERRUPT_HANDLER(HWI_VECTOR, asm_handle_hwi);
 
-  // Diable timers
-//  VMEM(TIMER1_BASE + CRTL_OFFSET) &= ~ENABLE_MASK;
-//  VMEM(TIMER2_BASE + CRTL_OFFSET) &= ~ENABLE_MASK;
-//  VMEM(TIMER3_BASE + CRTL_OFFSET) &= ~ENABLE_MASK;
-
   // Use IRQ
   VMEM(VIC1 + INTSELECT_OFFSET) = 0;
   // Clear all interrupts
   VMEM(VIC1 + INTENCLR_OFFSET) = ~0;
+}
+
+// TODO test.
+static void uninstall_interrupt_handlers() {
+  // Disable HWI handler
+	INSTALL_INTERRUPT_HANDLER(HWI_VECTOR, 0);
+
+  // Diable timers
+  VMEM(TIMER1_BASE + CRTL_OFFSET) &= ~ENABLE_MASK;
+  VMEM(TIMER2_BASE + CRTL_OFFSET) &= ~ENABLE_MASK;
+  VMEM(TIMER3_BASE + CRTL_OFFSET) &= ~ENABLE_MASK;
+
+  // Clear all interrupts
+  VMEM(VIC1 + INTENCLR_OFFSET) = ~0;
+  VMEM(VIC2 + INTENCLR_OFFSET) = ~0;
 }
 
 static volatile TaskDescriptor* waiter;
@@ -47,6 +57,10 @@ void kernel_init() {
 	install_interrupt_handlers();
 	mem_reset();
 	scheduler_init();
+}
+
+void kernel_close() {
+	uninstall_interrupt_handlers();
 }
 
 void kernel_runloop() {
@@ -80,7 +94,7 @@ void kernel_runloop() {
       }
       //INSTALL_INTERRUPT_HANDLER(HWI_VECTOR, bad_code);
     }
-	}
+	} // End kernel loop;
 }
 
 void kernel_createtask(int* returnPtr, int priority, int code, int notUsed) {
@@ -211,8 +225,7 @@ void kernel_reply(int* returnVal, int tid, int reply, int replylen) {
   *returnVal = 0;
 }
 
-void kernel_pass(){
-}
+void kernel_pass(){}
 
 void kernel_awaitevent(int* returnVal, int eventType) {
 	volatile TaskDescriptor *td = scheduler_get_running();
