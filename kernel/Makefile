@@ -4,7 +4,7 @@ AR = ar
 LD = ld
 
 # CANNOT enalbe finline-function due to syscall file messing up.
-CFLAGS  = -c -fPIC -Wall -I. -Itask/. -mcpu=arm920t -msoft-float -MMD -std=c99 #-finline-functions , -funswitch-loops, -fpredictive-commoning, -fgcse-after-reload and -ftree-vectorize options.
+CFLAGS  = -c -fPIC -Wall -I. -Itask/. -mcpu=arm920t -msoft-float -MMD -std=c99 -O3 #-finline-functions , -funswitch-loops, -fpredictive-commoning, -fgcse-after-reload and -ftree-vectorize options.
 LDFLAGS = -init main -Map main.map -N -T orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 
 ASFLAGS	= -mcpu=arm920t -mapcs-32 -mno-fpu
 
@@ -22,11 +22,14 @@ all: $(ASMS) main.elf
 	cp main.elf /u/cs452/public/tftp/ARM/${USER}.elf
 	chmod 777 /u/cs452/public/tftp/ARM/${USER}.elf
 
+task/idle_asm.o : task/idle.asm
+	$(AS) $(ASFLAGS) -o $@ $<
+
 interrupt.o : interrupt.asm
 	$(AS) $(ASFLAGS) -o $@ $<
 
-main.elf: $(OBJECTS) interrupt.o orex.ld 
-	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) interrupt.o -lgcc
+main.elf: $(OBJECTS) interrupt.o task/idle_asm.o orex.ld 
+	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) interrupt.o task/idle_asm.o -lgcc
 
 clean:
 	-rm -f *.s task/*.s *.o task/*.o *.map *.elf task/*.d *.d /u/cs452/public/tftp/ARM/${USER}.elf

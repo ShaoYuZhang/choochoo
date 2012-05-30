@@ -58,6 +58,7 @@ void timing2() {
 }
 
 void task1() {
+  startIdleTask();
   // Enable on device
 
   VMEM(TIMER1_BASE + CRTL_OFFSET) &= ~ENABLE_MASK; // stop timer
@@ -69,9 +70,6 @@ void task1() {
   int irqmask = INT_MASK(TIMER_INT_MASK);
   // Enables timer interrupt.
   VMEM(VIC1 + INT_ENABLE) = irqmask;
-  while (1) {
-
-  }
   Exit();
 }
 
