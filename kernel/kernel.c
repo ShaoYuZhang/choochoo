@@ -53,8 +53,7 @@ void kernel_runloop() {
 	volatile TaskDescriptor *td;
 	volatile int** sp_pointer;
 
-  // TODO: when all tasks blocked.. this exits.
-  //       should be when all task are in ZOMBIE
+
 	while ((td = scheduler_get()) != (TaskDescriptor *)NULL) {
 		sp_pointer = (int**)&(td->sp);
     scheduler_set_running(td);

@@ -3,6 +3,7 @@
 #include <syscall.h>
 #include <memory.h>
 #include <NameServer.h>
+#include <idle.h>
 
 void generateTimeInterrupt() {
   // Enable on device
