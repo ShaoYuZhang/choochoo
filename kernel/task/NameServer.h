@@ -5,7 +5,7 @@
 
 #define REGISTER_AS  79
 #define WHO_IS       81
-#define NAMESERVER_TID 1
+#define NAMESERVER_TID 2
 
 void startNameServerTask();
 

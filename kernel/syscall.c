@@ -13,7 +13,7 @@ extern int _TextEnd;
 
 int Create(int priority, func_t code) {
 #if MORE_CHECKING
-  if (priority < MIN_PRIORITY || priority > MAX_PRIORITY) {
+  if (priority < HIGHEST_PRIORITY || priority > LOWEST_PRIORITY) {
 		return -1;
 	}
 	unsigned int codeaddr = (unsigned int)code;

@@ -3,6 +3,6 @@
 #include <util.h>
 #include <syscall.h>
 
-void startIdleTask() {
-  Create(MAX_PRIORITY, idle_task);
+int startIdleTask() {
+  return Create(LOWEST_PRIORITY, idle_task);
 }

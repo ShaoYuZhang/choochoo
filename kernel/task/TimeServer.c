@@ -42,7 +42,7 @@ int DelayUntil(int ticks, int timeServerTid) {
 void timeserver_task() {
   // Enable timer device
   VMEM(TIMER1_BASE + CRTL_OFFSET) &= ~ENABLE_MASK; // stop timer
-  VMEM(TIMER1_BASE + LDR_OFFSET)   = 2000; ///508; // Corresponds to clock frequency
+  VMEM(TIMER1_BASE + LDR_OFFSET)   = 508; ///508; // Corresponds to clock frequency
   VMEM(TIMER1_BASE + CRTL_OFFSET) |= MODE_MASK; // pre-load mode
   VMEM(TIMER1_BASE + CRTL_OFFSET) |= CLKSEL_MASK; // 508Khz clock
   VMEM(TIMER1_BASE + CRTL_OFFSET) |= ENABLE_MASK; // start
@@ -145,13 +145,13 @@ void timernotifier_task() {
   int irqmask = 1 << TC1OI;
   VMEM(VIC1 + INT_ENABLE) = irqmask;
 
-  int counter = 0;
+//  int counter = 0;
   for (;;) {
     AwaitEvent(TC1OI);
     Send(parent, (char*)NULL, 0, (char*)NULL, 0);
-    counter++;
-    if (counter % 20 == 0) {
-      bwputstr(COM2, "no\n");
-    }
+//    counter++;
+//    if (counter % 20 == 0) {
+//      bwputstr(COM2, "no\n");
+//    }
   }
 }

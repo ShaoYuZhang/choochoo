@@ -8,6 +8,7 @@
 #include <bwio.h>
 #include <NameServer.h>
 #include <TimeServer.h>
+#include <idle.h>
 
 static void (*syscall_handler[LAST_SYSCALL])(int*, int, int, int) = {
   kernel_createtask,
@@ -22,6 +23,7 @@ static void (*syscall_handler[LAST_SYSCALL])(int*, int, int, int) = {
 };
 
 static unsigned int tid_counter;
+static unsigned int idleTid;
 static TaskDescriptor tds[NUM_MAX_TASK];
 static volatile TaskDescriptor* eventWaitingTask[64];
 
@@ -60,6 +62,9 @@ void kernel_init() {
   for (int i = 0; i < 64; i++) {
     eventWaitingTask[i] = (TaskDescriptor*) NULL;
   }
+
+  kernel_createtask((int*)&idleTid, LOWEST_PRIORITY, (int)idle_task, 0);
+  bwprintf(COM2, "haha %d idle:\n", idleTid);
 }
 
 void kernel_close() {
@@ -86,15 +91,45 @@ void kernel_handle_interrupt() {
     scheduler_append(subscriber);
   }
 }
+
 void kernel_runloop() {
 	volatile TaskDescriptor *td;
 	int** sp_pointer;
 
-	while ((td = scheduler_get()) != (TaskDescriptor *)NULL) {
+#if PERF_CHECK
+  unsigned int kernelTimeStart = (((VMEM(0x80810064) & 0xff) << 32) | VMEM(0x80810060));
+  unsigned int idleTimeStart = 0;
+  unsigned int idleTime = 0;
+  // Clear Timer4
+  VMEM(0x80810064) &= ~0x100;
+  VMEM(0x80810064) |= 0x100;
+#endif
+
+
+	while (LIKELY((td = scheduler_get()) != (TaskDescriptor *)NULL)) {
+#if PERF_CHECK
+    if (idleTid == td->id) {
+      idleTimeStart = (((VMEM(0x80810064) & 0xff) << 32) | VMEM(0x80810060));
+    }
+#endif
 		sp_pointer = (int**)&(td->sp);
     scheduler_set_running(td);
 		int is_interrupt = asm_switch_to_usermode(sp_pointer);
-    if (!is_interrupt) {
+#if PERF_CHECK
+    if (idleTid == td->id) {
+      idleTime += (((VMEM(0x80810064) & 0xff) << 32) | VMEM(0x80810060)) - idleTimeStart;
+      if (idleTime > 400000) {
+        int kernelTime = (((VMEM(0x80810064) & 0xff) << 32) | VMEM(0x80810060)) - kernelTimeStart;
+        bwprintf(COM2, "Kenel: %d idle:%d \n", kernelTime, idleTime);
+        break;
+      }
+    }
+#endif
+
+    if (LIKELY(is_interrupt)) {
+      scheduler_move2ready();
+      kernel_handle_interrupt();
+    } else {
       int *arg0 = *sp_pointer;
       int request = *arg0 & MASK_LOWER;
 
@@ -107,9 +142,7 @@ void kernel_runloop() {
       if (request <= SYSCALL_REPLY) {
         scheduler_move2ready();
       }
-    } else {
-      scheduler_move2ready();
-      kernel_handle_interrupt();
+
     }
 	} // End kernel loop;
 }
@@ -218,10 +251,12 @@ void kernel_receive(int* notUsed, int arg1, int arg2, int msglen) {
 }
 
 void kernel_reply(int* returnVal, int tid, int reply, int replylen) {
+#if MORE_CHECKING
   if (tid >= tid_counter) {
     *returnVal = -2;
     return;
   }
+#endif
 
   volatile TaskDescriptor* sender = &tds[tid];
 
@@ -246,14 +281,17 @@ void kernel_reply(int* returnVal, int tid, int reply, int replylen) {
 void kernel_pass(){}
 
 void kernel_awaitevent(int* returnVal, int eventType, int notUsed1, int notUsed2) {
+#if MORE_CHECKING
   if (eventType >= 64 || eventType < 0) {
     *returnVal = -1;
     return;
   }
+  // Another task already registered for this event.
   if (eventWaitingTask[eventType] != (TaskDescriptor*)NULL) {
     *returnVal = -4;
     return;
   }
+#endif
 	volatile TaskDescriptor *td = scheduler_get_running();
   td->state = EVENT_BLOCK;
   eventWaitingTask[eventType] = td;

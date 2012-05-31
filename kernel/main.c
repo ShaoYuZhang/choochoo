@@ -4,13 +4,10 @@
 #include <memory.h>
 #include <NameServer.h>
 #include <TimeServer.h>
-#include <idle.h>
 
 void task1() {
   startNameServerTask();
-
   int timerServerTid = startTimeServerTask();
-  startIdleTask();
 
   int checkId = WhoIs(TIMESERVER_NAME);
 
@@ -18,12 +15,12 @@ void task1() {
   bwputstr(COM2, "okay\n");
 
 
-  for (;;) {
-    Delay(10, checkId);
-    int time = Time(checkId);
-    bwprintf(COM2, "time: %d\n", time);
-  }
-
+//  for (;;) {
+//    Delay(10, checkId);
+//    int time = Time(checkId);
+//    bwprintf(COM2, "time: %d\n", time);
+//  }
+//
   Exit();
 }
 
