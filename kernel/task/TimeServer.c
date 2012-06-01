@@ -42,7 +42,7 @@ int DelayUntil(int ticks, int timeServerTid) {
 void timeserver_task() {
   // Enable timer device
   VMEM(TIMER1_BASE + CRTL_OFFSET) &= ~ENABLE_MASK; // stop timer
-  VMEM(TIMER1_BASE + LDR_OFFSET)   = 508; ///508; // Corresponds to clock frequency
+  VMEM(TIMER1_BASE + LDR_OFFSET)   = 5080; ///508; // Corresponds to clock frequency
   VMEM(TIMER1_BASE + CRTL_OFFSET) |= MODE_MASK; // pre-load mode
   VMEM(TIMER1_BASE + CRTL_OFFSET) |= CLKSEL_MASK; // 508Khz clock
   VMEM(TIMER1_BASE + CRTL_OFFSET) |= ENABLE_MASK; // start
@@ -83,24 +83,19 @@ void timeserver_task() {
         }
       }
 
-      if (counter%1000 == 0)
-        bwprintf(COM2, "%d\n", counter);
     } else if (len == 0) {
       // Timing request
-      bwprintf(COM2, "time r:%d\n", counter);
       Reply(tid, (char*)&counter, 4);
     } else {
       if (msgBuff & 0xf0000000) {
-        bwputstr(COM2, "delay msg\n");
+        //bwputstr(COM2, "delay msg\n");
         // Delay message
         msgBuff += counter;
       } else {
-        bwputstr(COM2, "delay until msg\n");
+        //bwputstr(COM2, "delay until msg\n");
       }
       // Delay until message, dont need to add current time.
       msgBuff &= 0x00ffffff;
-      bwprintf(COM2, "delay until %d\n", msgBuff);
-      bwprintf(COM2, "delay msg to %d\n", tid);
 
       // NOTE: shazhang think it is unlikely delay until will have its time passed.
       // If it does happen. it will be picked up at next ms tick.
@@ -125,7 +120,6 @@ void timeserver_task() {
 
       taskQueue[insertPoint].time = msgBuff;
       taskQueue[insertPoint].tid = (char)tid;
-      bwprintf(COM2, "Added at %d\n", insertPoint);
 
       ASSERT(taskQueueLen != TIMER_SERVER_SIZE, "MAX BUFFER");
       taskQueueLen++;
@@ -145,13 +139,8 @@ void timernotifier_task() {
   int irqmask = 1 << TC1OI;
   VMEM(VIC1 + INT_ENABLE) = irqmask;
 
-//  int counter = 0;
   for (;;) {
     AwaitEvent(TC1OI);
     Send(parent, (char*)NULL, 0, (char*)NULL, 0);
-//    counter++;
-//    if (counter % 20 == 0) {
-//      bwputstr(COM2, "no\n");
-//    }
   }
 }

@@ -11,8 +11,10 @@
 #define OFF 0
 
 #define NUM_PRIORITY 31 // 0 = HIGHEST, 30 = LOWEST
-#define MAX_PRIORITY (NUM_PRIORITY - 1)
-#define MIN_PRIORITY 0
+#define LOWEST_PRIORITY (NUM_PRIORITY - 1)
+#define HIGHEST_PRIORITY 0
+
+#define LIKELY(x) __builtin_expect((x), 1)
 
 // Also look at the variables in orex.ld
 #define USER_MEM_START	0x300000
@@ -22,7 +24,6 @@
 
 // Artificial limit..
 #define NUM_MAX_TASK 128
-
 
 typedef signed char Tid;
 #define MASK_HIGHER 0xFFFF0000
@@ -64,6 +65,7 @@ typedef char *va_list;
 ///////////// DEBUG
 #define ASSERT_ENABLED 1
 #define MORE_CHECKING  1
+#define PERF_CHECK 0
 
 #if ASSERT_ENABLED
 #define ASSERT(X, ...) { \

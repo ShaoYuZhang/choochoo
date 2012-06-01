@@ -5,22 +5,54 @@
 #include <NameServer.h>
 #include <TimeServer.h>
 
+void client();
+
 void task1() {
   startNameServerTask();
-  int timerServerTid = startTimeServerTask();
+  startTimeServerTask();
 
-  int checkId = WhoIs(TIMESERVER_NAME);
+  int id1 = Create(3, client);
+  int id2 = Create(4, client);
+  int id3 = Create(5, client);
+  int id4 = Create(6, client);
 
-  ASSERT(checkId  == timerServerTid, "WHAT>>>>");
-  bwputstr(COM2, "okay\n");
+  char replyBuffer[2];
+  int receiveId;
 
+  for (int i = 0; i < 4; i++) {
+    Receive(&receiveId, (char *)NULL, 0);
+    if (receiveId == id1) {
+      replyBuffer[0] = 10;
+      replyBuffer[1] = 20;
+    } else if (receiveId == id2) {
+      replyBuffer[0] = 23;
+      replyBuffer[1] = 9;
+    } else if (receiveId == id3) {
+      replyBuffer[0] = 33;
+      replyBuffer[1] = 6;
+    } else if (receiveId == id4) {
+      replyBuffer[0] = 71;
+      replyBuffer[1] = 3;
+    }
+    Reply(receiveId, replyBuffer, 2);
+  }
+  Exit();
+}
 
-//  for (;;) {
-//    Delay(10, checkId);
-//    int time = Time(checkId);
-//    bwprintf(COM2, "time: %d\n", time);
-//  }
-//
+void client() {
+  int id = MyTid();
+  int parent = MyParentsTid();
+  char replyBuffer[2];
+  Send(parent, (char *)NULL, 0, replyBuffer, 2);
+  int delayTime = replyBuffer[0];
+  int numberDelay = replyBuffer[1];
+
+  int timeServerId = WhoIs(TIMESERVER_NAME);
+  for (int i = 0; i < numberDelay; i++) {
+    Delay(delayTime, timeServerId);
+    bwprintf(COM2, "Tid: %d, Interval: %d, NumDelay: %d\n\r", id, delayTime, i +1);
+  }
+
   Exit();
 }
 
