@@ -64,7 +64,7 @@ void kernel_init() {
   }
 
   kernel_createtask((int*)&idleTid, LOWEST_PRIORITY, (int)idle_task, 0);
-  bwprintf(COM2, "haha %d idle:\n", idleTid);
+  asm_enable_cache();
 }
 
 void kernel_close() {

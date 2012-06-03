@@ -63,8 +63,8 @@ typedef char *va_list;
 #define BIT_TOGGLE(word, mask, flag) ((word) ^= (-(flag) ^ (word)) & (mask))
 
 ///////////// DEBUG
-#define ASSERT_ENABLED 1
-#define MORE_CHECKING  1
+#define ASSERT_ENABLED 0
+#define MORE_CHECKING  0
 #define PERF_CHECK 0
 
 #if ASSERT_ENABLED

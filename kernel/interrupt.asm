@@ -2,10 +2,11 @@
 .align	2
 .global print_cpsr
 print_cpsr:
+  stmfd sp!, {r0, r1, lr}
   mov r0, #1
   mrs r1, cpsr
   bl bwputr(PLT)
-  mov lr, pc
+  ldmfd sp!, {r0, r1, pc}
 
 .text
 .align	2
@@ -188,3 +189,16 @@ asm_switch_to_usermode:
 asm_syscall:
   swi 0
 	mov pc, lr
+
+.text
+.align	2
+.global asm_enable_cache
+asm_enable_cache:
+  stmfd sp!, {r0, lr}
+  mrc p15, 0, r0, c1, c0, 0 @ cp15 reg 1
+  @ mmu on, both cache on
+  orr r0, r0, #0x1000 
+  orr r0, r0, #0x5
+  mcr p15, 0, r0, c1, c0
+  ldmfd sp!, {r0, pc}
+  
