@@ -34,6 +34,7 @@ static void install_interrupt_handlers() {
   // Use IRQ
   VMEM(VIC1 + INTSELECT_OFFSET) = 0;
   VMEM(VIC2 + INTSELECT_OFFSET) = 0;
+
   // Clear all interrupts
   VMEM(VIC1 + INTENCLR_OFFSET) = ~0;
   VMEM(VIC2 + INTENCLR_OFFSET) = ~0;
@@ -64,7 +65,10 @@ void kernel_init() {
   }
 
   kernel_createtask((int*)&idleTid, LOWEST_PRIORITY, (int)idle_task, 0);
-  bwprintf(COM2, "haha %d idle:\n", idleTid);
+
+  // Clear Timer4
+  *(volatile unsigned int*)(0x80810064) &= ~0x100;
+  *(volatile unsigned int*)(0x80810064) |= 0x100;
 }
 
 void kernel_close() {
@@ -81,6 +85,8 @@ void kernel_handle_interrupt() {
   if (VIC1Status & (1 << TC1OI)) {
     VMEM(TIMER1_BASE + CLR_OFFSET) = 0;
     event = TC1OI;
+  } else {
+    ASSERT(FALSE, "We did not enable this interrupt.");
   }
 
   volatile TaskDescriptor* subscriber = eventWaitingTask[event];
@@ -93,40 +99,33 @@ void kernel_handle_interrupt() {
 }
 
 void kernel_runloop() {
-	volatile TaskDescriptor *td;
+	volatile TaskDescriptor* td;
 	int** sp_pointer;
-
-#if PERF_CHECK
-  unsigned int kernelTimeStart = (((VMEM(0x80810064) & 0xff) << 32) | VMEM(0x80810060));
+  unsigned int kernelTimeStart = GET_TIMER4();
   unsigned int idleTimeStart = 0;
-  unsigned int idleTime = 0;
-  // Clear Timer4
-  VMEM(0x80810064) &= ~0x100;
-  VMEM(0x80810064) |= 0x100;
-#endif
-
+  unsigned int totalIdleTime = 0;
 
 	while (LIKELY((td = scheduler_get()) != (TaskDescriptor *)NULL)) {
-#if PERF_CHECK
     if (idleTid == td->id) {
-      idleTimeStart = (((VMEM(0x80810064) & 0xff) << 32) | VMEM(0x80810060));
+      idleTimeStart = GET_TIMER4();
     }
-#endif
+
 		sp_pointer = (int**)&(td->sp);
     scheduler_set_running(td);
 		int is_interrupt = asm_switch_to_usermode(sp_pointer);
-#if PERF_CHECK
+
+#if 0
     if (idleTid == td->id) {
-      idleTime += (((VMEM(0x80810064) & 0xff) << 32) | VMEM(0x80810060)) - idleTimeStart;
-      if (idleTime > 400000) {
-        int kernelTime = (((VMEM(0x80810064) & 0xff) << 32) | VMEM(0x80810060)) - kernelTimeStart;
-        bwprintf(COM2, "Kenel: %d idle:%d \n", kernelTime, idleTime);
+      totalIdleTime += GET_TIMER4() - idleTimeStart;
+      if (totalIdleTime > 20000) {
+        int kernelTime = GET_TIMER4() - kernelTimeStart;
+        bwputstr(COM2, "Kernel");//: %d idle:%d \n", kernelTime, totalIdleTime);
         break;
       }
     }
 #endif
 
-    if (LIKELY(is_interrupt)) {
+    if (is_interrupt) {
       scheduler_move2ready();
       kernel_handle_interrupt();
     } else {

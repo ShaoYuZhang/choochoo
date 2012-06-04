@@ -3,16 +3,14 @@
 #include <syscall.h>
 #include <NameServer.h>
 
-#define TIMER_SERVER_SIZE 16 // WARNING: must be power of 2
-#define TIMER_SERVER_SIZE_MOD 15 // TIMER_SERVER_SIZE-1
-#define TIME_REQUEST 0
+#define TIMER_SERVER_SIZE 8      // WARNING: must be power of 2
+#define TIMER_SERVER_SIZE_MOD (TIMER_SERVER_SIZE-1)
 
 void timernotifier_task();
-void timeserver_task();
 
 // Size optimization if needed.....
 typedef struct RegisteredTask {
-  char tid;
+  int tid;
   int time;
 } RegisteredTask;
 
@@ -40,13 +38,6 @@ int DelayUntil(int ticks, int timeServerTid) {
 }
 
 void timeserver_task() {
-  // Enable timer device
-  VMEM(TIMER1_BASE + CRTL_OFFSET) &= ~ENABLE_MASK; // stop timer
-  VMEM(TIMER1_BASE + LDR_OFFSET)   = 5080; ///508; // Corresponds to clock frequency
-  VMEM(TIMER1_BASE + CRTL_OFFSET) |= MODE_MASK; // pre-load mode
-  VMEM(TIMER1_BASE + CRTL_OFFSET) |= CLKSEL_MASK; // 508Khz clock
-  VMEM(TIMER1_BASE + CRTL_OFFSET) |= ENABLE_MASK; // start
-
   int counter = 0;
   int basePos = 0;
   char name[] = TIMESERVER_NAME;
@@ -58,7 +49,7 @@ void timeserver_task() {
     taskQueue[i].tid = -1;
   }
 
-  int notifierId = Create(0, timernotifier_task);
+  int notifierId = Create(HIGHEST_PRIORITY, timernotifier_task);
 
   // Start serving..
   for (;;) {
@@ -69,37 +60,21 @@ void timeserver_task() {
 
     if (tid == notifierId) {
       counter += 1;
-      Reply(tid, (char*)NULL, 0);
+      Reply(tid, (char*)NULL, 0); // Reply to notifier
 
-      // Reply to applicable queues...
-      while (taskQueueLen) {
-        if (taskQueue[basePos & TIMER_SERVER_SIZE_MOD].time <= counter) {
-          Reply(taskQueue[basePos & TIMER_SERVER_SIZE_MOD].tid, (char *)NULL, 0);
-          taskQueue[basePos & TIMER_SERVER_SIZE_MOD].time = -1;
-          basePos = (basePos+1) & TIMER_SERVER_SIZE_MOD;
-          taskQueueLen--;
-        } else {
-          break;
-        }
-      }
 
     } else if (len == 0) {
       // Timing request
       Reply(tid, (char*)&counter, 4);
     } else {
       if (msgBuff & 0xf0000000) {
-        //bwputstr(COM2, "delay msg\n");
         // Delay message
         msgBuff += counter;
-      } else {
-        //bwputstr(COM2, "delay until msg\n");
       }
       // Delay until message, dont need to add current time.
       msgBuff &= 0x00ffffff;
 
-      // NOTE: shazhang think it is unlikely delay until will have its time passed.
-      // If it does happen. it will be picked up at next ms tick.
-      // Insert into sorted circular buffer.
+      // Insert into sorted circular list.
       int insertPoint = (basePos + taskQueueLen) & TIMER_SERVER_SIZE_MOD;
       while (1) {
         const int checkPos = (insertPoint-1) & TIMER_SERVER_SIZE_MOD;
@@ -115,14 +90,26 @@ void timeserver_task() {
         const int pos = (swap-1) & TIMER_SERVER_SIZE_MOD;
         taskQueue[swap].time = taskQueue[pos].time;
         taskQueue[swap].tid = taskQueue[pos].tid;
-        swap =  pos;
+        swap = pos;
       }
 
       taskQueue[insertPoint].time = msgBuff;
-      taskQueue[insertPoint].tid = (char)tid;
+      taskQueue[insertPoint].tid = tid;
 
-      ASSERT(taskQueueLen != TIMER_SERVER_SIZE, "MAX BUFFER");
+      ASSERT(taskQueueLen != TIMER_SERVER_SIZE, "Buffer maxed out.");
       taskQueueLen++;
+    }
+
+    // Reply to applicable queues...
+    while (taskQueueLen) {
+      if (taskQueue[basePos & TIMER_SERVER_SIZE_MOD].time <= counter) {
+        Reply(taskQueue[basePos & TIMER_SERVER_SIZE_MOD].tid, (char*)NULL, 0);
+        taskQueue[basePos & TIMER_SERVER_SIZE_MOD].time = -1;
+        basePos = (basePos+1) & TIMER_SERVER_SIZE_MOD;
+        taskQueueLen--;
+      } else {
+        break;
+      }
     }
   } // End of serve loop
 }
@@ -133,11 +120,15 @@ int startTimeServerTask() {
 
 void timernotifier_task() {
   int parent = MyParentsTid();
+  // Enable timer device
+  VMEM(TIMER1_BASE + CRTL_OFFSET) &= ~ENABLE_MASK; // stop timer
+  VMEM(TIMER1_BASE + LDR_OFFSET)   = 5080; // Corresponds to clock frequency, 10 ticks
+  VMEM(TIMER1_BASE + CRTL_OFFSET) |= MODE_MASK; // pre-load mode
+  VMEM(TIMER1_BASE + CRTL_OFFSET) |= CLKSEL_MASK; // 508Khz clock
+  VMEM(TIMER1_BASE + CRTL_OFFSET) |= ENABLE_MASK; // start
 
   // Enables timer interrupt.
-  // TODO, move to kernel.
-  int irqmask = 1 << TC1OI;
-  VMEM(VIC1 + INT_ENABLE) = irqmask;
+  VMEM(VIC1 + INT_ENABLE) = 1 << TC1OI;
 
   for (;;) {
     AwaitEvent(TC1OI);
