@@ -14,10 +14,14 @@ void task1() {
 
   int id = startIoServerTask();
   for (int i = 0; i < 5; i++) {
-    Send(id, (char*)NULL, 0, (char*)NULL, 0);
+    PutcCOM2(id, 'u');
   }
 
-  bwputstr(COM1, "DONE1");
+  bwputstr(COM1, "finished putc, now getc");
+
+  char c = GetcCOM2(id);
+
+  bwprintf(COM1, "Returned with %c \n", c);
 
   Exit();
 }

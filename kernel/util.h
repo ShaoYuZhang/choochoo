@@ -31,8 +31,8 @@ typedef signed char Tid;
 
 ////////// TYPES
 
-typedef unsigned int* addr;
-#define NULL (addr) 1
+typedef char* addr;
+#define NULL (char*) 1
 
 ////////// VAR ARG
 typedef char *va_list;
@@ -52,7 +52,7 @@ typedef char *va_list;
 #define FALSE 0
 #define CRLF "\r\n"
 #define MEM(x) (*(addr)(x))
-#define VMEM(x) (*(volatile addr)(x))
+#define VMEM(x) (*(volatile unsigned int*)(x))
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 #define MAX(x, y) ( ( (x) > (y) ) ? (x) : (y) )

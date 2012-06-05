@@ -4,42 +4,44 @@
 #include <syscall.h>
 #include <NameServer.h>
 
-char Getc(const int channel) {
-  if (channel == COM1) {
-  } else {
-    ASSERT(FALSE, "Not implemented.");
-  }
+#define PUTC 1
+#define GETC 2
+
+typedef struct IOMessage {
+  char type;
+  char data;
+} IOMessage;
+
+char GetcCOM2(const int tid) {
+  IOMessage msg;
+  msg.type = GETC;
+  Send(tid, (char*)&msg, sizeof(IOMessage), &(msg.data), 1);
   return '\0';
 }
 
-void Putc(const int channel, const char c) {
-  if (channel == COM1) {
-
-  } else {
-    ASSERT(FALSE, "Not implemented.");
-  }
+void PutcCOM2(const int tid, const char c) {
+  IOMessage msg;
+  msg.type = PUTC;
+  msg.data = c;
+  Send(tid, (char*)&msg, sizeof(IOMessage), NULL, 0);
 }
 
-void com1notifier_task() {
-}
 
 void com2notifier_task() {
   int parent = MyParentsTid();
 
-  bwprintf(COM1, "in notifier\n");
-  // Enable com2 interrupt
-  // This creates an interrupt.
+  // Enable com2 interrupt, This creates an interrupt.
   VMEM(VIC2 + INT_ENABLE) = 1 << (INT_UART2 & 31);
 
   for (;;) {
-    bwprintf(COM1, "**awaitEvent\n");
+    bwprintf(COM1, "***awaitEvent\n");
     AwaitEvent(INT_UART2);
     bwprintf(COM1, "***woke up\n");
     Send(parent, (char*)NULL, 0, (char*)NULL, 0);
   }
 }
 
-void serv_putc(int* txempty, int* cts);
+void serv_putc(int* txempty, int* cts, char c);
 
 void ioserver_task() {
   //char name[] = IOSERVER_NAME;
@@ -52,70 +54,85 @@ void ioserver_task() {
   VMEM(uartbase + UART_CTLR_OFFSET) |= TIEN_MASK | RIEN_MASK | MSIEN_MASK;
   VMEM(uartbase + UART_INTR_OFFSET) = 1;
 
-  int com1 = Create(HIGHEST_PRIORITY, com2notifier_task);
+  int com2 = Create(HIGHEST_PRIORITY, com2notifier_task);
 
   int txempty = VMEM(uartbase + UART_FLAG_OFFSET) & TXFE_MASK;
   int cts = 1;
-
-  int msgBuff = -1;
+  IOMessage msg;
   int tid = -1;
+  int wait_send_tid = -1;
+
   for (;;) {
-    if (tid == com1) {
+    bwputstr(COM1, "                  Server waiting\n");
+    Receive(&tid, (char*)&msg, sizeof(IOMessage));
+
+    if (tid == com2) {
       bwputstr(COM1, "serving notifier\n");
       int uart_isr = VMEM(uartbase + UART_INTR_OFFSET);
       int uart_flag = VMEM(uartbase + UART_FLAG_OFFSET);
 
-      // incoming register full
+      // An item can be received
       if (uart_isr & UARTRXINTR) {
-        bwputstr(COM1, "crash ...\n");
-        *(char*)(1) = 10;
-        for(;;) ;
+        bwputstr(COM1, "an item can be received.\n");
+
         //ASSERT(uart_flag & RXFF_MASK, "incoming register empty");
         //ASSERT(FALSE, "not receiving..");
+        // TODO, pick the guy wa
+        if (wait_send_tid != -1) {
+          char c = VMEM(uartbase + UART_DATA_OFFSET) & DATA_MASK;
+          Reply(wait_send_tid, &c, 1);
+          wait_send_tid = -1;
+        }
       }
 
-      // outgoing register empty
+      // Can send stuff
       if (uart_isr & UARTTXINTR) {
         bwputstr(COM1, "out going buffer empty...\n");
         txempty = TRUE;
         VMEM(uartbase + UART_CTLR_OFFSET) &= ~TIEN_MASK;
       }
 
+      // Control stuff, CTS
       if (uart_isr & UARTMSINTR) {
         bwputstr(COM1, "ms interrupt full...\n");
         cts = uart_flag & CTS_MASK;
         VMEM(uartbase + UART_INTR_OFFSET) = 1; // clear ms interrupt in hardware
       }
 
-      serv_putc(&txempty, &cts);
+      serv_putc(&txempty, &cts, 'x');
 
       Reply(tid, (char*)1, 0);
     }
-    else if (tid != -1) {
-      bwputstr(COM1, "serving client\n");
-      serv_putc(&txempty, &cts);
+    else if (msg.type == PUTC) {
+      bwputstr(COM1, "PUTC client\n");
+      serv_putc(&txempty, &cts, msg.data);
       Reply(tid, (char*)1, 0);
     }
-
-    bwputstr(COM1, "                  Server waiting\n");
-    int len = Receive(&tid, (char*)&msgBuff, 4);
+    else if (msg.type == GETC) {
+      bwputstr(COM1, "GETC client\n");
+      int uart_isr = VMEM(uartbase + UART_INTR_OFFSET);
+      if (uart_isr & UARTRXINTR) {
+        char c = VMEM(uartbase + UART_DATA_OFFSET) & DATA_MASK;
+        Reply(tid, &c, 1);
+      } else {
+        bwputstr(COM1, "wait .. for input.\n");
+        wait_send_tid = tid;
+      }
+    }
   }
 }
 
-void serv_putc(int* txempty, int* cts) {
+void serv_putc(int* txempty, int* cts, char c) {
   int uartbase = UART_BASE(COM2);
-  if (1) { //(txempty && cts) {
-    if (!cts) {
-      bwputstr(COM1, "EROROR____dont send.....\n");
-    }
+  //if (*txempty && *cts) {
+
     bwputstr(COM1, "transferign.....\n");
-    char c = 'x';
     VMEM(uartbase + UART_DATA_OFFSET) = c;
     VMEM(uartbase + UART_CTLR_OFFSET) |= TIEN_MASK; // enable tx interrupt
     VMEM(uartbase + UART_INTR_OFFSET) = 1; // clear ms interrupt in hardware
-    cts = 1;
-    txempty = VMEM(uartbase + UART_CTLR_OFFSET) & TXFE_MASK;
-  }
+    *cts = 1;
+    *txempty = VMEM(uartbase + UART_CTLR_OFFSET) & TXFE_MASK;
+  //}
 }
 
 int startIoServerTask() {

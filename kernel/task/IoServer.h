@@ -3,9 +3,9 @@
 
 #define IOSERVER_NAME "IO\0"
 
-char Getc(const int channel);
+char GetcCOM2(const int tid);
 
-void Putc(const int channel, const char c);
+void PutcCOM2(const int tid, const char c);
 
 int startIoServerTask();
 
