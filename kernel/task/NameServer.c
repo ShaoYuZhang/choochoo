@@ -37,7 +37,7 @@ static void nameserver_task() {
 
       Reply(tid, msg, 1);
     } else if (type == REGISTER_AS) {
-      bwprintf(COM2, "Registering %d with name %s \n", tid, msg);
+      bwprintf(COM1, "Registering %d with name %s \n", tid, msg);
       ASSERT(emptyTaskName < NUM_TASK_NAMESERVER, "Too many tasks registered with nameserver.");
       tasks[emptyTaskName].tid = (signed char)tid;
       memcpy_no_overlap_asm(msg, tasks[emptyTaskName++].name, len-2);

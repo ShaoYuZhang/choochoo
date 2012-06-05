@@ -82,18 +82,21 @@ void kernel_handle_interrupt() {
   int event = 0;
 
   // TODO, can we process more than one at a time?
-  if (VIC1Status & (1 << UART1RXINTR1)) {
-    event = UART1RXINTR1;
-    VMEM(VIC1 + INTENCLR_OFFSET) ^= (1 << UART1RXINTR1);
-  }
-  else if (VIC2Status & (1 << (INT_UART1-32))) {
+  if (VIC2Status & (1 << (INT_UART1 & 0x1f))) {
     event = INT_UART1;
-    VMEM(VIC2 + INTENCLR_OFFSET) ^= (1 << (INT_UART1-32));
+    VMEM(VIC2 + INTENCLR_OFFSET) = (1 << (INT_UART1 & 0x1f));
+  }
+  else if (VIC2Status & (1 << (INT_UART2 & 0x1f))) {
+    event = INT_UART2;
+    VMEM(VIC2 + INTENCLR_OFFSET) = (1 << (INT_UART2 & 0x1f));
+    bwprintf(COM1, "UART2 interrupt\n");
   }
   else if (VIC1Status & (1 << TC1OI)) {
     event = TC1OI;
     VMEM(TIMER1_BASE + CLR_OFFSET) = 0;
-  } else {
+  }
+  else {
+    bwprintf(COM1, "UNKNOWN--------------------------\n");
     ASSERT(FALSE, "We did not enable this interrupt.");
   }
 
@@ -299,6 +302,7 @@ void kernel_awaitevent(int* returnVal, int eventType, int notUsed1, int notUsed2
     return;
   }
 #endif
+
 	volatile TaskDescriptor *td = scheduler_get_running();
   td->state = EVENT_BLOCK;
   eventWaitingTask[eventType] = td;

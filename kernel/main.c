@@ -10,9 +10,14 @@ void client();
 
 void task1() {
   startNameServerTask();
-  startTimeServerTask();
+//  startTimeServerTask();
 
-  startIoServerTask();
+  int id = startIoServerTask();
+  for (int i = 0; i < 5; i++) {
+    Send(id, (char*)NULL, 0, (char*)NULL, 0);
+  }
+
+  bwputstr(COM1, "DONE1");
 
   Exit();
 }
