@@ -83,13 +83,14 @@ void kernel_handle_interrupt() {
   int event = 0;
 
   // TODO, can we process more than one at a time?
-  if (VIC2Status & (1 << (INT_UART1 & 0x1f))) {
+  if (VIC2Status & (1 << (INT_UART1 & 31))) {
+    bwprintf(COM1, "UART1 interrupt\n");
     event = INT_UART1;
-    VMEM(VIC2 + INTENCLR_OFFSET) = (1 << (INT_UART1 & 0x1f));
+    VMEM(VIC2 + INTENCLR_OFFSET) = (1 << (INT_UART1 & 31));
   }
-  else if (VIC2Status & (1 << (INT_UART2 & 0x1f))) {
+  else if (VIC2Status & (1 << (INT_UART2 & 31))) {
     event = INT_UART2;
-    VMEM(VIC2 + INTENCLR_OFFSET) = (1 << (INT_UART2 & 0x1f));
+    VMEM(VIC2 + INTENCLR_OFFSET) = (1 << (INT_UART2 & 31));
     bwprintf(COM1, "UART2 interrupt\n");
   }
   else if (VIC1Status & (1 << TC1OI)) {
