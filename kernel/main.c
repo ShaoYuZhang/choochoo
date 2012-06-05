@@ -21,7 +21,7 @@ void task1() {
 
   char c = GetcCOM2(id);
 
-  bwprintf(COM1, "Returned with %c \n", c);
+  bwprintf(COM1, "Getc returned with %d \n", c);
 
   Exit();
 }

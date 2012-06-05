@@ -16,7 +16,7 @@ char GetcCOM2(const int tid) {
   IOMessage msg;
   msg.type = GETC;
   Send(tid, (char*)&msg, sizeof(IOMessage), &(msg.data), 1);
-  return '\0';
+  return msg.data ;
 }
 
 void PutcCOM2(const int tid, const char c) {
@@ -26,14 +26,11 @@ void PutcCOM2(const int tid, const char c) {
   Send(tid, (char*)&msg, sizeof(IOMessage), NULL, 0);
 }
 
-
 void com2notifier_task() {
   int parent = MyParentsTid();
 
-  // Enable com2 interrupt, This creates an interrupt.
-  VMEM(VIC2 + INT_ENABLE) = 1 << (INT_UART2 & 31);
-
   for (;;) {
+    // Enable com2 interrupt.
     bwprintf(COM1, "***awaitEvent\n");
     AwaitEvent(INT_UART2);
     bwprintf(COM1, "***woke up\n");
@@ -57,8 +54,8 @@ void ioserver_task() {
   int com2 = Create(HIGHEST_PRIORITY, com2notifier_task);
 
   int txempty = VMEM(uartbase + UART_FLAG_OFFSET) & TXFE_MASK;
-  int cts = 1;
   IOMessage msg;
+  int cts = 1;
   int tid = -1;
   int wait_send_tid = -1;
 
@@ -88,7 +85,7 @@ void ioserver_task() {
       // Can send stuff
       if (uart_isr & UARTTXINTR) {
         bwputstr(COM1, "out going buffer empty...\n");
-        txempty = TRUE;
+        txempty = 1;
         VMEM(uartbase + UART_CTLR_OFFSET) &= ~TIEN_MASK;
       }
 
@@ -98,8 +95,7 @@ void ioserver_task() {
         cts = uart_flag & CTS_MASK;
         VMEM(uartbase + UART_INTR_OFFSET) = 1; // clear ms interrupt in hardware
       }
-
-      serv_putc(&txempty, &cts, 'x');
+      //serv_putc(&txempty, &cts, 'x');
 
       Reply(tid, (char*)1, 0);
     }
@@ -124,7 +120,7 @@ void ioserver_task() {
 
 void serv_putc(int* txempty, int* cts, char c) {
   int uartbase = UART_BASE(COM2);
-  //if (*txempty && *cts) {
+  if (*txempty && *cts) {
 
     bwputstr(COM1, "transferign.....\n");
     VMEM(uartbase + UART_DATA_OFFSET) = c;
@@ -132,7 +128,7 @@ void serv_putc(int* txempty, int* cts, char c) {
     VMEM(uartbase + UART_INTR_OFFSET) = 1; // clear ms interrupt in hardware
     *cts = 1;
     *txempty = VMEM(uartbase + UART_CTLR_OFFSET) & TXFE_MASK;
-  //}
+  }
 }
 
 int startIoServerTask() {

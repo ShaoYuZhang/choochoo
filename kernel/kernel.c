@@ -94,6 +94,7 @@ void kernel_handle_interrupt() {
     bwprintf(COM1, "UART2 interrupt\n");
   }
   else if (VIC1Status & (1 << TC1OI)) {
+    bwprintf(COM1, "Timer interrupt\n");
     event = TC1OI;
     VMEM(TIMER1_BASE + CLR_OFFSET) = 0;
   }
@@ -305,6 +306,7 @@ void kernel_awaitevent(int* returnVal, int eventType, int notUsed1, int notUsed2
   }
 #endif
 
+  VMEM(VIC2 + INT_ENABLE) = 1 << (INT_UART2 & 31);
 	volatile TaskDescriptor *td = scheduler_get_running();
   td->state = EVENT_BLOCK;
   eventWaitingTask[eventType] = td;
