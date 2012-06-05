@@ -77,14 +77,22 @@ void kernel_close() {
 
 void kernel_handle_interrupt() {
   int VIC1Status = VMEM(VIC1);
-  //int VIC2Status = VMEM(VIC2);
+  int VIC2Status = VMEM(VIC2);
 
   int event = 0;
-  int returnVal = 0;
 
-  if (VIC1Status & (1 << TC1OI)) {
-    VMEM(TIMER1_BASE + CLR_OFFSET) = 0;
+  // TODO, can we process more than one at a time?
+  if (VIC1Status & (1 << UART1RXINTR1)) {
+    event = UART1RXINTR1;
+    VMEM(VIC1 + INTENCLR_OFFSET) ^= (1 << UART1RXINTR1);
+  }
+  else if (VIC2Status & (1 << (INT_UART1-32))) {
+    event = INT_UART1;
+    VMEM(VIC2 + INTENCLR_OFFSET) ^= (1 << (INT_UART1-32));
+  }
+  else if (VIC1Status & (1 << TC1OI)) {
     event = TC1OI;
+    VMEM(TIMER1_BASE + CLR_OFFSET) = 0;
   } else {
     ASSERT(FALSE, "We did not enable this interrupt.");
   }
@@ -92,7 +100,7 @@ void kernel_handle_interrupt() {
   volatile TaskDescriptor* subscriber = eventWaitingTask[event];
   eventWaitingTask[event] = (TaskDescriptor*)NULL;
   if (subscriber != (TaskDescriptor*)NULL) {
-    *(subscriber->sp) = returnVal;
+    *(subscriber->sp) = 0; // TODO, does return val matter?
     subscriber->state = READY;
     scheduler_append(subscriber);
   }

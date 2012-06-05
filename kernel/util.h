@@ -61,7 +61,7 @@ typedef char *va_list;
 #define ROUND_UP(x, num) ((((unsigned int)x)+(num-1))&~(num-1))
 // turn mask bits on/off in word based on flag (improve with orr/bic?)
 #define BIT_TOGGLE(word, mask, flag) ((word) ^= (-(flag) ^ (word)) & (mask))
-#define GET_TIMER4() (((*(volatile unsigned int*)(0x80810064) & 0xff) << 32) | *(volatile unsigned int*)(0x80810060))
+#define GET_TIMER4() (*(volatile unsigned int*)(0x80810060))
 
 ///////////// DEBUG
 #define ASSERT_ENABLED 1
