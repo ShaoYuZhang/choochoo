@@ -1,11 +1,17 @@
 #ifndef IOSERVER_H_
 #define IOSERVER_H_
 
-#define IOSERVER_NAME "IO\0"
+#define IOSERVERCOM1_NAME "IOCOM1\0"
+#define IOSERVERCOM2_NAME "IOCOM2\0"
 
-char GetcCOM2(const int tid);
+typedef struct IOMessage {
+  char type;
+  char data;
+} IOMessage;
 
-void PutcCOM2(const int tid, const char c);
+char Getc(const int tid);
+
+void Putc(const int tid, const char c);
 
 int startIoServerTask();
 

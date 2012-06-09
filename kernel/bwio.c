@@ -30,8 +30,8 @@ void uart_parity(int channel, int enable) {
 void bwioInit() {
 	// init COM1
 	bwsetfifo(COM1, OFF);
-	bwsetspeed(COM1, 105200); // 2400
-	uart_stopbits(COM1, 1); //2
+	bwsetspeed(COM1, 2400); // 2400
+	uart_stopbits(COM1, 2); //2
 	uart_databits(COM1, 8);
 	uart_parity(COM1, OFF);
 

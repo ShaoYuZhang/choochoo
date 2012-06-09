@@ -63,7 +63,7 @@ void timeserver_task() {
       Reply(tid, (char*)NULL, 0); // Reply to notifier
 
       if(counter % 100 == 0) {
-        bwputstr(COM1, "second..");
+        //bwputstr(COM2, "second..");
       }
 
     } else if (len == 0) {
@@ -131,7 +131,7 @@ void timernotifier_task() {
   VMEM(TIMER1_BASE + CRTL_OFFSET) |= ENABLE_MASK; // start
 
   // Enables timer interrupt.
-  VMEM(VIC1 + INT_ENABLE) ^= 1 << TC1OI;
+  VMEM(VIC1 + INT_ENABLE) = 1 << TC1OI;
 
   for (;;) {
     AwaitEvent(TC1OI);

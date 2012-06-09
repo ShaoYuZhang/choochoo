@@ -81,32 +81,56 @@ void kernel_handle_interrupt() {
   int VIC2Status = VMEM(VIC2);
 
   int event = 0;
+  int retValue = 0;
 
   // TODO, can we process more than one at a time?
-  if (VIC2Status & (1 << (INT_UART1 & 31))) {
-    bwprintf(COM1, "UART1 interrupt\n");
-    event = INT_UART1;
-    VMEM(VIC2 + INTENCLR_OFFSET) = (1 << (INT_UART1 & 31));
+  if (VIC1Status & (1 << UART1RXINTR1)) {
+    //bwprintf(COM2, "UART1 RX\n");
+    event = UART1RXINTR1;
+    retValue = (int) (VMEM(UART1_BASE + UART_DATA_OFFSET) & DATA_MASK);
   }
-  else if (VIC2Status & (1 << (INT_UART2 & 31))) {
-    event = INT_UART2;
-    VMEM(VIC2 + INTENCLR_OFFSET) = (1 << (INT_UART2 & 31));
-    bwprintf(COM1, "UART2 interrupt\n");
+  else if (VIC1Status & (1 << UART2RXINTR2)) {
+    //bwprintf(COM2, "UART2 RX\n");
+    event = UART2RXINTR2;
+    retValue = (int) (VMEM(UART2_BASE + UART_DATA_OFFSET) & DATA_MASK);
+  }
+  else if (VIC1Status & (1 << UART1TXINTR1)) {
+    //bwprintf(COM2, "UART1 TX\n");
+    event = UART1TXINTR1;
+    retValue = 0;
+    VMEM(UART1_BASE + UART_CTLR_OFFSET) &= ~TIEN_MASK; // disable TX interrupt
+  }
+  else if (VIC1Status & (1 << UART2TXINTR2)) {
+    //bwprintf(COM2, "UART2 TX\n");
+    event = UART2TXINTR2;
+    retValue = 0;
+    VMEM(UART2_BASE + UART_CTLR_OFFSET) &= ~TIEN_MASK; // disable TX interrupt
+  }
+  else if (VIC2Status & (1 << (INT_UART1 & 31))) {
+    // hacky, since modem status doesn't have its own iterrupt line
+    // need to just check here if it's a modem status interrupt
+    if (VMEM(UART1_BASE + UART_INTR_OFFSET) & UARTMSINTR) {
+      //bwprintf(COM2, "MS Interrupt\n");
+      event = INT_UART1;
+      retValue = (int) VMEM(UART1_BASE + UART_FLAG_OFFSET);
+      VMEM(UART1_BASE + UART_INTR_OFFSET) = 1; // writing anything clears MSINTR
+    }
   }
   else if (VIC1Status & (1 << TC1OI)) {
-    bwprintf(COM1, "Timer interrupt\n");
+    //bwprintf(COM2, "Timer interrupt\n");
     event = TC1OI;
     VMEM(TIMER1_BASE + CLR_OFFSET) = 0;
   }
   else {
-    bwprintf(COM1, "UNKNOWN--------------------------\n");
+    //bwprintf(COM2, "UNKNOWN--------------------------\n");
     ASSERT(FALSE, "We did not enable this interrupt.");
   }
 
   volatile TaskDescriptor* subscriber = eventWaitingTask[event];
   eventWaitingTask[event] = (TaskDescriptor*)NULL;
   if (subscriber != (TaskDescriptor*)NULL) {
-    *(subscriber->sp) = 0; // TODO, does return val matter?
+    volatile int* subscriber_ret = subscriber->sp;
+    *subscriber_ret = retValue;
     subscriber->state = READY;
     scheduler_append(subscriber);
   }
@@ -306,7 +330,6 @@ void kernel_awaitevent(int* returnVal, int eventType, int notUsed1, int notUsed2
   }
 #endif
 
-  VMEM(VIC2 + INT_ENABLE) = 1 << (INT_UART2 & 31);
 	volatile TaskDescriptor *td = scheduler_get_running();
   td->state = EVENT_BLOCK;
   eventWaitingTask[eventType] = td;

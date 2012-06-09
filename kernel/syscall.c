@@ -71,6 +71,5 @@ int Reply( int tid, char *reply, int replylen) {
 }
 
 int AwaitEvent(int eventType){
-  asm_syscall(SYSCALL_AWAITEVENT, eventType, 0, 0);
-  return 1;
+  return asm_syscall(SYSCALL_AWAITEVENT, eventType, 0, 0);
 }

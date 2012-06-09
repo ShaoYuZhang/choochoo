@@ -14,7 +14,7 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32 -mno-fpu
 %.o: %.c
 	$(CC) $(CFLAGS) $*.c -o $@ $<
 
-OBJECTS = main.o bwio.o memory.o kernel.o syscall.o Scheduler.o TaskQueue.o task/NameServer.o task/idle.o task/TimeServer.o task/IoServer.o train/train.o
+OBJECTS = main.o bwio.o memory.o kernel.o syscall.o Scheduler.o TaskQueue.o task/NameServer.o task/idle.o task/TimeServer.o task/IoServer.o task/IoBuffer.o train/train.o
 DEPENDS = ${OBJECTS:.o=.d} # substitute ".o" with ".d"
 ASMS = $(OBJECTS:.o=.s)
 
@@ -32,6 +32,6 @@ main.elf: $(OBJECTS) interrupt.o task/idle_asm.o orex.ld
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) interrupt.o task/idle_asm.o -lgcc
 
 clean:
-	-rm -f *.s */*.s *.o */*.o *.map *.elf task/*.d *.d /u/cs452/public/tftp/ARM/${USER}.elf
+	-rm -f *.s */*.s *.o */*.o *.map *.elf */*.d *.d /u/cs452/public/tftp/ARM/${USER}.elf
 
 -include ${DEPENDS} # reads the .d files and reruns dependencies

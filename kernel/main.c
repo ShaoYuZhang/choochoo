@@ -13,16 +13,8 @@ void task1() {
 //  startTimeServerTask();
 
   int id = startIoServerTask();
-  for (int i = 0; i < 5; i++) {
-    PutcCOM2(id, 'u');
-  }
-
-  bwputstr(COM1, "finished putc, now getc");
-
-  char c = GetcCOM2(id);
-
-  bwprintf(COM1, "Getc returned with %d \n", c);
-
+  Putc(id, 5);
+  Putc(id, 41);
   Exit();
 }
 
