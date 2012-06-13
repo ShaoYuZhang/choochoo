@@ -6,6 +6,12 @@
 
 #include <util.h>
 
+void uart_stopbits(int channel, int bits);
+
+void uart_databits(int channel, int wlen);
+
+void uart_parity(int channel, int enable);
+
 void bwioInit();
 
 int bwsetfifo( int channel, int state );

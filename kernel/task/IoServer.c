@@ -4,9 +4,11 @@
 #include <syscall.h>
 #include <NameServer.h>
 #include <IoBuffer.h>
+#include <bwio.h>
 
 #define PUTC 1
 #define GETC 2
+#define PUTSTR 3
 
 char Getc(const int tid) {
   IOMessage msg;
@@ -20,6 +22,17 @@ void Putc(const int tid, const char c) {
   msg.type = PUTC;
   msg.data = c;
   Send(tid, (char*)&msg, sizeof(IOMessage), NULL, 0);
+}
+
+// Prints uninterrupted, use with caution
+void Putstr(const int tid, char* str, int len) {
+  IOMessageStr msg;
+  msg.type = PUTSTR;
+  for (int i = 0 ; i < len; i++) {
+    msg.data[i] = str[i];
+  }
+  msg.data[len] = '\0';
+  Send(tid, (char*)&msg, sizeof(IOMessageStr), NULL, 0);
 }
 
 void com1rx_task() {
@@ -114,7 +127,7 @@ void ioserver_com1_task() {
   int txempty = VMEM(uart_flag) & TXFE_MASK;
   int cts = VMEM(uart_flag) & CTS_MASK;
 
-  IOMessage msg;
+  IOMessageStr msg;
 
   int com1_rx_id = Create(HIGHEST_PRIORITY, com1rx_task);
   int com1_tx_id = Create(HIGHEST_PRIORITY, com1tx_task);
@@ -122,12 +135,12 @@ void ioserver_com1_task() {
 
   for (;;) {
     int tid = -1;
-    Receive(&tid, (char*)&msg, sizeof(IOMessage));
+    Receive(&tid, (char*)&msg, sizeof(IOMessageStr));
 
     if (tid == com1_rx_id) {
       Reply(tid, (char*)1, 0);
 
-      char c = msg.data;
+      char c = msg.data[0];
       if (com1InputWaitTid!= -1) {
         Reply(com1InputWaitTid, &c, 1);
         com1InputWaitTid= -1;
@@ -141,11 +154,19 @@ void ioserver_com1_task() {
     }
     else if (tid == com1_ms_id) {
       Reply(tid, (char*)1, 0);
-      char flag = msg.data;
+      char flag = msg.data[0];
       cts = flag & CTS_MASK;
     }
     else if (msg.type == PUTC) {
-      add_to_buffer( &com1Out, msg.data);
+      add_to_buffer( &com1Out, msg.data[0]);
+      Reply(tid, (char*)1, 0);
+    }
+    else if (msg.type == PUTSTR) {
+      int i = 0;
+      while (msg.data[i] != '\0') {
+        add_to_buffer( &com1Out, msg.data[i]);
+        i++;
+      }
       Reply(tid, (char*)1, 0);
     }
     else if (msg.type == GETC) {
@@ -187,19 +208,19 @@ void ioserver_com2_task() {
 
   int txempty = VMEM(uart_flag) & TXFE_MASK;
 
-  IOMessage msg;
+  IOMessageStr msg;
 
   int com2_rx_id = Create(HIGHEST_PRIORITY, com2rx_task);
   int com2_tx_id = Create(HIGHEST_PRIORITY, com2tx_task);
 
   for (;;) {
     int tid = -1;
-    Receive(&tid, (char*)&msg, sizeof(IOMessage));
+    Receive(&tid, (char*)&msg, sizeof(IOMessageStr));
 
     if (tid == com2_rx_id) {
       Reply(tid, (char*)1, 0);
 
-      char c = msg.data;
+      char c = msg.data[0];
       add_to_buffer( &com2Out, c);
       if (com2InputWaitTid!= -1) {
         Reply(com2InputWaitTid, &c, 1);
@@ -213,7 +234,15 @@ void ioserver_com2_task() {
       txempty = 1;
     }
     else if (msg.type == PUTC) {
-      add_to_buffer( &com2Out, msg.data);
+      add_to_buffer( &com2Out, msg.data[0]);
+      Reply(tid, (char*)1, 0);
+    }
+    else if (msg.type == PUTSTR) {
+      int i = 0;
+      while (msg.data[i] != '\0') {
+        add_to_buffer( &com2Out, msg.data[i]);
+        i++;
+      }
       Reply(tid, (char*)1, 0);
     }
     else if (msg.type == GETC) {

@@ -7,8 +7,6 @@ void putx( int tid, char c );
 
 void putr( int tid, unsigned int reg );
 
-void putstr( int tid, char *str );
-
 void putw( int tid, int n, char fc, char *bf );
 
 void printff( int tid, char *format, ... );
