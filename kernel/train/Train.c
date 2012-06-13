@@ -4,9 +4,9 @@
 #include <util.h>
 #include <TimeServer.h>
 #include <NameServer.h>
+#include <IoHelper.h>
 
 static int switchStatus[NUM_SWITCHES];
-static unsigned int last_switch_write_time;
 
 typedef struct Train {
   int speed;
@@ -14,99 +14,80 @@ typedef struct Train {
   int delay;
 } Train;
 
-static int solenoidTaskId;
 static int com1;
 static Train train[NUM_TRAINS];
 
 void trainGetSwitch();
-void trainSetSwitch();
-void trainSetSpeed();
 
 void trainController() {
-  char com1Name[] = IOSERVERCOM1_NAME;
+  char com1Name[] = IOSERVERCOM2_NAME;
   com1 = WhoIs(com1Name);
+  char trainName[] = TRAIN_NAME;
+  RegisterAs(trainName);
 
-  for (int i = 0; i <= NUM_TRAINS; i++) {
+  for (int i = 0; i < NUM_TRAINS; i++) {
     train[i].speed = 0;
     train[i].reversed = 0;
   }
 
-  solenoidTaskId = 0;
-  last_switch_write_time = 0;
-
-  char trainName[] = TRAIN_NAME;
-  RegisterAs(TRAIN_NAME);
-
-  for (int i = 0; i < 10;i++) {
+  for (;;) {
     int tid = -1;
-    char msg[8];
-    //Receive(&tid, (char*)msg, 8);
-    Putc(com1, 't');
+    TrainMsg msg;
+    Receive(&tid, (char*)&msg, sizeof(TrainMsg));
+
+    switch (msg.type) {
+      case GET_SWITCH: {
+        Reply(tid, (char*)(switchStatus + msg.data1), 8);
+        break;
+      }
+      case SET_SWITCH: {
+        Reply(tid, (char*)1, 0);
+        trainSetSwitch((int)msg.data1, (int)msg.data2);
+        break;
+      }
+      case GET_SPEED: {
+        const int trainNum = msg.data1;
+        Reply(tid, (char*)&(train[trainNum].speed), 8);
+        break;
+      }
+      case SET_SPEED: {
+        Reply(tid, (char*)1, 0);
+        const int trainNum = msg.data1;
+        const int speed = msg.data2;
+        trainSetSpeed(trainNum, speed);
+        break;
+      }
+      default: {
+        ASSERT(FALSE, "Not suppported train message type.");
+      }
+    }
+
   }
 }
 
+void trainSetSwitch(int sw, int state) {
+  char msg[3];
+  msg[0] = (char)state;
+  msg[1] = (char)sw;
+  msg[2] = 0;
 
-#if 0
-void turnoffSolenoid(void* unused) {
-  solenoidTaskId = 0;
-  bwputc(COM1, SOLENOID_OFF);
-}
-
-int train_getswitch(int sw) {
-  return switchStatus[sw];
-}
-
-static void setswitch(void* raw_swstate) {
-  unsigned int swstate = (unsigned int) raw_swstate;
-  int sw = swstate >> 16;
-  int state = swstate & 0xff;
-
-  if (state == STRAIGHT) {
-    Putc(COM1, SWITCH_STRAIGHT);
-  } else if (state == CURVED) {
-    bwputc(COM1, SWITCH_CURVED);
-  }
-
-  bwputc(COM1, sw);
-  timerRemoveTask(solenoidTaskId);
-  solenoidTaskId = timerCreateTask(turnoffSolenoid, NULL, SWITCH_DELAY + 100);
+  putstr(com1, msg);
   switchStatus[sw] = state;
 }
 
-void train_setswitch(int sw, int state) {
-  int curtime = timerGetTime();
-  int trigger_time = MAX(last_switch_write_time + SWITCH_DELAY, timerGetTime());
-  last_switch_write_time = trigger_time;
-  int wait_time = MAX(trigger_time - curtime, 0);
-
-  timerCreateTask(setswitch, (void*)((sw << 16) | (unsigned int) state), wait_time);
-}
-
-void train_setspeed(int train, int spd) {
-  bwputc(COM1, spd);
-  bwputc(COM1, train);
-  speed[train] = spd;
-
-  timerRemoveTask(delay[train]);
-  delay[train] = 0;
-}
-
-static void train_speed(void* p) {
-  unsigned int data = (unsigned int)p;
-  int reverse = 0x80000000 & data;
-  int train = 0x7fff & (data >> 16);
-  int speed = data & 0xffff;
-
-  if (reverse) {
-    bwputc(COM1, 0xf);
-    bwputc(COM1, train);
+void trainSetSpeed(int trainNum, int spd) {
+  if (spd >= 0) {
+    char msg[3];
+    msg[0] = (char)spd;
+    msg[1] = (char)trainNum;
+    msg[2] = 0;
+    train[trainNum].speed = spd;
+  } else {
+    // TODO
   }
-
-  bwputc(COM1, speed);
-  bwputc(COM1, train);
-  delay[train] = 0;
 }
 
+#if 0
 void train_reverse(int train) {
   timerRemoveTask(delay[train]);
   delay[train] = 0;
@@ -120,7 +101,7 @@ void train_reverse(int train) {
 }
 #endif
 
-int startTrainController() {
+int startTrainControllerTask() {
   return Create(2, trainController);
 }
 

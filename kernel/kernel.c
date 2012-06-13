@@ -138,14 +138,18 @@ void kernel_handle_interrupt() {
 void kernel_runloop() {
 	volatile TaskDescriptor* td;
 	int** sp_pointer;
+#if 0
   unsigned int kernelTimeStart = GET_TIMER4();
   unsigned int idleTimeStart = 0;
   unsigned int totalIdleTime = 0;
+#endif
 
 	while (LIKELY((td = scheduler_get()) != (TaskDescriptor *)NULL)) {
+#if 0
     if (idleTid == td->id) {
       idleTimeStart = GET_TIMER4();
     }
+#endif
 
 		sp_pointer = (int**)&(td->sp);
     scheduler_set_running(td);

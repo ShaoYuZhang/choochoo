@@ -4,6 +4,7 @@
 #include <memory.h>
 #include <NameServer.h>
 #include <TimeServer.h>
+#include <Train.h>
 #include <IoServer.h>
 
 void client();
@@ -11,16 +12,13 @@ void client();
 void task1() {
   startNameServerTask();
   startTimeServerTask();
+  startIoServerTask();
+  startTrainControllerTask();
 
-  int id = startIoServerTask();
-  startTrainController();
-  //Putc(id, 5);
-  //Putc(id, 41);
   Exit();
 }
 
 int main(int argc, char* argv[]) {
-	bwioInit();
 	kernel_init();
 
   int returnVal;

@@ -13,6 +13,6 @@ char Getc(const int tid);
 
 void Putc(const int tid, const char c);
 
-int startIoServerTask();
+void startIoServerTask();
 
 #endif // IOSERVER_H_
