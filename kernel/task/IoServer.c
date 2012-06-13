@@ -31,8 +31,8 @@ void Putstr(const int tid, char* str, int len) {
   for (int i = 0 ; i < len; i++) {
     msg.data[i] = str[i];
   }
-  msg.data[len] = '\0';
-  Send(tid, (char*)&msg, sizeof(IOMessageStr), NULL, 0);
+  msg.data[len] = EOS;
+  Send(tid, (char*)&msg, 1 + 1 + len, NULL, 0);
 }
 
 void com1rx_task() {
@@ -163,7 +163,7 @@ void ioserver_com1_task() {
     }
     else if (msg.type == PUTSTR) {
       int i = 0;
-      while (msg.data[i] != '\0') {
+      while (msg.data[i] != EOS) {
         add_to_buffer( &com1Out, msg.data[i]);
         i++;
       }
@@ -239,7 +239,7 @@ void ioserver_com2_task() {
     }
     else if (msg.type == PUTSTR) {
       int i = 0;
-      while (msg.data[i] != '\0') {
+      while (msg.data[i] != EOS) {
         add_to_buffer( &com2Out, msg.data[i]);
         i++;
       }

@@ -9,13 +9,15 @@ static char decoderBuffer[DECODER_BUFFER_SIZE];
 static unsigned int decoderCurrBufferPos;
 
 static int trainController;
+static int com2;
 
 void decoderAddChar( char c );
 void decodeCommand();
 
 void commandDecoder() {
+  decoderCurrBufferPos = 0;
   char com2Name[] = IOSERVERCOM2_NAME;
-  int com2 = WhoIs(com2Name);
+  com2 = WhoIs(com2Name);
   char trainControllerName[] = TRAIN_NAME;
   trainController = WhoIs(trainControllerName);
 
@@ -67,8 +69,9 @@ void decodeCommand() {
     char c = *temp++;
     c = a2i(c, &temp, 10, &train_number);
 
-    //msg.type = SET_REVERSE;
+    msg.type = SET_SPEED;
     msg.data1 = train_number;
+    msg.data2 = -1;
     Send(trainController, (char *)&msg, sizeof(TrainMsg), (char *)NULL, 0);
   } else if (decoderBuffer[0] == 's' && decoderBuffer[1] == 'w') {
     int switch_number = 0;
