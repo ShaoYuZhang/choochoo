@@ -6,6 +6,7 @@
 #include <TimeServer.h>
 #include <Train.h>
 #include <IoServer.h>
+#include <CommandDecoder.h>
 
 void client();
 
@@ -14,6 +15,7 @@ void task1() {
   startTimeServerTask();
   startIoServerTask();
   startTrainControllerTask();
+  startCommandDecoderTask();
 
   Exit();
 }
