@@ -16,7 +16,7 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32 -mno-fpu
 
 OBJECTS = main.o bwio.o memory.o kernel.o syscall.o Scheduler.o TaskQueue.o \
 					task/NameServer.o task/idle.o task/TimeServer.o task/IoServer.o task/IoBuffer.o task/IoHelper.o \
-					train/train.o
+					train/Train.o
 DEPENDS = ${OBJECTS:.o=.d} # substitute ".o" with ".d"
 ASMS = $(OBJECTS:.o=.s)
 

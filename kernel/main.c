@@ -10,11 +10,12 @@ void client();
 
 void task1() {
   startNameServerTask();
-//  startTimeServerTask();
+  startTimeServerTask();
 
   int id = startIoServerTask();
-  Putc(id, 5);
-  Putc(id, 41);
+  startTrainController();
+  //Putc(id, 5);
+  //Putc(id, 41);
   Exit();
 }
 

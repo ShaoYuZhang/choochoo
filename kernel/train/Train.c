@@ -1,51 +1,52 @@
-#include "train.h"
+#include "Train.h"
 #include "IoServer.h"
-
-void trainGetSwitch();
-
-void trainSetSwitch();
-
-void trainSetSpeed();
-
-#if 0
 #include <ts7200.h>
-#include <bwio.h>
-#include <train.h>
 #include <util.h>
-#include <timer.h>
+#include <TimeServer.h>
+#include <NameServer.h>
 
 static int switchStatus[NUM_SWITCHES];
 static unsigned int last_switch_write_time;
 
-static int speed[NUM_TRAINS+1];
-static int reversed[NUM_TRAINS+1];
-static int delay[NUM_TRAINS+1];
+typedef struct Train {
+  int speed;
+  int reversed;
+  int delay;
+} Train;
+
 static int solenoidTaskId;
+static int com1;
+static Train train[NUM_TRAINS];
 
-static int com1server;
+void trainGetSwitch();
+void trainSetSwitch();
+void trainSetSpeed();
 
-void trainInit() {
-  // Set stopbit
-  int* uart1high = (int*) UART1_BASE + UART_LCRH_OFFSET;
-  *uart1high |= STP2_MASK;
-
-  bwsetspeed(COM1, 2400);
-  bwputc(COM1, GO);
+void trainController() {
+  char com1Name[] = IOSERVERCOM1_NAME;
+  com1 = WhoIs(com1Name);
 
   for (int i = 0; i <= NUM_TRAINS; i++) {
-    speed[i] = 0;
-    reversed[i] = 0;
-    delay[i] = 0;
+    train[i].speed = 0;
+    train[i].reversed = 0;
   }
 
   solenoidTaskId = 0;
   last_switch_write_time = 0;
+
+  char trainName[] = TRAIN_NAME;
+  RegisterAs(TRAIN_NAME);
+
+  for (int i = 0; i < 10;i++) {
+    int tid = -1;
+    char msg[8];
+    //Receive(&tid, (char*)msg, 8);
+    Putc(com1, 't');
+  }
 }
 
-void trainClose() {
-  PutC(COM1, STOP);
-}
 
+#if 0
 void turnoffSolenoid(void* unused) {
   solenoidTaskId = 0;
   bwputc(COM1, SOLENOID_OFF);
@@ -61,7 +62,7 @@ static void setswitch(void* raw_swstate) {
   int state = swstate & 0xff;
 
   if (state == STRAIGHT) {
-    bwputc(COM1, SWITCH_STRAIGHT);
+    Putc(COM1, SWITCH_STRAIGHT);
   } else if (state == CURVED) {
     bwputc(COM1, SWITCH_CURVED);
   }
@@ -117,5 +118,10 @@ void train_reverse(int train) {
   delay[train] = timerCreateTask(
       train_speed, (void*)(0x80000000 | (train<<16) | speed[train]), 3000);
 }
-
 #endif
+
+int startTrainController() {
+  return Create(2, trainController);
+}
+
+
