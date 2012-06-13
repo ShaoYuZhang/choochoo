@@ -83,7 +83,6 @@ void kernel_handle_interrupt() {
   int event = 0;
   int retValue = 0;
 
-  // TODO, can we process more than one at a time?
   if (VIC1Status & (1 << UART1RXINTR1)) {
     //bwprintf(COM2, "UART1 RX\n");
     event = UART1RXINTR1;
