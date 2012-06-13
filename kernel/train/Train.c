@@ -1,5 +1,5 @@
 #include "Train.h"
-#include "IoServer.h"
+#include <IoServer.h>
 #include <ts7200.h>
 #include <util.h>
 #include <TimeServer.h>
@@ -71,7 +71,7 @@ void trainSetSwitch(int sw, int state) {
   msg[1] = (char)sw;
   msg[2] = 0;
 
-  putstr(com1, msg);
+  Putstr(com1, msg, 3);
   switchStatus[sw] = state;
 }
 
@@ -82,8 +82,9 @@ void trainSetSpeed(int trainNum, int spd) {
     msg[1] = (char)trainNum;
     msg[2] = 0;
     train[trainNum].speed = spd;
+    Putstr(com1, msg, 3);
   } else {
-    // TODO
+    // TODO: reverse
   }
 }
 
