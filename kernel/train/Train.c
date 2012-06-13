@@ -13,7 +13,6 @@ static int switchStatus[NUM_SWITCHES];
 
 typedef struct Train {
   int speed;
-  int reversed;
 } Train;
 
 static int com1;
@@ -42,14 +41,13 @@ void trainWorker() {
 }
 
 void trainController() {
-  char com1Name[] = IOSERVERCOM2_NAME;
+  char com1Name[] = IOSERVERCOM1_NAME;
   com1 = WhoIs(com1Name);
   char trainName[] = TRAIN_NAME;
   RegisterAs(trainName);
 
   for (int i = 0; i < NUM_TRAINS; i++) {
     train[i].speed = 0;
-    train[i].reversed = 0;
   }
 
   numWorkerLeft = NUM_WORKER-1;
@@ -105,6 +103,7 @@ void trainSetSpeed(TrainMsg* origMsg) {
   const int speed = origMsg->data2;
   if (origMsg->data3 == WORKER_SIG) {
     numWorkerLeft++;
+    ASSERT(speed > 0, "Train worker has negative speed.");
   }
 
   char msg[3];
@@ -115,7 +114,10 @@ void trainSetSpeed(TrainMsg* origMsg) {
   } else {
     msg[0] = 0;
     origMsg->data2 = train[trainNum].speed * -1;
-    Send(numWorkerLeft--, (char*)origMsg, sizeof(TrainMsg), (char*)origMsg, 0);
+    origMsg->data3 = 250; // 2.5s . TODO, calculate from train speed.
+    Send(worker[numWorkerLeft--], (char*)origMsg,
+        sizeof(TrainMsg), (char*)origMsg, 0);
+    ASSERT(numWorkerLeft < -1, "Used non-existence worker id");
   }
 
   Putstr(com1, msg, 3);
