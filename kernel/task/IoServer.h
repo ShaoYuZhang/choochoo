@@ -9,9 +9,16 @@ typedef struct IOMessage {
   char data;
 } IOMessage;
 
+typedef struct IOMessageStr {
+  char type;
+  char data[32];
+} IOMessageStr;
+
 char Getc(const int tid);
 
 void Putc(const int tid, const char c);
+
+void Putstr(const int tid, char* str, int len);
 
 void startIoServerTask();
 
