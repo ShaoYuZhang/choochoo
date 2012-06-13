@@ -5,6 +5,7 @@
 #include <NameServer.h>
 #include <TimeServer.h>
 #include <Train.h>
+#include <CommandDecoder.h>
 #include <IoServer.h>
 #include <CommandDecoder.h>
 
