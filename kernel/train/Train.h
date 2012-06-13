@@ -13,19 +13,18 @@
 #define GET_SPEED  3
 
 typedef struct TrainMsg {
-  char type;
+  char type;  // Defined above
   char data1; // Train or Switch number
-  char data2; // Speed or switch state
+  signed char data2; // Speed or switch state (-1 for reverse)
+  unsigned char data3; // Delay num, or msg came from worker
 } TrainMsg;
 
 int startTrainControllerTask();
-
-void trainClose();
 
 void trainGetSwitch();
 
 void trainSetSwitch(int switchNum, int state);
 
-void trainSetSpeed(int trainNum, int spd);
+void trainSetSpeed(TrainMsg* origMsg);
 
 #endif // TRAIN_H_
