@@ -24,13 +24,6 @@ void putr( int tid, unsigned int reg ) {
 	Putc( tid, ' ' );
 }
 
-void putstr( int tid, char *str ) {
-	while( *str ) {
-		Putc( tid, *str );
-		str++;
-	}
-}
-
 void putw( int tid, int n, char fc, char *bf ) {
 	char ch;
 	char *p = bf;
