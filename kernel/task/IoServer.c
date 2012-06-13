@@ -115,13 +115,13 @@ void ioserver_com1_task() {
   int cts = VMEM(uart_flag) & CTS_MASK;
 
   IOMessage msg;
-  int tid = -1;
 
   int com1_rx_id = Create(HIGHEST_PRIORITY, com1rx_task);
   int com1_tx_id = Create(HIGHEST_PRIORITY, com1tx_task);
   int com1_ms_id = Create(HIGHEST_PRIORITY, com1ms_task);
 
   for (;;) {
+    int tid = -1;
     Receive(&tid, (char*)&msg, sizeof(IOMessage));
 
     if (tid == com1_rx_id) {
@@ -181,27 +181,26 @@ void ioserver_com2_task() {
   int com2InputWaitTid = -1;
 
   int uartbase = UART_BASE(COM2);
-  int uart_isr = uartbase + UART_INTR_OFFSET;
   int uart_flag = uartbase + UART_FLAG_OFFSET;
 
-  VMEM(uart_isr) = 1; // clear msintr
   VMEM(UART2_BASE + UART_DATA_OFFSET); // clear rxintr
 
   int txempty = VMEM(uart_flag) & TXFE_MASK;
 
   IOMessage msg;
-  int tid = -1;
 
   int com2_rx_id = Create(HIGHEST_PRIORITY, com2rx_task);
   int com2_tx_id = Create(HIGHEST_PRIORITY, com2tx_task);
 
   for (;;) {
+    int tid = -1;
     Receive(&tid, (char*)&msg, sizeof(IOMessage));
 
     if (tid == com2_rx_id) {
       Reply(tid, (char*)1, 0);
 
       char c = msg.data;
+      add_to_buffer( &com2Out, c);
       if (com2InputWaitTid!= -1) {
         Reply(com2InputWaitTid, &c, 1);
         com2InputWaitTid= -1;
@@ -233,8 +232,7 @@ void ioserver_com2_task() {
   }
 }
 
-int startIoServerTask() {
-#if 0
+void startIoServerTask() {
   // COM1
   bwsetfifo(COM1, OFF);
   bwsetspeed(COM1, 2400);
@@ -248,7 +246,7 @@ int startIoServerTask() {
 	uart_stopbits(COM2, 1);
 	uart_databits(COM2, 8);
 	uart_parity(COM2, OFF);
-#endif
 
-  return Create(1, ioserver_com1_task);
+  Create(1, ioserver_com1_task);
+  Create(1, ioserver_com2_task);
 }

@@ -10,16 +10,13 @@ void client();
 
 void task1() {
   startNameServerTask();
-//  startTimeServerTask();
+  startTimeServerTask();
+  startIoServerTask();
 
-  int id = startIoServerTask();
-  Putc(id, 5);
-  Putc(id, 41);
   Exit();
 }
 
 int main(int argc, char* argv[]) {
-	bwioInit();
 	kernel_init();
 
   int returnVal;
