@@ -5,9 +5,9 @@
 #include <TimeServer.h>
 #include <NameServer.h>
 #include <IoHelper.h>
+#include <syscall.h>
 
 #define NUM_WORKER 4
-#define WORKER_SIG 0xff
 
 static int switchStatus[NUM_SWITCHES];
 
@@ -16,30 +16,30 @@ typedef struct Train {
 } Train;
 
 static int com1;
+static int com2;
 static Train train[NUM_TRAINS];
-// Workers that is responsible for reversing train.
+
 static int worker[NUM_WORKER];
 
 // Responsider for delag msg server about positive train speed
 void trainWorker() {
   char timename[] = TIMESERVER_NAME;
   int timeserver = WhoIs(timename);
+  int parent = MyParentsTid();
 
   TrainMsg msg;
+  msg.type = WORKER;
+  Send(parent, (char*)&msg, sizeof(TrainMsg), (char*)&msg, sizeof(TrainMsg));
   for (;;) {
-    int tid = -1;
-    Receive(&tid, (char*)&msg, sizeof(TrainMsg));
-    Reply(tid, (char*)1, 0);
-    // delay
     int numTick = msg.data3; // num of 10ms
+    printff(com2, "Delay\n");
     Delay(numTick, timeserver);
-    // Send positive speed
-    msg.data3 = WORKER_SIG;
-    Send(tid, (char*)&msg, sizeof(TrainMsg), (char*)&msg, 0);
+    printff(com2, "Wokeup\n");
+    msg.data3 = WORKER;
+    Send(parent, (char*)&msg, sizeof(TrainMsg), (char*)&msg, sizeof(TrainMsg));
   }
 }
 
-static int com2;
 void trainController() {
   char com1Name[] = IOSERVERCOM1_NAME;
   char com2Name[] = IOSERVERCOM2_NAME;
@@ -52,18 +52,17 @@ void trainController() {
     train[i].speed = 0;
   }
 
-  int numWorkerLeft = NUM_WORKER-1;
+  int numWorkerLeft = -1;
   for (int i = 0; i < NUM_WORKER; i++) {
     worker[i] = Create(1, trainWorker);
   }
-  Putc(com2, 'a' + numWorkerLeft);
 
-  for (int i = 1; i < 19; i++) {
-    trainSetSwitch(i, SWITCH_STRAIGHT);
-  }
-  for (int i = 1; i < 19; i++) {
-    trainSetSwitch(i, SWITCH_CURVED);
-  }
+  //for (int i = 1; i < 19; i++) {
+  //  trainSetSwitch(i, SWITCH_STRAIGHT);
+  //}
+  //for (int i = 1; i < 19; i++) {
+  //  trainSetSwitch(i, SWITCH_CURVED);
+  //}
 
   for (;;) {
     int tid = -1;
@@ -86,9 +85,18 @@ void trainController() {
         break;
       }
       case SET_SPEED: {
-        Reply(tid, (char*)1, 0);
-        Putc(com2, 'a' + numWorkerLeft);
+        printff(com2, "Speed %d %d \n", msg.data1, msg.data2);
         trainSetSpeed(&msg, &numWorkerLeft);
+        if (msg.data3 != WORKER) {
+          Reply(tid, (char*)1, 0);
+          break;
+        }
+        printff(com2, "WorkerCameback. \n");
+        // else fall through
+      }
+      case WORKER: {
+        worker[++numWorkerLeft] = tid;
+        printff(com2, "WorkerLeft: %d \n", numWorkerLeft);
         break;
       }
       default: {
@@ -112,31 +120,33 @@ void trainSetSwitch(int sw, int state) {
 void trainSetSpeed(TrainMsg* origMsg, int* numWorkerLeft) {
   const int trainNum = origMsg->data1;
   const int speed = origMsg->data2;
-  if (origMsg->data3 == WORKER_SIG) {
-    (*numWorkerLeft)++;
-    ASSERT(speed > 0, "Train worker has negative speed.");
-  }
 
-  char msg[3];
+  char msg[4];
   msg[1] = (char)trainNum;
-  msg[2] = 0;
   if (speed >= 0) {
     msg[0] = (char)speed;
+    Putstr(com1, msg, 2);
+    train[trainNum].speed = speed;
   } else {
-    msg[0] = 0;
-    origMsg->data2 = train[trainNum].speed;
+    msg[0] = 0xf;
+    printff(com2, "Reverse... %d \n", train[trainNum].speed);
+    origMsg->data2 = (signed char)train[trainNum].speed;
     origMsg->data3 = 250; // 2.5s . TODO, calculate from train speed.
-    Send(worker[*numWorkerLeft], (char*)origMsg,
-        sizeof(TrainMsg), (char*)1, 0);
-    numWorkerLeft--;
+
+    printff(com2, "Using worker: %d \n", *numWorkerLeft);
+    Reply(worker[*numWorkerLeft], (char*)origMsg, sizeof(TrainMsg));
+    (*numWorkerLeft)--;
+
+    msg[2] = 0;
+    msg[3] = (char)trainNum;
+
     if (*numWorkerLeft < -1) {
       printff(com2, "Used non-existence worker id");
       while(1);
     }
+    Putstr(com1, msg, 4);
+    train[trainNum].speed = 0;
   }
-
-  Putstr(com1, msg, 3);
-  train[trainNum].speed = msg[1];
 }
 
 int startTrainControllerTask() {

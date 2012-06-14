@@ -11,6 +11,7 @@
 #define SET_SWITCH 1
 #define SET_SPEED  2
 #define GET_SPEED  3
+#define WORKER     4
 
 typedef struct TrainMsg {
   char type;  // Defined above
