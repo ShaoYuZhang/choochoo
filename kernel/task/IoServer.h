@@ -4,6 +4,8 @@
 #define IOSERVERCOM1_NAME "IOCOM1\0"
 #define IOSERVERCOM2_NAME "IOCOM2\0"
 
+#define EOS 255
+
 typedef struct IOMessage {
   char type;
   char data;
