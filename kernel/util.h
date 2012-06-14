@@ -7,6 +7,10 @@
 ////////// HARDWARE Stuff
 #define UART_BASE(_x) (((_x) == COM1) ? UART1_BASE : UART2_BASE)
 
+#define BACKSPACE '\b'
+#define RETURN '\r'
+#define ESC '\033'
+
 #define ON  1
 #define OFF 0
 

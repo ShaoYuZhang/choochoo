@@ -16,6 +16,7 @@ void task1() {
   startTimeServerTask();
   startIoServerTask();
   startTrainControllerTask();
+  startUserInterfaceTask();
   startCommandDecoderTask();
 
   Exit();
@@ -26,7 +27,7 @@ int main(int argc, char* argv[]) {
 
   int returnVal;
 
-  kernel_createtask((int*)&returnVal, 1, (int)task1, 0);
+  kernel_createtask((int*)&returnVal, 15, (int)task1, 0);
 
 	kernel_runloop();
 	return 0;

@@ -2,8 +2,10 @@
 #include <Train.h>
 #include <IoServer.h>
 #include <NameServer.h>
+#include <UserInterface.h>
 #include <syscall.h>
 #include <bwio.h> // need a2i
+
 
 static char decoderBuffer[DECODER_BUFFER_SIZE];
 static unsigned int decoderCurrBufferPos;
@@ -11,7 +13,6 @@ static unsigned int decoderCurrBufferPos;
 static int trainController;
 static int com2;
 
-void decoderAddChar( char c );
 void decodeCommand();
 
 void commandDecoder() {
@@ -20,36 +21,40 @@ void commandDecoder() {
   com2 = WhoIs(com2Name);
   char trainControllerName[] = TRAIN_NAME;
   trainController = WhoIs(trainControllerName);
+  char uiName[] = UI_TASK_NAME;
+  int ui = WhoIs(uiName);
 
+  UiMsg msg;
+  msg.type = PROMPT_CHAR;
   for (;;) {
     char c = Getc(com2);
-    if (c == '\r') {
-      // TODO, clear line, UI stuff
+    msg.data3 = c;
+    if (c == RETURN) {
       decodeCommand();
+      msg.data2 = 1; // Move cursor to clear line.
+      Send(ui, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
     } else {
-      decoderAddChar( c );
+      if (decoderCurrBufferPos > 0 && c == BACKSPACE) {
+        --decoderCurrBufferPos;
+        msg.data2 = decoderCurrBufferPos+1;
+        Send(ui, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
+      } else if (decoderCurrBufferPos < DECODER_BUFFER_SIZE) {
+        decoderBuffer[decoderCurrBufferPos] = c;
+        ++decoderCurrBufferPos;
+        msg.data2 = decoderCurrBufferPos;
+        Send(ui, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
+      }
     }
-  }
-}
-
-void decoderAddChar( char c ) {
-  if ( decoderCurrBufferPos > 0 && c == 8 ) {
-    --decoderCurrBufferPos;
-  } else if (decoderCurrBufferPos < DECODER_BUFFER_SIZE) {
-    decoderBuffer[decoderCurrBufferPos] = c;
-    ++decoderCurrBufferPos;
   }
 }
 
 void decodeCommand() {
   decoderBuffer[decoderCurrBufferPos] = 0;
-  unsigned int temp_len = decoderCurrBufferPos;
+  unsigned int shortEvalulation = (decoderCurrBufferPos <= 3);
   decoderCurrBufferPos = 0;
-  TrainMsg msg;
-  if (temp_len <= 3) {
-    return;
-  }
+  if (shortEvalulation) return;
 
+  TrainMsg msg;
   if (decoderBuffer[0] == 't' && decoderBuffer[1] == 'r') {
     int train_number = 0;
     int train_speed;
@@ -88,7 +93,6 @@ void decodeCommand() {
     }
   }
 }
-
 
 int startCommandDecoderTask() {
   return Create(10, commandDecoder);

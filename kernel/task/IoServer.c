@@ -221,7 +221,7 @@ void ioserver_com2_task() {
       Reply(tid, (char*)1, 0);
 
       char c = msg.data[0];
-      add_to_buffer( &com2Out, c);
+
       if (com2InputWaitTid!= -1) {
         Reply(com2InputWaitTid, &c, 1);
         com2InputWaitTid= -1;
