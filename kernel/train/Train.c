@@ -40,6 +40,23 @@ void trainWorker() {
   }
 }
 
+void set_default_switch() {
+  char timename[] = TIMESERVER_NAME;
+  int timeserver = WhoIs(timename);
+
+  for (int sw = 0; sw < 32; sw++){
+    trainSetSwitch(sw, SWITCH_STRAIGHT);
+    Delay(timeserver, 5);
+  }
+
+  Delay(timeserver, 100);
+
+  for (int sw = 0; sw < 32; sw++){
+    trainSetSwitch(sw, SWITCH_CURVED);
+    Delay(timeserver, 5);
+  }
+}
+
 void trainController() {
   char com1Name[] = IOSERVERCOM1_NAME;
   com1 = WhoIs(com1Name);
@@ -54,6 +71,8 @@ void trainController() {
   for (int i = 0; i < NUM_WORKER; i++) {
     worker[i] = Create(1, trainWorker);
   }
+
+  set_default_switch();
 
   for (;;) {
     int tid = -1;
@@ -89,12 +108,11 @@ void trainController() {
 }
 
 void trainSetSwitch(int sw, int state) {
-  char msg[3];
+  char msg[2];
   msg[0] = (char)state;
   msg[1] = (char)sw;
-  msg[2] = 0;
 
-  Putstr(com1, msg, 3);
+  Putstr(com1, msg, 2);
   switchStatus[sw] = state;
 }
 
@@ -106,9 +124,8 @@ void trainSetSpeed(TrainMsg* origMsg) {
     ASSERT(speed > 0, "Train worker has negative speed.");
   }
 
-  char msg[3];
+  char msg[2];
   msg[1] = (char)trainNum;
-  msg[2] = 0;
   if (speed >= 0) {
     msg[0] = (char)speed;
   } else {
@@ -120,7 +137,7 @@ void trainSetSpeed(TrainMsg* origMsg) {
     ASSERT(numWorkerLeft < -1, "Used non-existence worker id");
   }
 
-  Putstr(com1, msg, 3);
+  Putstr(com1, msg, 2);
   train[trainNum].speed = msg[1];
 }
 

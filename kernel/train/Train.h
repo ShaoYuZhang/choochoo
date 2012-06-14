@@ -4,8 +4,8 @@
 #define TRAIN_NAME "TRAINN\0"
 #define NUM_SWITCHES 0xff
 #define NUM_TRAINS 80
-#define SWITCH_STRAIGHT 34
-#define SWITCH_CURVED   35
+#define SWITCH_STRAIGHT 35
+#define SWITCH_CURVED   34
 
 #define GET_SWITCH 0
 #define SET_SWITCH 1
