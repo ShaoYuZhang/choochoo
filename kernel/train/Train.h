@@ -25,6 +25,6 @@ void trainGetSwitch();
 
 void trainSetSwitch(int switchNum, int state);
 
-void trainSetSpeed(TrainMsg* origMsg);
+void trainSetSpeed(TrainMsg* origMsg, int* numWorkerLeft);
 
 #endif // TRAIN_H_

@@ -19,7 +19,6 @@ static int com1;
 static Train train[NUM_TRAINS];
 // Workers that is responsible for reversing train.
 static int worker[NUM_WORKER];
-static int numWorkerLeft;
 
 // Responsider for delag msg server about positive train speed
 void trainWorker() {
@@ -40,9 +39,12 @@ void trainWorker() {
   }
 }
 
+static int com2;
 void trainController() {
   char com1Name[] = IOSERVERCOM1_NAME;
+  char com2Name[] = IOSERVERCOM2_NAME;
   com1 = WhoIs(com1Name);
+  com2 = WhoIs(com2Name);
   char trainName[] = TRAIN_NAME;
   RegisterAs(trainName);
 
@@ -50,15 +52,16 @@ void trainController() {
     train[i].speed = 0;
   }
 
-  numWorkerLeft = NUM_WORKER-1;
+  int numWorkerLeft = NUM_WORKER-1;
   for (int i = 0; i < NUM_WORKER; i++) {
     worker[i] = Create(1, trainWorker);
   }
+  Putc(com2, 'a' + numWorkerLeft);
 
-  for (int i = 0; i < 32; i++) {
+  for (int i = 1; i < 19; i++) {
     trainSetSwitch(i, SWITCH_STRAIGHT);
   }
-  for (int i = 0; i < 32; i++) {
+  for (int i = 1; i < 19; i++) {
     trainSetSwitch(i, SWITCH_CURVED);
   }
 
@@ -84,7 +87,8 @@ void trainController() {
       }
       case SET_SPEED: {
         Reply(tid, (char*)1, 0);
-        trainSetSpeed(&msg);
+        Putc(com2, 'a' + numWorkerLeft);
+        trainSetSpeed(&msg, &numWorkerLeft);
         break;
       }
       default: {
@@ -105,11 +109,11 @@ void trainSetSwitch(int sw, int state) {
   switchStatus[sw] = state;
 }
 
-void trainSetSpeed(TrainMsg* origMsg) {
+void trainSetSpeed(TrainMsg* origMsg, int* numWorkerLeft) {
   const int trainNum = origMsg->data1;
   const int speed = origMsg->data2;
   if (origMsg->data3 == WORKER_SIG) {
-    numWorkerLeft++;
+    (*numWorkerLeft)++;
     ASSERT(speed > 0, "Train worker has negative speed.");
   }
 
@@ -120,11 +124,15 @@ void trainSetSpeed(TrainMsg* origMsg) {
     msg[0] = (char)speed;
   } else {
     msg[0] = 0;
-    origMsg->data2 = train[trainNum].speed * -1;
+    origMsg->data2 = train[trainNum].speed;
     origMsg->data3 = 250; // 2.5s . TODO, calculate from train speed.
-    Send(worker[numWorkerLeft--], (char*)origMsg,
-        sizeof(TrainMsg), (char*)origMsg, 0);
-    ASSERT(numWorkerLeft < -1, "Used non-existence worker id");
+    Send(worker[*numWorkerLeft], (char*)origMsg,
+        sizeof(TrainMsg), (char*)1, 0);
+    numWorkerLeft--;
+    if (*numWorkerLeft < -1) {
+      printff(com2, "Used non-existence worker id");
+      while(1);
+    }
   }
 
   Putstr(com1, msg, 3);

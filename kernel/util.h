@@ -72,9 +72,9 @@ typedef char *va_list;
 #define ASSERT(X, ...) { \
 	if (!(X)) { \
 		bwprintf(COM2, "assertion failed in file " __FILE__ " line:" TOSTRING(__LINE__) CRLF); \
-		bwprintf(COM2, "[%s] ", __func__); \
-		bwprintf(COM2, __VA_ARGS__); \
-		bwprintf(COM2, "\n"); \
+		printff(COM2, "[%s] ", __func__); \
+		printff(COM2, __VA_ARGS__); \
+		printff(COM2, "\n"); \
 		while(1); \
 	} \
 }
