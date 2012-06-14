@@ -182,7 +182,7 @@ void ioserver_com1_task() {
       VMEM(uartbase + UART_DATA_OFFSET) = remove_from_buffer(&com1Out);
       VMEM(uartbase + UART_CTLR_OFFSET) |= TIEN_MASK; // enable tx interrupt
       txempty = 0;
-      cts = VMEM(uart_flag) & CTS_MASK;
+      cts = 0;
     }
   }
 }
