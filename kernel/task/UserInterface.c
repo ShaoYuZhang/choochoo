@@ -4,6 +4,7 @@
 #include <Train.h>
 #include <TimeServer.h>
 #include <IoServer.h>
+#include <Sensor.h>
 
 #define REFRESH_TICK 100
 #define NUM_SENSORSET 5
@@ -245,6 +246,26 @@ static void timerDelay() {
   }
 }
 
+static void sensorQuery() {
+  int parent = MyParentsTid();
+  char sensorName[] = SENSOR_NAME;
+  int sensorServer = WhoIs(sensorName);
+  UiMsg msg;
+  msg.type = UPDATE_SENSOR;
+
+  for(;;) {
+    SensorMsg sensorMsg;
+    msg.type = QUERY_RECENT;
+    Sensor sensor;
+    Send(sensorServer, (char *)&sensorMsg, sizeof(SensorMsg), (char *)&sensor, sizeof(Sensor));
+
+    // TODO (zhang) this is not following your convention
+    msg.data1 = sensor.box;
+    msg.data2 = sensor.val;
+    Send(parent, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
+  }
+}
+
 static void displayStaticContent(int com2) {
   char msgStart[255];
   char* msg = msgStart;
@@ -275,7 +296,8 @@ static void userInterface() {
   RegisterAs(name);
   char com2name[] = IOSERVERCOM2_NAME;
   int com2 = WhoIs(com2name);
-  Create(1, timerDelay);
+  //Create(1, timerDelay);
+  //Create(1, sensorQuery);
 
   displayStaticContent(com2);
 
@@ -294,6 +316,13 @@ static void userInterface() {
       }
       case UPDATE_TIME: {
         com2msg = updateTime(msg.data3, com2msg);
+        break;
+      }
+      case UPDATE_SENSOR: {
+        // TODO(zhang) format
+        *com2msg++ = 'a' + msg.data1;
+        *com2msg++ = '0' + msg.data2; // and this is wrong
+        *com2msg++ = ' ';
         break;
       }
     }

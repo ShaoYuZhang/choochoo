@@ -44,7 +44,7 @@ static void com1rx_task() {
 
   IOMessage msg;
   for (;;) {
-    msg.data = (char)AwaitEvent(UART2TXINTR2);
+    msg.data = (char)AwaitEvent(UART1RXINTR1);
     Send(parent, (char *)&msg, sizeof(IOMessage), (char *)NULL, 0);
   }
 }

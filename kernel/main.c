@@ -8,6 +8,7 @@
 #include <CommandDecoder.h>
 #include <IoServer.h>
 #include <UserInterface.h>
+#include <Sensor.h>
 
 void client();
 
@@ -18,6 +19,7 @@ void task1() {
   startTrainControllerTask();
   startUserInterfaceTask();
   startCommandDecoderTask();
+  startSensorServer();
 
   Exit();
 }
