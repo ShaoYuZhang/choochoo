@@ -27,18 +27,6 @@ void uart_parity(int channel, int enable) {
 	VMEM(memptr) = buf;
 }
 
-void bwioInit() {
-	// init COM1
-	bwsetfifo(COM1, OFF);
-	bwsetspeed(COM1, 2400); // 2400
-	uart_stopbits(COM1, 2); //2
-	uart_databits(COM1, 8);
-	uart_parity(COM1, OFF);
-
-	// init COM2
-	bwsetfifo(COM2, OFF);
-}
-
 /*
  * The UARTs are initialized by RedBoot to the following state
  * 	115,200 bps

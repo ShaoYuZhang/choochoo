@@ -12,8 +12,6 @@ void uart_databits(int channel, int wlen);
 
 void uart_parity(int channel, int enable);
 
-void bwioInit();
-
 int bwsetfifo( int channel, int state );
 
 int bwsetspeed( int channel, int speed );
