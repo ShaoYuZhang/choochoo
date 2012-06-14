@@ -247,7 +247,7 @@ static void displayStaticContent(int com2) {
   Putstr(com2, msgStart, msg-msgStart);
 }
 
-void userInterface() {
+static void userInterface() {
   char name[] = UI_TASK_NAME;
   RegisterAs(name);
   char com2name[] = IOSERVERCOM2_NAME;

@@ -22,10 +22,4 @@ typedef struct TrainMsg {
 
 int startTrainControllerTask();
 
-void trainGetSwitch();
-
-void trainSetSwitch(int switchNum, int state);
-
-void trainSetSpeed(TrainMsg* origMsg, int* numWorkerLeft);
-
 #endif // TRAIN_H_

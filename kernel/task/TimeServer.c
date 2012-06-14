@@ -2,11 +2,12 @@
 #include <util.h>
 #include <syscall.h>
 #include <NameServer.h>
+#include <IoHelper.h>
 
 #define TIMER_SERVER_SIZE 8      // WARNING: must be power of 2
 #define TIMER_SERVER_SIZE_MOD (TIMER_SERVER_SIZE-1)
 
-void timernotifier_task();
+static void timernotifier_task();
 
 // Size optimization if needed.....
 typedef struct RegisteredTask {
@@ -37,7 +38,7 @@ int DelayUntil(int ticks, int timeServerTid) {
   return Send(timeServerTid, (char*)&ticks, 4, (char*)NULL, 0);
 }
 
-void timeserver_task() {
+static void timeserver_task() {
   int counter = 0;
   int basePos = 0;
   char name[] = TIMESERVER_NAME;
@@ -121,7 +122,7 @@ int startTimeServerTask() {
   return Create(1, timeserver_task);
 }
 
-void timernotifier_task() {
+static void timernotifier_task() {
   int parent = MyParentsTid();
   // Enable timer device
   VMEM(TIMER1_BASE + CRTL_OFFSET) &= ~ENABLE_MASK; // stop timer

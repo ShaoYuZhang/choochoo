@@ -7,7 +7,7 @@
 #include <Train.h>
 #include <CommandDecoder.h>
 #include <IoServer.h>
-#include <CommandDecoder.h>
+#include <UserInterface.h>
 
 void client();
 

@@ -18,11 +18,52 @@ typedef struct Train {
 static int com1;
 static int com2;
 static Train train[NUM_TRAINS];
-
 static int worker[NUM_WORKER];
 
+static void trainSetSwitch(int sw, int state) {
+  char msg[2];
+  msg[0] = (char)state;
+  msg[1] = (char)sw;
+
+  Putstr(com1, msg, 2);
+  //printff(com1, "Sw: %d State: %d \n", sw, state);
+  switchStatus[sw] = state;
+}
+
+static void trainSetSpeed(TrainMsg* origMsg, int* numWorkerLeft) {
+  const int trainNum = origMsg->data1;
+  const int speed = origMsg->data2;
+
+  char msg[4];
+  msg[1] = (char)trainNum;
+  if (speed >= 0) {
+    msg[0] = (char)speed;
+    Putstr(com1, msg, 2);
+    train[trainNum].speed = speed;
+  } else {
+    msg[0] = 0xf;
+    printff(com2, "Reverse... %d \n", train[trainNum].speed);
+    origMsg->data2 = (signed char)train[trainNum].speed;
+    origMsg->data3 = 250; // 2.5s . TODO, calculate from train speed.
+
+    printff(com2, "Using worker: %d \n", *numWorkerLeft);
+    Reply(worker[*numWorkerLeft], (char*)origMsg, sizeof(TrainMsg));
+    (*numWorkerLeft)--;
+
+    msg[2] = 0;
+    msg[3] = (char)trainNum;
+
+    if (*numWorkerLeft < -1) {
+      printff(com2, "Used non-existence worker id");
+      while(1);
+    }
+    Putstr(com1, msg, 4);
+    train[trainNum].speed = 0;
+  }
+}
+
 // Responsider for delag msg server about positive train speed
-void trainWorker() {
+static void trainWorker() {
   char timename[] = TIMESERVER_NAME;
   int timeserver = WhoIs(timename);
   int parent = MyParentsTid();
@@ -40,7 +81,7 @@ void trainWorker() {
   }
 }
 
-void trainController() {
+static void trainController() {
   char com1Name[] = IOSERVERCOM1_NAME;
   char com2Name[] = IOSERVERCOM2_NAME;
   com1 = WhoIs(com1Name);
@@ -107,47 +148,6 @@ void trainController() {
   }
 }
 
-void trainSetSwitch(int sw, int state) {
-  char msg[2];
-  msg[0] = (char)state;
-  msg[1] = (char)sw;
-
-  Putstr(com1, msg, 2);
-  //printff(com1, "Sw: %d State: %d \n", sw, state);
-  switchStatus[sw] = state;
-}
-
-void trainSetSpeed(TrainMsg* origMsg, int* numWorkerLeft) {
-  const int trainNum = origMsg->data1;
-  const int speed = origMsg->data2;
-
-  char msg[4];
-  msg[1] = (char)trainNum;
-  if (speed >= 0) {
-    msg[0] = (char)speed;
-    Putstr(com1, msg, 2);
-    train[trainNum].speed = speed;
-  } else {
-    msg[0] = 0xf;
-    printff(com2, "Reverse... %d \n", train[trainNum].speed);
-    origMsg->data2 = (signed char)train[trainNum].speed;
-    origMsg->data3 = 250; // 2.5s . TODO, calculate from train speed.
-
-    printff(com2, "Using worker: %d \n", *numWorkerLeft);
-    Reply(worker[*numWorkerLeft], (char*)origMsg, sizeof(TrainMsg));
-    (*numWorkerLeft)--;
-
-    msg[2] = 0;
-    msg[3] = (char)trainNum;
-
-    if (*numWorkerLeft < -1) {
-      printff(com2, "Used non-existence worker id");
-      while(1);
-    }
-    Putstr(com1, msg, 4);
-    train[trainNum].speed = 0;
-  }
-}
 
 int startTrainControllerTask() {
   return Create(2, trainController);

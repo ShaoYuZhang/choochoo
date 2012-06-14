@@ -35,7 +35,7 @@ void Putstr(const int tid, char* str, int len) {
   Send(tid, (char*)&msg, 1 + 1 + len, NULL, 0);
 }
 
-void com1rx_task() {
+static void com1rx_task() {
   int parent = MyParentsTid();
 
   // Enables UART1RXINTR1
@@ -49,7 +49,7 @@ void com1rx_task() {
   }
 }
 
-void com2rx_task() {
+static void com2rx_task() {
   int parent = MyParentsTid();
 
   // Enables UART2RXINTR2
@@ -63,7 +63,7 @@ void com2rx_task() {
   }
 }
 
-void com1tx_task() {
+static void com1tx_task() {
   int parent = MyParentsTid();
 
   // Enables UART1TXINTR1
@@ -76,7 +76,7 @@ void com1tx_task() {
   }
 }
 
-void com2tx_task() {
+static void com2tx_task() {
   int parent = MyParentsTid();
 
   // Enables UART2TXINTR2
@@ -89,7 +89,7 @@ void com2tx_task() {
   }
 }
 
-void com1ms_task() {
+static void com1ms_task() {
   int parent = MyParentsTid();
 
   // Enables INT_UART1
@@ -103,7 +103,7 @@ void com1ms_task() {
   }
 }
 
-void ioserver_com1_task() {
+static void ioserver_com1_task() {
   char name[] = IOSERVERCOM1_NAME;
   RegisterAs(name);
 
@@ -187,7 +187,7 @@ void ioserver_com1_task() {
   }
 }
 
-void ioserver_com2_task() {
+static void ioserver_com2_task() {
   char name[] = IOSERVERCOM2_NAME;
   RegisterAs(name);
 

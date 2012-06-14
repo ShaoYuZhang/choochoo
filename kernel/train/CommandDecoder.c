@@ -4,7 +4,7 @@
 #include <NameServer.h>
 #include <UserInterface.h>
 #include <syscall.h>
-#include <bwio.h> // need a2i
+#include <IoHelper.h> // need a2i
 
 
 static char decoderBuffer[DECODER_BUFFER_SIZE];
@@ -13,42 +13,7 @@ static unsigned int decoderCurrBufferPos;
 static int trainController;
 static int com2;
 
-void decodeCommand();
-
-void commandDecoder() {
-  decoderCurrBufferPos = 0;
-  char com2Name[] = IOSERVERCOM2_NAME;
-  com2 = WhoIs(com2Name);
-  char trainControllerName[] = TRAIN_NAME;
-  trainController = WhoIs(trainControllerName);
-  char uiName[] = UI_TASK_NAME;
-  int ui = WhoIs(uiName);
-
-  UiMsg msg;
-  msg.type = PROMPT_CHAR;
-  for (;;) {
-    char c = Getc(com2);
-    msg.data3 = c;
-    if (c == RETURN) {
-      decodeCommand();
-      msg.data2 = 1; // Move cursor to clear line.
-      Send(ui, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
-    } else {
-      if (decoderCurrBufferPos > 0 && c == BACKSPACE) {
-        --decoderCurrBufferPos;
-        msg.data2 = decoderCurrBufferPos+1;
-        Send(ui, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
-      } else if (decoderCurrBufferPos < DECODER_BUFFER_SIZE) {
-        decoderBuffer[decoderCurrBufferPos] = c;
-        ++decoderCurrBufferPos;
-        msg.data2 = decoderCurrBufferPos;
-        Send(ui, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
-      }
-    }
-  }
-}
-
-void decodeCommand() {
+static void decodeCommand() {
   decoderBuffer[decoderCurrBufferPos] = 0;
   unsigned int shortEvalulation = (decoderCurrBufferPos <= 3);
   decoderCurrBufferPos = 0;
@@ -90,6 +55,39 @@ void decodeCommand() {
       msg.data1 = switch_number;
       msg.data2 = switch_pos;
       Send(trainController, (char *)&msg, sizeof(TrainMsg), (char *)NULL, 0);
+    }
+  }
+}
+
+static void commandDecoder() {
+  decoderCurrBufferPos = 0;
+  char com2Name[] = IOSERVERCOM2_NAME;
+  com2 = WhoIs(com2Name);
+  char trainControllerName[] = TRAIN_NAME;
+  trainController = WhoIs(trainControllerName);
+  char uiName[] = UI_TASK_NAME;
+  int ui = WhoIs(uiName);
+
+  UiMsg msg;
+  msg.type = PROMPT_CHAR;
+  for (;;) {
+    char c = Getc(com2);
+    msg.data3 = c;
+    if (c == RETURN) {
+      decodeCommand();
+      msg.data2 = 1; // Move cursor to clear line.
+      Send(ui, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
+    } else {
+      if (decoderCurrBufferPos > 0 && c == BACKSPACE) {
+        --decoderCurrBufferPos;
+        msg.data2 = decoderCurrBufferPos+1;
+        Send(ui, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
+      } else if (decoderCurrBufferPos < DECODER_BUFFER_SIZE) {
+        decoderBuffer[decoderCurrBufferPos] = c;
+        ++decoderCurrBufferPos;
+        msg.data2 = decoderCurrBufferPos;
+        Send(ui, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
+      }
     }
   }
 }

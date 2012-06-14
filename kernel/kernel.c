@@ -9,6 +9,7 @@
 #include <NameServer.h>
 #include <TimeServer.h>
 #include <idle.h>
+#include <IoHelper.h>
 
 static void (*syscall_handler[LAST_SYSCALL])(int*, int, int, int) = {
   kernel_createtask,

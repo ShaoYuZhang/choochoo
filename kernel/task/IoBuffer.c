@@ -1,11 +1,11 @@
 #include <IoBuffer.h>
 
 unsigned int increment_offset( int curr_offset ) {
-    curr_offset++;
-    if (curr_offset == IO_BUFFER_SIZE) {
-        curr_offset = 0;
-    }
-    return curr_offset;
+  curr_offset++;
+  if (curr_offset == IO_BUFFER_SIZE) {
+    curr_offset = 0;
+  }
+  return curr_offset;
 }
 
 void add_to_buffer( IOBuffer *buffer, char c) {

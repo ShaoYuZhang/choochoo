@@ -1,6 +1,7 @@
 #include "NameServer.h"
 #include <memory.h>
 #include <string.h>
+#include <IoHelper.h>
 
 #define NUM_TASK_NAMESERVER 20
 #define MSG_LEN 31
