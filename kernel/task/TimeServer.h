@@ -2,6 +2,7 @@
 #define TIMESERVER_H_
 
 #define TIMESERVER_NAME "TS\0"
+#define T100MS 10
 
 int startTimeServerTask();
 

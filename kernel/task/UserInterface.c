@@ -13,8 +13,7 @@
 #define PROMPT_R2 '0'+7
 #define CLOCK_R1 '0'+2
 #define CLOCK_R2 '0'+6
-#define CLOCK_C1 '0'
-#define CLOCK_C2 '0'+1
+#define CLOCK_C1 '1'
 
 static char* promptChar(char col, char c, char* msg) {
   // move to position
@@ -53,11 +52,14 @@ static char* promptChar(char col, char c, char* msg) {
   return msg;
 }
 
-static char* updateTime(UiMsg* ui, char* msg) {
-  unsigned int ms = ui->data3;
+static char* updateTime(unsigned int ms, char* msg) {
   int min = (ms / 60000) % 60;
   int sec = (ms / 1000) % 60;
   int mso = (ms / 100) % 10;
+  // SaveCursor
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = 's';
 
   // move to position
   *msg++ = ESC;
@@ -66,7 +68,6 @@ static char* updateTime(UiMsg* ui, char* msg) {
   *msg++ = CLOCK_R2;
   *msg++ = ';';
   *msg++ = CLOCK_C1;
-  *msg++ = CLOCK_C2;
   *msg++ = 'f';
 
   // Print the time
@@ -77,6 +78,12 @@ static char* updateTime(UiMsg* ui, char* msg) {
 	*msg++ = sec%10 + '0';
 	*msg++ = '.';
 	*msg++ = mso + '0';
+
+  // Restore Cursor
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = 'u';
+
   return msg;
 }
 
@@ -222,6 +229,22 @@ static int execute(char* cmd) {
 }
 #endif
 
+static void timerDelay() {
+  int parent = MyParentsTid();
+  char timeName[] = TIMESERVER_NAME;
+  int timeserver = WhoIs(timeName);
+  UiMsg msg;
+  msg.type = UPDATE_TIME;
+  int ticks = Time(timeserver);
+
+  for(;;) {
+    ticks += T100MS;
+    DelayUntil(ticks, timeserver);
+    msg.data3 = ticks*10; // 10ms per tick
+    Send(parent, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
+  }
+}
+
 static void displayStaticContent(int com2) {
   char msgStart[255];
   char* msg = msgStart;
@@ -252,6 +275,7 @@ static void userInterface() {
   RegisterAs(name);
   char com2name[] = IOSERVERCOM2_NAME;
   int com2 = WhoIs(com2name);
+  Create(1, timerDelay);
 
   displayStaticContent(com2);
 
@@ -266,6 +290,11 @@ static void userInterface() {
     switch (msg.type) {
       case PROMPT_CHAR: {
         com2msg = promptChar(msg.data2+1, msg.data3, com2msg);
+        break;
+      }
+      case UPDATE_TIME: {
+        com2msg = updateTime(msg.data3, com2msg);
+        break;
       }
     }
     Putstr(com2, com2msgStart, com2msg-com2msgStart);

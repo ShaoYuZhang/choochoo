@@ -13,7 +13,7 @@ typedef struct UiMsg {
   char type;   //
   char data1;  // Row (2 digit allowed)
   char data2;  // Col (2 digit allowed)
-  unsigned int data3;  // time
+  int data3;  // time
 } UiMsg;
 
 int startUserInterfaceTask();
