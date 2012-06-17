@@ -22,6 +22,6 @@ typedef struct Sensor {
   char val;
 } Sensor;
 
-int startSensorServer();
+int startSensorServerTask();
 
 #endif // SENSOR_H

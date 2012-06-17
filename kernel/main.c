@@ -10,8 +10,6 @@
 #include <UserInterface.h>
 #include <Sensor.h>
 
-void client();
-
 void task1() {
   startNameServerTask();
   startTimeServerTask();
@@ -19,7 +17,7 @@ void task1() {
   startTrainControllerTask();
   startUserInterfaceTask();
   startCommandDecoderTask();
-  startSensorServer();
+  startSensorServerTask();
 
   Exit();
 }
@@ -29,7 +27,8 @@ int main(int argc, char* argv[]) {
 
   int returnVal;
 
-  kernel_createtask((int*)&returnVal, 15, (int)task1, 0);
+  // Create task with low priority to ensure other initialized tasks are blocked.
+  kernel_createtask((int*)&returnVal, 28, (int)task1, 0);
 
 	kernel_runloop();
 	return 0;

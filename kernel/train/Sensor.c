@@ -158,6 +158,6 @@ static void sensorServer() {
 
 
 
-int startSensorServer() {
+int startSensorServerTask() {
   return Create(3, sensorServer);
 }

@@ -296,7 +296,7 @@ static void userInterface() {
   RegisterAs(name);
   char com2name[] = IOSERVERCOM2_NAME;
   int com2 = WhoIs(com2name);
-  //Create(1, timerDelay);
+  Create(1, timerDelay);
   //Create(1, sensorQuery);
 
   displayStaticContent(com2);
