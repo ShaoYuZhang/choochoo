@@ -15,9 +15,9 @@ void task1() {
   startTimeServerTask();
   startIoServerTask();
   startTrainControllerTask();
+  startSensorServerTask();
   startUserInterfaceTask();
   startCommandDecoderTask();
-  startSensorServerTask();
 
   Exit();
 }

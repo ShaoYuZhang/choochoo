@@ -10,7 +10,7 @@ static int CURR_HIGH_BITS;
 static int SENSOR_QUERY_FINISHED;
 static int SENSOR_VALUE[NUM_SENSOR_BOX][16];
 // TODO, need to be a list of subscriber later
-static int sensorUpdateSubscriber = -1;
+static int sensorUpdateSubscriber;
 
 static void sensorQueryWorker() {
   char com1Name[] = IOSERVERCOM1_NAME;
@@ -21,7 +21,7 @@ static void sensorQueryWorker() {
   for (;;) {
     SensorMsg msg;
     msg.type = QUERY_WORKER;
-    Send (parent, (char *)&msg, sizeof(SensorMsg), (char *)NULL, 0);
+    Send(parent, (char *)&msg, sizeof(SensorMsg), (char *)NULL, 0);
 
     Putc( com1, 133);
   }
@@ -38,7 +38,7 @@ static void sensorQueryResponseWorker() {
     char c = Getc(com1);
     msg.type = QUERY_RESPONSE_WORKER;
     msg.data = c;
-    Send (parent, (char *)&msg, sizeof(SensorMsg), (char *)NULL, 0);
+    Send(parent, (char *)&msg, sizeof(SensorMsg), (char *)NULL, 0);
   }
 }
 
@@ -51,7 +51,7 @@ static void sensorQueryTimeoutWorker() {
   for (;;) {
     SensorMsg msg;
     msg.type = QUERY_TIMEOUT_WORKER;
-    Send (parent, (char *)&msg, sizeof(SensorMsg), (char *)NULL, 0);
+    Send(parent, (char *)&msg, sizeof(SensorMsg), (char *)NULL, 0);
     // TODO (cao) need tuning
     Delay(10, timeServer);
   }
@@ -152,6 +152,9 @@ static void sensorServer() {
         sensorUpdateSubscriber = tid;
         break;
       }
+      default: {
+        ASSERT(FALSE, "invalid sensor msg type.");
+      }
     }
   }
 }
@@ -159,5 +162,6 @@ static void sensorServer() {
 
 
 int startSensorServerTask() {
+  sensorUpdateSubscriber = -1;
   return Create(3, sensorServer);
 }

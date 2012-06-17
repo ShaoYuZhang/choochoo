@@ -88,19 +88,39 @@ static char* updateTime(unsigned int ms, char* msg) {
   return msg;
 }
 
-#if 0
-static void ui_sensor_draw() {
-	int startX = UI_WIDTH / 2 + 1;
+static char* updateSensor(int box, int val, char* msg) {
+	const int startX = UI_WIDTH / 2 + 1;
 
-	moveCursor(1, startX);
+  // SaveCursor
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = 's';
 
-	bwputstr(COM2, "Sensor");
+  // move to position
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = '1'; // line
+  *msg++ = ';';
+  *msg++ = '0' + startX/10; // Col
+  *msg++ = '0' + startX%10;
+  *msg++ = 'f';
 
-	for (int i = startX + 8; i < UI_WIDTH - 17; i++) {
-		bwputc(COM2, ' ');
-	}
+  // Print sensor info
+	*msg++ = '0' + box;
+	*msg++ = ':';
+  if (val > 10) {
+	  *msg++ = '0'+ val;
+  }
+  *msg++ = '0'+ val%10;
+
+  // Restore Cursor
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = 'u';
+  return msg;
 }
 
+#if 0
 static void ui_switch_draw()
 {
 	moveCursor(1,1);
@@ -145,89 +165,6 @@ static void ui_switch_redraw(int sw, int ss) {
   bwputc(COM2, msg);
 }
 
-void uiInit() {
-  // Hide cursor
-  bwputstr(COM2, "\033[?25");
-  bwputc(COM2, 'l');
-  // Clear console
-  bwputstr(COM2, "\033c");
-  bwputstr(COM2, "\033[2J");
-
-  ui_switch_draw();
-	ui_sensor_draw();
-	moveCursor(29, 1);
-	bwputc(COM2, '>');
-}
-
-static int execute(char* cmd) {
-  bwputc(COM2, '\033');
-  bwputc(COM2, '[');
-  bwputc(COM2, '2');
-  bwputc(COM2, '8');
-  bwputc(COM2, ';');
-  bwputc(COM2, '1');
-  bwputc(COM2, 'f');
-	bwputstr(COM2, "\033[K");
-  bwputc(COM2, '\033');
-  bwputc(COM2, '[');
-  bwputc(COM2, '2');
-  bwputc(COM2, '8');
-  bwputc(COM2, ';');
-  bwputc(COM2, '1');
-  bwputc(COM2, 'f');
-
-	if (cmd[0] == 'q' && cmd[1] == '\0') {
-    return QUIT;
-  } else if (cmd[0] == 't' && cmd[1] == 'r' && cmd[2] == ' ') {
-    cmd += 3;
-
-    int train_number = parseInt(cmd);
-
-    if (train_number >= 1 && train_number <= 80) {
-      cmd += 1 + findFirstNonDigit(cmd);
-
-      int train_speed = parseInt(cmd);
-
-      if (train_speed >= 0 && train_speed <= 0xe) {
-        train_setspeed(train_number, train_speed);
-        bwprintf(COM2, "Set train %d's speed to %d.", train_number, train_speed);
-        return 0;
-      }
-    }
-  } else if (cmd [0] == 'r' && cmd[1] == 'v' && cmd[2] == ' ') {
-    cmd += 3;
-
-    int train_number = parseInt(cmd);
-
-    if (train_number >= 1 && train_number <= 80) {
-      train_reverse(train_number);
-      bwprintf(COM2, "Reversed train %d's direction.", train_number);
-      return 0;
-    }
-  } else if (cmd[0] == 's' && cmd[1] == 'w') {
-    cmd += 3;
-    int switch_number = parseInt(cmd);
-
-    if (switch_number >= 0 && switch_number <= 0xff) {
-      cmd += 1 + findFirstNonDigit(cmd);
-
-      int ss = -1;
-
-      if (*cmd == 's' || *cmd == 'S') {
-        ss = STRAIGHT;
-      } else if (*cmd == 'c' || *cmd == 'C') {
-        ss = CURVED;
-      }
-      if (ss != -1) {
-        train_setswitch(switch_number, ss);
-        ui_switch_redraw(switch_number, ss);
-        return 0;
-      }
-    }
-  }
-	bwprintf(COM2, "Invalid comand.");
-  return INVALID_CMD;
-}
 #endif
 
 static void timerDelay() {
@@ -250,19 +187,19 @@ static void sensorQuery() {
   int parent = MyParentsTid();
   char sensorName[] = SENSOR_NAME;
   int sensorServer = WhoIs(sensorName);
-  UiMsg msg;
-  msg.type = UPDATE_SENSOR;
+  UiMsg uimsg;
+  uimsg.type = UPDATE_SENSOR;
 
-  for(;;) {
+  for (;;) {
     SensorMsg sensorMsg;
-    msg.type = QUERY_RECENT;
+    sensorMsg.type = QUERY_RECENT;
     Sensor sensor;
-    Send(sensorServer, (char *)&sensorMsg, sizeof(SensorMsg), (char *)&sensor, sizeof(Sensor));
+    Send(sensorServer, (char*)&sensorMsg, sizeof(SensorMsg),
+        (char*)&sensor, sizeof(Sensor));
 
-    // TODO (zhang) this is not following your convention
-    msg.data1 = sensor.box;
-    msg.data2 = sensor.val;
-    Send(parent, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
+    uimsg.data1 = sensor.box;
+    uimsg.data2 = sensor.val;
+    Send(parent, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
   }
 }
 
@@ -297,7 +234,7 @@ static void userInterface() {
   char com2name[] = IOSERVERCOM2_NAME;
   int com2 = WhoIs(com2name);
   Create(1, timerDelay);
-  //Create(1, sensorQuery);
+  Create(1, sensorQuery);
 
   displayStaticContent(com2);
 
@@ -319,10 +256,8 @@ static void userInterface() {
         break;
       }
       case UPDATE_SENSOR: {
-        // TODO(zhang) format
-        *com2msg++ = 'a' + msg.data1;
-        *com2msg++ = '0' + msg.data2; // and this is wrong
-        *com2msg++ = ' ';
+        // TODO, why is val wrong?
+        com2msg = updateSensor(msg.data1 /*box*/, msg.data2 /*val*/, com2msg);
         break;
       }
     }

@@ -11,8 +11,8 @@
 
 typedef struct UiMsg {
   char type;   //
-  char data1;  // Row (2 digit allowed)
-  char data2;  // Col (2 digit allowed)
+  char data1;  // Row (2 digit allowed), or sensor box
+  char data2;  // Col (2 digit allowed), or sensor val
   int data3;  // time
 } UiMsg;
 
