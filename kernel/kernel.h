@@ -31,4 +31,6 @@ void kernel_awaitevent(int* returnVal, int eventType, int, int);
 
 void kernel_runloop();
 
+void kernel_quit();
+
 #endif // KERNEL_H_

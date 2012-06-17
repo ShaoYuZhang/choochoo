@@ -5,6 +5,7 @@
 #include <UserInterface.h>
 #include <syscall.h>
 #include <IoHelper.h> // need a2i
+#include <kernel.h>
 
 
 static char decoderBuffer[DECODER_BUFFER_SIZE];
@@ -15,6 +16,9 @@ static int com2;
 
 static void decodeCommand() {
   decoderBuffer[decoderCurrBufferPos] = 0;
+  if (decoderCurrBufferPos == 1 && decoderBuffer[0] == 'q') {
+    kernel_quit();
+  }
   unsigned int shortEvalulation = (decoderCurrBufferPos <= 3);
   decoderCurrBufferPos = 0;
   if (shortEvalulation) return;

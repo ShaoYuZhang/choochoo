@@ -27,6 +27,7 @@ static unsigned int tid_counter;
 static unsigned int idleTid;
 static TaskDescriptor tds[NUM_MAX_TASK];
 static volatile TaskDescriptor* eventWaitingTask[64];
+static int notQuit;
 
 static void install_interrupt_handlers() {
 	INSTALL_INTERRUPT_HANDLER(SWI_VECTOR, asm_handle_swi);
@@ -41,7 +42,6 @@ static void install_interrupt_handlers() {
   VMEM(VIC2 + INTENCLR_OFFSET) = ~0;
 }
 
-// TODO test.
 static void uninstall_interrupt_handlers() {
   // Disable HWI handler
 	INSTALL_INTERRUPT_HANDLER(HWI_VECTOR, 0);
@@ -57,6 +57,7 @@ static void uninstall_interrupt_handlers() {
 }
 
 void kernel_init() {
+  notQuit = 1;
   tid_counter = 0;
 	install_interrupt_handlers();
 	mem_reset();
@@ -145,7 +146,7 @@ void kernel_runloop() {
   unsigned int totalIdleTime = 0;
 #endif
 
-	while (LIKELY((td = scheduler_get()) != (TaskDescriptor *)NULL)) {
+	while (LIKELY((td = scheduler_get()) != (TaskDescriptor *)NULL && notQuit)) {
 #if 0
     if (idleTid == td->id) {
       idleTimeStart = GET_TIMER4();
@@ -186,6 +187,8 @@ void kernel_runloop() {
 
     }
 	} // End kernel loop;
+
+  kernel_close();
 }
 
 
@@ -337,4 +340,8 @@ void kernel_awaitevent(int* returnVal, int eventType, int notUsed1, int notUsed2
 	volatile TaskDescriptor *td = scheduler_get_running();
   td->state = EVENT_BLOCK;
   eventWaitingTask[eventType] = td;
+}
+
+void kernel_quit() {
+  notQuit = 0;
 }
