@@ -6,6 +6,7 @@
 #include <NameServer.h>
 #include <IoHelper.h>
 #include <syscall.h>
+#include <UserInterface.h>
 
 #define NUM_WORKER 4
 
@@ -84,9 +85,11 @@ static void trainWorker() {
 static void trainController() {
   char com1Name[] = IOSERVERCOM1_NAME;
   char com2Name[] = IOSERVERCOM2_NAME;
+  char uiName[] = UI_TASK_NAME;
+  char trainName[] = TRAIN_NAME;
   com1 = WhoIs(com1Name);
   com2 = WhoIs(com2Name);
-  char trainName[] = TRAIN_NAME;
+  int ui = WhoIs(uiName);
   RegisterAs(trainName);
 
   for (int i = 0; i < NUM_TRAINS; i++) {
@@ -105,6 +108,7 @@ static void trainController() {
   //  trainSetSwitch(i, SWITCH_CURVED);
   //}
 
+  UiMsg uimsg;
   for (;;) {
     int tid = -1;
     TrainMsg msg;
@@ -118,6 +122,10 @@ static void trainController() {
       case SET_SWITCH: {
         Reply(tid, (char*)1, 0);
         trainSetSwitch((int)msg.data1, (int)msg.data2);
+        uimsg.type = UPDATE_SWITCH;
+        uimsg.data1 = msg.data1;
+        uimsg.data2 = msg.data2;
+        Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
         break;
       }
       case GET_SPEED: {
@@ -126,18 +134,15 @@ static void trainController() {
         break;
       }
       case SET_SPEED: {
-        printff(com2, "Speed %d %d \n", msg.data1, msg.data2);
         trainSetSpeed(&msg, &numWorkerLeft);
         if (msg.data3 != WORKER) {
           Reply(tid, (char*)1, 0);
           break;
         }
-        printff(com2, "WorkerCameback. \n");
         // else fall through
       }
       case WORKER: {
         worker[++numWorkerLeft] = tid;
-        printff(com2, "WorkerLeft: %d \n", numWorkerLeft);
         break;
       }
       default: {

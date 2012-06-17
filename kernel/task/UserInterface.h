@@ -8,6 +8,7 @@
 #define UPDATE_TRAIN  5
 #define UPDATE_TIME   6
 #define UPDATE_IDLE   7
+#define DEBUG_MSG     8
 
 typedef struct UiMsg {
   char type;   //

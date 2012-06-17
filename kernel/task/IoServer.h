@@ -13,7 +13,7 @@ typedef struct IOMessage {
 
 typedef struct IOMessageStr {
   char type;
-  char data[32];
+  char data[1024];
 } IOMessageStr;
 
 char Getc(const int tid);

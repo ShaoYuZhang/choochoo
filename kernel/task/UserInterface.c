@@ -4,6 +4,7 @@
 #include <Train.h>
 #include <TimeServer.h>
 #include <IoServer.h>
+#include <IoHelper.h>
 #include <Sensor.h>
 
 #define REFRESH_TICK 100
@@ -50,6 +51,14 @@ static char* promptChar(char col, char c, char* msg) {
   else {
     *msg++ = c;
   }
+  return msg;
+}
+
+static char* pad2(int n, char* msg){
+  if (n/10) {
+    *msg++ = '0' + n/10;
+  }
+  *msg++ = '0' + n%10;
   return msg;
 }
 
@@ -120,52 +129,119 @@ static char* updateSensor(int box, int val, char* msg) {
   return msg;
 }
 
-#if 0
-static void ui_switch_draw()
-{
-	moveCursor(1,1);
+static char* drawSwitches(char* msg) {
+  // Move to position
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = '1'; // line
+  *msg++ = ';';
+  *msg++ = '1'; // Col
+  *msg++ = 'f';
 
-	bwputstr(COM2, "Switch");
+  // Text
+  *msg++ = 'S';
+  *msg++ = 'w';
+  *msg++ = 'i';
+  *msg++ = 't';
+  *msg++ = 'c';
+  *msg++ = 'h';
 
-	for (int i = 1; i<= 18; i++) {
-		moveCursor(i + 1,1);
-		bwputstr(COM2, "Sw   ");
-		pad2(i);
-		bwputstr(COM2, ": ");
-		bwputc(COM2, train_getswitch(i) == STRAIGHT ? '-' : '~');
+	for (int i = 1; i <= 18; i++) {
+    // Move again
+    *msg++ = ESC;
+    *msg++ = '[';
+    msg = pad2(i+1, msg); // Row
+    *msg++ = ';';
+    *msg++ = '1'; // Col
+    *msg++ = 'f';
+
+    // Switch info
+    *msg++ = 'S';
+    *msg++ = 'w';
+    msg = pad2(i, msg);
+    if (i < 10) {
+      *msg++  = ' ';
+    }
+    *msg++  = ' ';
+    *msg++  = ':';
+    *msg++  = '~';
 	}
 
 	for (int i = 0; i < 4; i++) {
-		moveCursor(2 + i, 21);
-		bwputstr(COM2, "Sw 0x");
+    // Move cursor
+    *msg++ = ESC;
+    *msg++ = '[';
+    *msg++ = '2';
+    *msg++ = '0'+ i%10;
+    *msg++ = ';';
+    *msg++ = '1'; // Col
+    *msg++ = 'f';
+
+    // Text
+    *msg++ = 'S';
+    *msg++ = 'w';
+    *msg++ = '0';
+    *msg++ = 'x';
     if (i == 0) {
-      bwputc(COM2, '9');
+      *msg++ = '9';
     } else if (i == 1) {
-      bwputc(COM2, 'a');
+      *msg++ = 'a';
     } else if (i == 2) {
-      bwputc(COM2, 'b');
+      *msg++ = 'b';
     } else if (i == 3) {
-      bwputc(COM2, 'c');
+      *msg++ = 'c';
     }
-		bwputc(COM2, ':');
-		bwputc(COM2, ' ');
-		bwputc(COM2, train_getswitch(i) == STRAIGHT ? '-' : '~');
+    *msg++ = ':';
+    *msg++ = '~';
 	}
+
+  return msg;
 }
 
-static void ui_switch_redraw(int sw, int ss) {
-	char msg = ss == STRAIGHT ? '-' : '~';
+static char* updateSwitch(int sw, int ss, char* msg) {
+  // SaveCursor
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = 's';
+
+
+	char state = ss == SWITCH_STRAIGHT ? '-' : '~';
 
 	if (sw >= 1 && sw <= 18) {
-		moveCursor(sw + 1,10);
+    *msg++ = ESC;
+    *msg++ = '[';
+    if (sw >= 10) {
+      *msg++ = '1';
+    }
+    *msg++ = '1' + sw%10;
+    *msg++ = ';';
+    *msg++ = '1'; // Col
+    *msg++ = '0'; // Col
+    *msg++ = 'f';
 	}
 	else if (sw >= 0x9a && sw <= 0x9d) {
-		moveCursor(sw - 0x99 + 1, 30);
-	}
-  bwputc(COM2, msg);
-}
+    sw -= 0x99;
 
-#endif
+    *msg++ = ESC;
+    *msg++ = '[';
+    if (sw >= 10) {
+      *msg++ = '1';
+    }
+    *msg++ = '1' + sw%10;
+    *msg++ = ';';
+    *msg++ = '3'; // Col
+    *msg++ = '0'; // Col
+    *msg++ = 'f';
+	}
+  *msg++ = state;
+
+  // Restore Cursor
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = 'u';
+
+  return msg;
+}
 
 static void timerDelay() {
   int parent = MyParentsTid();
@@ -204,7 +280,7 @@ static void sensorQuery() {
 }
 
 static void displayStaticContent(int com2) {
-  char msgStart[255];
+  char msgStart[2048];
   char* msg = msgStart;
 
   // Do not show cursor
@@ -223,9 +299,11 @@ static void displayStaticContent(int com2) {
   *msg++ = '2';
   *msg++ = 'J';
 
+  msg = drawSwitches(msg);
   msg = promptChar(1, '>', msg);
 
   Putstr(com2, msgStart, msg-msgStart);
+
 }
 
 static void userInterface() {
@@ -256,8 +334,16 @@ static void userInterface() {
         break;
       }
       case UPDATE_SENSOR: {
-        // TODO, why is val wrong?
         com2msg = updateSensor(msg.data1 /*box*/, msg.data2 /*val*/, com2msg);
+        break;
+      }
+      case UPDATE_SWITCH: {
+        printff(com2, "\nUpdate switch %d %d\n", msg.data1, msg.data2);
+        //com2msg = updateSwitch(msg.data1 /*switch*/, msg.data2 /*state*/, com2msg);
+        break;
+      }
+      case DEBUG_MSG: {
+        // TODO
         break;
       }
     }

@@ -1,7 +1,7 @@
 #ifndef IOBUFFER_H_
 #define IOBUFFER_H_
 
-#define IO_BUFFER_SIZE 255
+#define IO_BUFFER_SIZE 1024
 
 typedef struct IOBuffer{
   char data[IO_BUFFER_SIZE];
