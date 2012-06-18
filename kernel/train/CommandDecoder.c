@@ -54,10 +54,10 @@ static void decodeCommand() {
     char c = *temp++;
     c = a2i(c, &temp, 10, &switch_number);
     switch_pos = *temp++;
-    if (switch_pos == 's' && switch_pos == 'c') {
+    if (switch_pos == 's' || switch_pos == 'c') {
       msg.type = SET_SWITCH;
       msg.data1 = switch_number;
-      msg.data2 = switch_pos;
+      msg.data2 = switch_pos == 'c' ? SWITCH_CURVED : SWITCH_STRAIGHT;
       Send(trainController, (char *)&msg, sizeof(TrainMsg), (char *)NULL, 0);
     }
   }

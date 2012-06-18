@@ -62,11 +62,9 @@ static char* pad2(int n, char* msg){
   return msg;
 }
 
-
+static int debugUpdateNum;
 static char* updateDebugMessage(char* receive, char* msg, int len) {
-  static int rowNum = 0;
-
-  int updateRow = rowNum%8 + 21;
+  int updateRow = debugUpdateNum%8 + 29;
 
   // SaveCursor
   *msg++ = ESC;
@@ -76,7 +74,7 @@ static char* updateDebugMessage(char* receive, char* msg, int len) {
   // move to position
   *msg++ = ESC;
   *msg++ = '[';
-  *msg++ = '2'; // line
+  *msg++ = '0' + updateRow/10; // line
   *msg++ = '0'+ updateRow%10; // line
   *msg++ = ';';
   *msg++ = '1'; // Col
@@ -91,7 +89,7 @@ static char* updateDebugMessage(char* receive, char* msg, int len) {
   *msg++ = '[';
   *msg++ = 'u';
 
-  rowNum += 1;
+  debugUpdateNum += 1;
   return msg;
 }
 
@@ -154,10 +152,11 @@ static char* updateSensor(int box, int val, char* msg) {
   // Print sensor info
 	*msg++ = 'A' + box;
 	*msg++ = ':';
-  if (val > 10) {
-	  *msg++ = '0'+ val;
+  if (val >= 10) {
+	  *msg++ = '0'+ val/10;
   }
   *msg++ = '0'+ val%10;
+  *msg++ = ' '; // Extra space to clear previous char on screen.
 
   // Restore Cursor
   *msg++ = ESC;
@@ -202,6 +201,7 @@ static char* drawSwitches(char* msg) {
       *msg++  = ' ';
     }
     *msg++  = ' ';
+    *msg++  = ' ';
     *msg++  = ':';
     *msg++  = '~';
 	}
@@ -221,6 +221,7 @@ static char* drawSwitches(char* msg) {
     *msg++ = 'w';
     *msg++ = '0';
     *msg++ = 'x';
+    *msg++ = '9';
     if (i == 0) {
       *msg++ = '9';
     } else if (i == 1) {
@@ -245,32 +246,21 @@ static char* updateSwitch(int sw, int ss, char* msg) {
 
 	char state = ss == SWITCH_STRAIGHT ? '-' : '~';
 
-	if (sw >= 1 && sw <= 18) {
-    *msg++ = ESC;
-    *msg++ = '[';
-    if (sw >= 10) {
-      *msg++ = '1';
-    }
-    *msg++ = '1' + sw%10;
-    *msg++ = ';';
-    *msg++ = '1'; // Col
-    *msg++ = '0'; // Col
-    *msg++ = 'f';
-	}
-	else if (sw >= 0x9a && sw <= 0x9d) {
-    sw -= 0x99;
+  if (sw >= 0x99 && sw <= 0x9c) {
+    sw -= 134; // make 0x99 19
+  }
+  sw ++;
 
-    *msg++ = ESC;
-    *msg++ = '[';
-    if (sw >= 10) {
-      *msg++ = '1';
-    }
-    *msg++ = '1' + sw%10;
-    *msg++ = ';';
-    *msg++ = '3'; // Col
-    *msg++ = '0'; // Col
-    *msg++ = 'f';
-	}
+  *msg++ = ESC;
+  *msg++ = '[';
+  if (sw >= 10) {
+    *msg++ = '0' + sw/10;
+  }
+  *msg++ = '0' + sw%10;
+  *msg++ = ';';
+  *msg++ = '8'; // Col
+  *msg++ = 'f';
+
   *msg++ = state;
 
   // Restore Cursor
@@ -413,5 +403,6 @@ static void userInterface() {
 
 int startUserInterfaceTask() {
   numUpdated = 0;
+  debugUpdateNum = 0;
   return Create(11, userInterface);
 }
