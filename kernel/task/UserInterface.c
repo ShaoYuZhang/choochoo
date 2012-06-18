@@ -62,6 +62,39 @@ static char* pad2(int n, char* msg){
   return msg;
 }
 
+
+static char* updateDebugMessage(char* receive, char* msg, int len) {
+  static int rowNum = 0;
+
+  int updateRow = rowNum%8 + 21;
+
+  // SaveCursor
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = 's';
+
+  // move to position
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = '2'; // line
+  *msg++ = '0'+ updateRow%10; // line
+  *msg++ = ';';
+  *msg++ = '1'; // Col
+  *msg++ = 'f';
+
+  for (int i = 0; i < len; i++) {
+    *msg++ = receive[i];
+  }
+
+  // Restore Cursor
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = 'u';
+
+  rowNum += 1;
+  return msg;
+}
+
 static char* updateTime(unsigned int ms, char* msg) {
   int min = (ms / 60000) % 60;
   int sec = (ms / 1000) % 60;
@@ -97,8 +130,9 @@ static char* updateTime(unsigned int ms, char* msg) {
   return msg;
 }
 
+static int numUpdated;
 static char* updateSensor(int box, int val, char* msg) {
-	const int startX = UI_WIDTH / 2 + 1;
+  int updateRow = (numUpdated % 16)+2;
 
   // SaveCursor
   *msg++ = ESC;
@@ -108,14 +142,17 @@ static char* updateSensor(int box, int val, char* msg) {
   // move to position
   *msg++ = ESC;
   *msg++ = '[';
-  *msg++ = '1'; // line
+  if (updateRow >= 10) {
+    *msg++ = '1'; // line
+  }
+  *msg++ = '0' + updateRow%10; // line
   *msg++ = ';';
-  *msg++ = '0' + startX/10; // Col
-  *msg++ = '0' + startX%10;
+  *msg++ = '4';
+  *msg++ = '1';
   *msg++ = 'f';
 
   // Print sensor info
-	*msg++ = '0' + box;
+	*msg++ = 'A' + box;
 	*msg++ = ':';
   if (val > 10) {
 	  *msg++ = '0'+ val;
@@ -126,6 +163,8 @@ static char* updateSensor(int box, int val, char* msg) {
   *msg++ = ESC;
   *msg++ = '[';
   *msg++ = 'u';
+
+  numUpdated++;
   return msg;
 }
 
@@ -203,7 +242,6 @@ static char* updateSwitch(int sw, int ss, char* msg) {
   *msg++ = ESC;
   *msg++ = '[';
   *msg++ = 's';
-
 
 	char state = ss == SWITCH_STRAIGHT ? '-' : '~';
 
@@ -300,6 +338,26 @@ static void displayStaticContent(int com2) {
   *msg++ = 'J';
 
   msg = drawSwitches(msg);
+
+  // Draw sensor
+	const int startX = UI_WIDTH / 2 + 1;
+  // Move to position
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = '1'; // line
+  *msg++ = ';';
+  *msg++ = '0'+startX/10; // Col
+  *msg++ = '0'+startX%10; // Col
+  *msg++ = 'f';
+
+  // Text
+  *msg++ = 'S';
+  *msg++ = 'e';
+  *msg++ = 'n';
+  *msg++ = 's';
+  *msg++ = 'o';
+  *msg++ = 'r';
+
   msg = promptChar(1, '>', msg);
 
   Putstr(com2, msgStart, msg-msgStart);
@@ -317,34 +375,36 @@ static void userInterface() {
   displayStaticContent(com2);
 
   char com2msgStart[128];
+  char receiveBuffer[128];
+  UiMsg* msg = (UiMsg*)receiveBuffer;
   for (;;) {
     int tid = -1;
-    UiMsg msg;
+
     char* com2msg = com2msgStart;
-    Receive(&tid, (char*)&msg, sizeof(UiMsg));
+    int len = Receive(&tid, receiveBuffer, 128);
     Reply(tid, (char*)1, 0);
 
-    switch (msg.type) {
+    switch (msg->type) {
       case PROMPT_CHAR: {
-        com2msg = promptChar(msg.data2+1, msg.data3, com2msg);
+        com2msg = promptChar(msg->data2+1, msg->data3, com2msg);
         break;
       }
       case UPDATE_TIME: {
-        com2msg = updateTime(msg.data3, com2msg);
+        com2msg = updateTime(msg->data3, com2msg);
         break;
       }
       case UPDATE_SENSOR: {
-        com2msg = updateSensor(msg.data1 /*box*/, msg.data2 /*val*/, com2msg);
+        //printff(com2, "\nUpdate sensor %d %d\n", msg->data1, msg->data2);
+        com2msg = updateSensor(msg->data1 /*box*/, msg->data2 /*val*/, com2msg);
         break;
       }
       case UPDATE_SWITCH: {
-        printff(com2, "\nUpdate switch %d %d\n", msg.data1, msg.data2);
-        //com2msg = updateSwitch(msg.data1 /*switch*/, msg.data2 /*state*/, com2msg);
+        //printff(com2, "\nUpdate switch %d %d\n", msg->data1, msg->data2);
+        com2msg = updateSwitch(msg->data1 /*switch*/, msg->data2 /*state*/, com2msg);
         break;
       }
-      case DEBUG_MSG: {
-        // TODO
-        break;
+      default: {
+        com2msg = updateDebugMessage(receiveBuffer, com2msg, len);
       }
     }
     Putstr(com2, com2msgStart, com2msg-com2msgStart);
@@ -352,5 +412,6 @@ static void userInterface() {
 }
 
 int startUserInterfaceTask() {
+  numUpdated = 0;
   return Create(11, userInterface);
 }
