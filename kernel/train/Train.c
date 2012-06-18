@@ -43,11 +43,11 @@ static void trainSetSpeed(TrainMsg* origMsg, int* numWorkerLeft) {
     train[trainNum].speed = speed;
   } else {
     msg[0] = 0xf;
-    printff(com2, "Reverse... %d \n", train[trainNum].speed);
+    //printff(com2, "Reverse... %d \n", train[trainNum].speed);
     origMsg->data2 = (signed char)train[trainNum].speed;
     origMsg->data3 = 250; // 2.5s . TODO, calculate from train speed.
 
-    printff(com2, "Using worker: %d \n", *numWorkerLeft);
+    //printff(com2, "Using worker: %d \n", *numWorkerLeft);
     Reply(worker[*numWorkerLeft], (char*)origMsg, sizeof(TrainMsg));
     (*numWorkerLeft)--;
 
@@ -74,9 +74,7 @@ static void trainWorker() {
   Send(parent, (char*)&msg, sizeof(TrainMsg), (char*)&msg, sizeof(TrainMsg));
   for (;;) {
     int numTick = msg.data3; // num of 10ms
-    printff(com2, "Delay\n");
     Delay(numTick, timeserver);
-    printff(com2, "Wokeup\n");
     msg.data3 = WORKER;
     Send(parent, (char*)&msg, sizeof(TrainMsg), (char*)&msg, sizeof(TrainMsg));
   }
@@ -101,12 +99,12 @@ static void trainController() {
     worker[i] = Create(1, trainWorker);
   }
 
-  //for (int i = 1; i < 19; i++) {
-  //  trainSetSwitch(i, SWITCH_STRAIGHT);
-  //}
-  //for (int i = 1; i < 19; i++) {
-  //  trainSetSwitch(i, SWITCH_CURVED);
-  //}
+  for (int i = 1; i < 19; i++) {
+    trainSetSwitch(i, SWITCH_STRAIGHT);
+  }
+  for (int i = 1; i < 19; i++) {
+    trainSetSwitch(i, SWITCH_CURVED);
+  }
 
   UiMsg uimsg;
   for (;;) {
@@ -149,10 +147,8 @@ static void trainController() {
         ASSERT(FALSE, "Not suppported train message type.");
       }
     }
-
   }
 }
-
 
 int startTrainControllerTask() {
   return Create(2, trainController);
