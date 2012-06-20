@@ -100,9 +100,6 @@ static void trainController() {
   }
 
   for (int i = 1; i < 19; i++) {
-    trainSetSwitch(i, SWITCH_STRAIGHT);
-  }
-  for (int i = 1; i < 19; i++) {
     trainSetSwitch(i, SWITCH_CURVED);
   }
 

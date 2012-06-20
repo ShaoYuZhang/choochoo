@@ -9,8 +9,8 @@ static int CURR_SENSOR_BOX;
 static int CURR_HIGH_BITS;
 static int SENSOR_QUERY_FINISHED;
 static int SENSOR_VALUE[NUM_SENSOR_BOX][16];
-// TODO, need to be a list of subscriber later
-static int sensorUpdateSubscriber;
+static int sensorUpdateSubscriber[10];
+static int subscriberIndex;
 
 static void sensorQueryWorker() {
   char com1Name[] = IOSERVERCOM1_NAME;
@@ -52,8 +52,7 @@ static void sensorQueryTimeoutWorker() {
     SensorMsg msg;
     msg.type = QUERY_TIMEOUT_WORKER;
     Send(parent, (char *)&msg, sizeof(SensorMsg), (char *)NULL, 0);
-    // TODO (cao) need tuning
-    Delay(10, timeServer);
+    Delay(8, timeServer);
   }
 }
 
@@ -70,13 +69,16 @@ static void sensorResponded(char response) {
         }
         if ((mask & response) != 0 && SENSOR_VALUE[CURR_SENSOR_BOX][7-i+offset] == 0) {
           // sensor triggered, update subscriber
-          if (sensorUpdateSubscriber != -1) {
-            Sensor s;
-            s.box = CURR_SENSOR_BOX;
-            s.val = 8 -i + offset;
 
-            Reply(sensorUpdateSubscriber, (char *)&s, sizeof(Sensor));
+          // TODO(cao), there is a problem with this architecture when we have >1 train running
+          Sensor s;
+          s.box = CURR_SENSOR_BOX;
+          s.val = 8 -i + offset;
+
+          for (int j = 0; j < subscriberIndex; j++) {
+            Reply(sensorUpdateSubscriber[j], (char *)&s, sizeof(Sensor));
           }
+          subscriberIndex = 0;
         }
         SENSOR_VALUE[CURR_SENSOR_BOX][7-i+offset] = ((mask & response) !=0);
     }
@@ -109,7 +111,7 @@ static void sensorServer() {
     }
   }
 
-  Putc(com1, 192);
+  subscriberIndex = 0;
 
   int queryWorker = Create(7, sensorQueryWorker);
   Create(8, sensorQueryResponseWorker);
@@ -118,12 +120,22 @@ static void sensorServer() {
   int queryWorkerReady = 0;
   int queryTimeout = 0;
 
+  char timerName[] = TIMESERVER_NAME;
+  int timer = WhoIs(timerName);
+
+  // sensor server is time sensitive, it delays and tries
+  // to avoid the initialization period where there are
+  // a lot of chars in com1 buffer
+  Delay(700, timer);
+
+  Putc(com1, 192);
   // end init
 
   for ( ;; ) {
-    // TODO (cao), pulling every x ms vs  pulling everytimes query is done??
     if (queryTimeout && queryWorkerReady) {
       SENSOR_QUERY_FINISHED = 0;
+      CURR_SENSOR_BOX = 0;
+      CURR_HIGH_BITS = 0;
       queryTimeout = 0;
       queryWorkerReady = 0;
       Reply(queryWorker, (char *)NULL, 0);
@@ -149,7 +161,7 @@ static void sensorServer() {
         break;
       }
       case QUERY_RECENT: {
-        sensorUpdateSubscriber = tid;
+        sensorUpdateSubscriber[subscriberIndex++] = tid;
         break;
       }
       default: {
@@ -162,6 +174,5 @@ static void sensorServer() {
 
 
 int startSensorServerTask() {
-  sensorUpdateSubscriber = -1;
   return Create(3, sensorServer);
 }
