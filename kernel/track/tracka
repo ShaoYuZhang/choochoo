@@ -610,7 +610,7 @@ edge A9 B8:
 edge A10 MR1:
   distance 210 mm
 edge A11 MR1:
-  distance 410 mm
+  distance 494 mm
 edge A12 EX8:
   distance 60 mm
 edge A13 MR4:

@@ -97,7 +97,7 @@ void init_tracka(track_node *track) {
   track[10].edge[DIR_AHEAD].reverse = &track[80].edge[DIR_STRAIGHT];
   track[10].edge[DIR_AHEAD].src = &track[10];
   track[10].edge[DIR_AHEAD].dest = &track[81];
-  track[10].edge[DIR_AHEAD].dist = 410;
+  track[10].edge[DIR_AHEAD].dist = 494;
   track[11].name = "A12";
   track[11].type = NODE_SENSOR;
   track[11].num = 11;
@@ -657,7 +657,7 @@ void init_tracka(track_node *track) {
   track[80].edge[DIR_STRAIGHT].reverse = &track[10].edge[DIR_AHEAD];
   track[80].edge[DIR_STRAIGHT].src = &track[80];
   track[80].edge[DIR_STRAIGHT].dest = &track[11];
-  track[80].edge[DIR_STRAIGHT].dist = 410;
+  track[80].edge[DIR_STRAIGHT].dist = 494;
   track[80].edge[DIR_CURVED].reverse = &track[9].edge[DIR_AHEAD];
   track[80].edge[DIR_CURVED].src = &track[80];
   track[80].edge[DIR_CURVED].dest = &track[8];
