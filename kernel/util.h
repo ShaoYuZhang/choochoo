@@ -4,6 +4,8 @@
 #include <ts7200.h>
 #include <bwio.h>
 
+#define CALIBRATION
+
 ////////// HARDWARE Stuff
 #define UART_BASE(_x) (((_x) == COM1) ? UART1_BASE : UART2_BASE)
 

@@ -38,21 +38,29 @@ static void trainSetSpeed(TrainMsg* origMsg, int* numWorkerLeft) {
   char msg[4];
   msg[1] = (char)trainNum;
   if (speed >= 0) {
-    msg[0] = (char)speed;
-    Putstr(com1, msg, 2);
+    if (origMsg->data3 == WORKER) {
+      printff(com2, "Reversing speed. cuz its worker %d\n", speed);
+      msg[0] = 0xf;
+      msg[1] = (char)trainNum;
+      msg[2] = (char)speed;
+      msg[3] = (char)trainNum;
+      Putstr(com1, msg, 4);
+    } else {
+      msg[0] = (char)speed;
+      Putstr(com1, msg, 2);
+    }
     train[trainNum].speed = speed;
   } else {
-    msg[0] = 0xf;
-    //printff(com2, "Reverse... %d \n", train[trainNum].speed);
+    printff(com2, "Reverse... %d \n", train[trainNum].speed);
     origMsg->data2 = (signed char)train[trainNum].speed;
-    origMsg->data3 = 250; // 2.5s . TODO, calculate from train speed.
+    origMsg->data3 = 150; // 2.5s . TODO, calculate from train speed.
+    printff(com2, "Using worker: %d \n", *numWorkerLeft);
 
-    //printff(com2, "Using worker: %d \n", *numWorkerLeft);
     Reply(worker[*numWorkerLeft], (char*)origMsg, sizeof(TrainMsg));
     (*numWorkerLeft)--;
 
-    msg[2] = 0;
-    msg[3] = (char)trainNum;
+    msg[0] = 0;
+    msg[1] = (char)trainNum;
 
     if (*numWorkerLeft < -1) {
       printff(com2, "Used non-existence worker id");
@@ -73,9 +81,10 @@ static void trainWorker() {
   msg.type = WORKER;
   Send(parent, (char*)&msg, sizeof(TrainMsg), (char*)&msg, sizeof(TrainMsg));
   for (;;) {
-    int numTick = msg.data3; // num of 10ms
+    int numTick = msg.data3*2; // num of 10ms
     Delay(numTick, timeserver);
     msg.data3 = WORKER;
+    printff(com2, "Worker Done.\n");
     Send(parent, (char*)&msg, sizeof(TrainMsg), (char*)&msg, sizeof(TrainMsg));
   }
 }
@@ -87,7 +96,9 @@ static void trainController() {
   char trainName[] = TRAIN_NAME;
   com1 = WhoIs(com1Name);
   com2 = WhoIs(com2Name);
+#ifndef CALIBRATION
   int ui = WhoIs(uiName);
+#endif
   RegisterAs(trainName);
 
   for (int i = 0; i < NUM_TRAINS; i++) {
@@ -117,10 +128,12 @@ static void trainController() {
       case SET_SWITCH: {
         Reply(tid, (char*)1, 0);
         trainSetSwitch((int)msg.data1, (int)msg.data2);
+#ifndef CALIBRATION
         uimsg.type = UPDATE_SWITCH;
         uimsg.data1 = msg.data1;
         uimsg.data2 = msg.data2;
         Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
+#endif
         break;
       }
       case GET_SPEED: {
