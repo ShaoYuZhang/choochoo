@@ -66,7 +66,7 @@ void goB(char train) {
     printff(com2, "Calibrating Velocity %d\n", speed);
     setSpeed.data2 = (char)speed;
     setSpeed.data3 = -1;
-    Delay(300, timeserver);
+    //Delay(300, timeserver);
     //Send(trainController, (char*)&setSpeed, sizeof(TrainMsg), (char *)NULL, 0);
     //int tid = -1;
     //while (1) {
