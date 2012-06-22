@@ -10,6 +10,7 @@
 #include <TimeServer.h>
 #include <idle.h>
 #include <IoHelper.h>
+#include <IoServer.h>
 
 static void (*syscall_handler[LAST_SYSCALL])(int*, int, int, int) = {
   kernel_createtask,
@@ -75,6 +76,8 @@ void kernel_init() {
 }
 
 void kernel_close() {
+  // Io flush
+  flush();
 	uninstall_interrupt_handlers();
 }
 

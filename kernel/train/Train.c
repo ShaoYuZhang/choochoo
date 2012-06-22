@@ -115,7 +115,7 @@ static void trainController() {
   }
 
   for (int i = 1; i < 19; i++) {
-    trainSetSwitch(i, SWITCH_CURVED);
+    //trainSetSwitch(i, SWITCH_CURVED);
   }
 
   UiMsg uimsg;

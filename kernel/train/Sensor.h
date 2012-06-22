@@ -13,12 +13,14 @@
 typedef struct SensorMsg {
   char type; // Defined above
   char data;
+  int time;
 } SensorMsg;
 
 // A1 is box = 0, val = 1
 typedef struct Sensor {
   char box;
   char val;
+  int time;
 } Sensor;
 
 int startSensorServerTask();

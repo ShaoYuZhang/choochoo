@@ -22,14 +22,15 @@ static void sensorQueryWorker() {
     SensorMsg msg;
     msg.type = QUERY_WORKER;
     Send(parent, (char *)&msg, sizeof(SensorMsg), (char *)NULL, 0);
-
-    Putc( com1, 133);
+    Putc(com1, 133);
   }
 }
 
 static void sensorQueryResponseWorker() {
   char com1Name[] = IOSERVERCOM1_NAME;
   int com1 = WhoIs(com1Name);
+  char timeName[] = TIMESERVER_NAME;
+  int time = WhoIs(timeName);
 
   int parent = MyParentsTid();
 
@@ -38,6 +39,7 @@ static void sensorQueryResponseWorker() {
     char c = Getc(com1);
     msg.type = QUERY_RESPONSE_WORKER;
     msg.data = c;
+    msg.time = Time(time);
     Send(parent, (char *)&msg, sizeof(SensorMsg), (char *)NULL, 0);
   }
 }
@@ -56,7 +58,7 @@ static void sensorQueryTimeoutWorker() {
   }
 }
 
-static void sensorResponded(char response) {
+static void sensorResponded(char response, int time) {
     if (SENSOR_QUERY_FINISHED) {
         return;
     }
@@ -74,6 +76,7 @@ static void sensorResponded(char response) {
           Sensor s;
           s.box = CURR_SENSOR_BOX;
           s.val = 8 -i + offset;
+          s.time = time;
 
           for (int j = 0; j < subscriberIndex; j++) {
             Reply(sensorUpdateSubscriber[j], (char *)&s, sizeof(Sensor));
@@ -128,6 +131,7 @@ static void sensorServer() {
   // a lot of chars in com1 buffer
   Delay(700, timer);
 
+  // Clear sensor memory after reading.
   Putc(com1, 192);
   // end init
 
@@ -153,7 +157,7 @@ static void sensorServer() {
       case QUERY_RESPONSE_WORKER: {
         Reply(tid, (char *)NULL, 0);
         char response = msg.data;
-        sensorResponded(response);
+        sensorResponded(response, msg.time);
         break;
       }
       case QUERY_TIMEOUT_WORKER: {

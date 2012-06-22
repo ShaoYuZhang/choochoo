@@ -24,4 +24,7 @@ void Putstr(const int tid, char* str, int len);
 
 void startIoServerTask();
 
+// BW all the data out.
+void flush();
+
 #endif // IOSERVER_H_

@@ -10,11 +10,12 @@ typedef struct Task {
 		signed char tid;
     char name[MSG_LEN];
 } Task;
+Task tasks[NUM_TASK_NAMESERVER];
+int emptyTaskName;
 
 static void nameserver_task() {
-  Task tasks[NUM_TASK_NAMESERVER];
   char msg[MSG_LEN];
-  int emptyTaskName = 0;
+  emptyTaskName = 0;
 
   while (1) {
     int tid = -1;
@@ -71,4 +72,21 @@ int WhoIs(char* name) {
   char reply;
   Send(NAMESERVER_TID, name, len+2, &reply, 1);
   return (int)reply;
+}
+
+void PrintAll() {
+  int __vic1 = VMEM(VIC1 + INTENCLR_OFFSET);
+  int __vic2 = VMEM(VIC2 + INTENCLR_OFFSET);
+  VMEM(VIC1 + INTENCLR_OFFSET) = ~0;
+  VMEM(VIC2 + INTENCLR_OFFSET) = ~0;
+
+  for (int i = 0; i < emptyTaskName; i++) {
+    if (tasks[i].name ){
+      bwprintf(COM2, "T:%d Name: %s\n", tasks[i].tid, tasks[i].name);
+    }
+  }
+
+  VMEM(VIC1 + INTENCLR_OFFSET) = __vic1;
+  VMEM(VIC2 + INTENCLR_OFFSET) = __vic2;
+
 }

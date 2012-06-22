@@ -21,6 +21,7 @@ static void sensorQuery() {
   int parent = MyParentsTid();
   char sensorName[] = SENSOR_NAME;
   int sensorServer = WhoIs(sensorName);
+  printff(com2, "Starting Sensor Query\n");
 
   for (;;) {
     SensorMsg sensorMsg;
@@ -28,21 +29,15 @@ static void sensorQuery() {
     Sensor sensor;
     Send(sensorServer, (char*)&sensorMsg, sizeof(SensorMsg),
         (char*)&sensor, sizeof(Sensor));
-
-    CaliMsg m;
-    m.sensorBox = sensor.box;
-    m.sensorVal = sensor.val;
-    Send(parent, (char*)&m, sizeof(CaliMsg), (char*)1, 0);
+    Send(parent, (char*)&sensor, sizeof(Sensor), (char*)1, 0);
   }
 }
 
-void goA(char train) {
-
-}
+void goA(char train) {}
 
 void goB(char train) {
-  Putstr(com2, "Calibrating Velocity\n", 21);
 
+  Putstr(com2, "Calibrating Velocity\n", 21);
   // Change track for velocity calibration
   TrainMsg setSwitch;
   setSwitch.type = SET_SWITCH;
@@ -51,31 +46,50 @@ void goB(char train) {
   Send(trainController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
   setSwitch.data1 = 17; // Switch 17
   Send(trainController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
-  setSwitch.data1 = 9; // Switch 9
+  setSwitch.data1 = 9;  // Switch 9
   Send(trainController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
 
+  Create(1, sensorQuery);
 
   // Setting train speed.
   TrainMsg setSpeed;
   setSpeed.type = SET_SPEED;
-  setSpeed.data1 = train;
-  setSpeed.data2 = 10;
+  setSpeed.data1 = (char)train;
+  setSpeed.data2 = (char)10;
+  setSpeed.data3 = -1;
   Send(trainController, (char*)&setSpeed, sizeof(TrainMsg), (char *)NULL, 0);
-  Delay(500, timeserver); // 4 seconds
-  Putstr(com2, "Reversing.\n", 11);
-  setSpeed.data2 = -1;
-  Send(trainController, (char*)&setSpeed, sizeof(TrainMsg), (char *)NULL, 0);
+  Delay(800, timeserver);
 
+  int startTime = -1;
   // See sensor reports and estimate velocity.
-  Putstr(com2, "Calibrating Velocity\n", 21);
-  Delay(1000, timeserver); // 4 seconds
+  for (int speed = 15; speed > 10; speed--) {
+    printff(com2, "Calibrating Velocity %d\n", speed);
+    setSpeed.data2 = (char)speed;
+    setSpeed.data3 = -1;
+    Delay(300, timeserver);
+    //Send(trainController, (char*)&setSpeed, sizeof(TrainMsg), (char *)NULL, 0);
+    //int tid = -1;
+    //while (1) {
+    //  Sensor sensor;
+    //  Receive(&tid, &sensor, sizeof(Sensor));
+    //  Reply(tid, (char*)1, 0);
+    //  printff(com2, "S:%d %d %d\n", sensor.box, sensor.val, sensor.time);
+    //  if (startTime != -1 && sensor.box == 4 && sensor.val == 8) {
+    //    printff(com2, "exiting\n");
+    //    break;
+    //  } else if (sensor.box == 2 && sensor.val == 14) {
+    //    printff(com2, "Got time\n");
+    //    startTime = sensor.time;
+    //  }
+    //}
+  }
 
   // Stopping train.
-  Delay(500, timeserver); // 4 seconds
   Putstr(com2, "Stopping train      \n", 21);
   setSpeed.data2 = 0;
   Send(trainController, (char*)&setSpeed, sizeof(TrainMsg), (char *)NULL, 0);
   Putstr(com2, "done                \n", 21);
+  Delay(500, timeserver);
   kernel_quit();
 }
 
@@ -85,7 +99,6 @@ void calibration() {
   char trainControllerName[] = TRAIN_NAME;
   char timename[] = TIMESERVER_NAME;
   timeserver = WhoIs(timename);
-  Delay(700, timeserver); // 4 seconds
   trainController = WhoIs(trainControllerName);
   com1 = WhoIs(com1Name);
   com2 = WhoIs(com2Name);

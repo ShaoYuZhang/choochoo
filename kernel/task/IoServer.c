@@ -3,12 +3,19 @@
 #include <util.h>
 #include <syscall.h>
 #include <NameServer.h>
+#include <TimeServer.h>
 #include <IoBuffer.h>
 #include <bwio.h>
 
 #define PUTC 1
 #define GETC 2
 #define PUTSTR 3
+
+// Global because need to flush these.
+IOBuffer com2In;
+IOBuffer com2Out;
+IOBuffer com1In;
+IOBuffer com1Out;
 
 char Getc(const int tid) {
   IOMessage msg;
@@ -107,9 +114,6 @@ static void ioserver_com1_task() {
   char name[] = IOSERVERCOM1_NAME;
   RegisterAs(name);
 
-  IOBuffer com1In;
-  IOBuffer com1Out;
-
   com1In.bufferHead = 0;
   com1In.bufferTail = 0;
   com1Out.bufferHead = 0;
@@ -159,12 +163,18 @@ static void ioserver_com1_task() {
     }
     else if (msg.type == PUTC) {
       add_to_buffer( &com1Out, msg.data[0]);
+      add_to_buffer( &com2Out, '0' + tid/10);
+      add_to_buffer( &com2Out, '0' + tid%10);
+      add_to_buffer( &com2Out, msg.data[0]);
       Reply(tid, (char*)1, 0);
     }
     else if (msg.type == PUTSTR) {
       int i = 0;
+      add_to_buffer( &com2Out, '0' + tid/10);
+      add_to_buffer( &com2Out, '0' + tid%10);
       while (msg.data[i] != EOS) {
         add_to_buffer( &com1Out, msg.data[i]);
+        add_to_buffer( &com2Out, msg.data[i]);
         i++;
       }
       Reply(tid, (char*)1, 0);
@@ -190,9 +200,6 @@ static void ioserver_com1_task() {
 static void ioserver_com2_task() {
   char name[] = IOSERVERCOM2_NAME;
   RegisterAs(name);
-
-  IOBuffer com2In;
-  IOBuffer com2Out;
 
   com2In.bufferHead = 0;
   com2In.bufferTail = 0;
@@ -253,12 +260,46 @@ static void ioserver_com2_task() {
         com2InputWaitTid = tid;
       }
     }
-    if (!buffer_empty(&com2Out) && txempty ) {
+    if (!buffer_empty(&com2Out) && txempty) {
       VMEM(uartbase + UART_DATA_OFFSET) = remove_from_buffer(&com2Out);
       VMEM(uartbase + UART_CTLR_OFFSET) |= TIEN_MASK; // enable tx interrupt
       txempty = 0;
     }
   }
+}
+
+static void flushGarbage() {
+  // Remove any data from com1.
+  int tid = WhoIs(TIMESERVER_NAME);
+  int target = Time(tid) + 50;
+  while (Time(tid) < target) {
+    volatile int i = VMEM(UART1_BASE + UART_DATA_OFFSET);
+    (void) i;
+  }
+}
+
+void flush() {
+  int __vic1 = VMEM(VIC1 + INTENCLR_OFFSET);
+  int __vic2 = VMEM(VIC2 + INTENCLR_OFFSET);
+  VMEM(VIC1 + INTENCLR_OFFSET) = ~0;
+  VMEM(VIC2 + INTENCLR_OFFSET) = ~0;
+
+
+  while (!buffer_empty(&com1Out)) {
+    char c = remove_from_buffer(&com1Out);
+    bwputc(COM2, 'F');
+    bwputc(COM2, 'F');
+    bwputc(COM2, 'F');
+    bwputc(COM2, 'F');
+    bwputc(COM1, c);
+  }
+
+  while(!buffer_empty(&com2Out)) {
+    char c = remove_from_buffer(&com2Out);
+    bwputc(COM2, c);
+  }
+  VMEM(VIC1 + INTENCLR_OFFSET) = __vic1;
+  VMEM(VIC2 + INTENCLR_OFFSET) = __vic2;
 }
 
 void startIoServerTask() {
@@ -275,6 +316,8 @@ void startIoServerTask() {
 	uart_stopbits(COM2, 1);
 	uart_databits(COM2, 8);
 	uart_parity(COM2, OFF);
+
+  flushGarbage();
 
   Create(1, ioserver_com1_task);
   Create(1, ioserver_com2_task);
