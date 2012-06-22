@@ -11,26 +11,18 @@ static int com1;
 static int com2;
 static int trainController;
 static int timeserver;
+static int sensorServer;
 
 typedef struct CaliMsg {
   char sensorBox;
   char sensorVal;
 } CaliMsg;
 
-static void sensorQuery() {
-  int parent = MyParentsTid();
-  char sensorName[] = SENSOR_NAME;
-  int sensorServer = WhoIs(sensorName);
-  printff(com2, "Starting Sensor Query\n");
-
-  for (;;) {
-    SensorMsg sensorMsg;
-    sensorMsg.type = QUERY_RECENT;
-    Sensor sensor;
-    Send(sensorServer, (char*)&sensorMsg, sizeof(SensorMsg),
-        (char*)&sensor, sizeof(Sensor));
-    Send(parent, (char*)&sensor, sizeof(Sensor), (char*)1, 0);
-  }
+static inline void getSensor(Sensor* s) {
+  SensorMsg sensorMsg;
+  sensorMsg.type = QUERY_RECENT;
+  Send(sensorServer, (char*)&sensorMsg, sizeof(SensorMsg),
+      (char*)s, sizeof(Sensor));
 }
 
 void goA(char train) {}
@@ -49,8 +41,6 @@ void goB(char train) {
   setSwitch.data1 = 9;  // Switch 9
   Send(trainController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
 
-  Create(1, sensorQuery);
-
   // Setting train speed.
   TrainMsg setSpeed;
   setSpeed.type = SET_SPEED;
@@ -58,7 +48,7 @@ void goB(char train) {
 
   int startTime = -1;
   // See sensor reports and estimate velocity.
-  for (char speed = 14; speed > 9; speed--) {
+  for (char speed = 14; speed > 8; speed--) {
     setSpeed.data2 = speed;
     setSpeed.data3 = -1;
     Putstr(com2, "New\n", 4);
@@ -67,8 +57,7 @@ void goB(char train) {
     for (int avgCount = 0; avgCount < 5; avgCount++) {
       while (1) {
         Sensor sensor;
-        Receive(&tid, &sensor, sizeof(Sensor));
-        Reply(tid, (char*)1, 0);
+        getSensor(&sensor);
         //printff(com2, "S:%d %d %d\n", sensor.box, sensor.val, sensor.time);
         if (startTime != -1 && sensor.box == 2 && sensor.val == 14) {
           printff(com2, "exiting %d\n", sensor.time);
@@ -80,6 +69,29 @@ void goB(char train) {
       }
     }
   }
+
+  Putstr(com2, "STOP DISTANCE CALI  \n", 21);
+  for (char speed = 14; speed > 8; speed--) {
+    setSpeed.data3 = -1;
+    Putstr(com2, "New\n", 4);
+    for (int avgCount = 0; avgCount < 3; avgCount++) {
+      setSpeed.data2 = speed;
+      Send(trainController, (char*)&setSpeed, sizeof(TrainMsg), (char*)NULL, 0);
+      while (1) {
+        Sensor sensor;
+        getSensor(&sensor);
+        //printff(com2, "S:%d %d %d\n", sensor.box, sensor.val, sensor.time);
+        if (sensor.box == 4 && sensor.val == 8) {
+          setSpeed.data2 = 0;
+          Send(trainController, (char*)&setSpeed, sizeof(TrainMsg), (char*)NULL, 0);
+          Putstr(com2, "STOP\n", 5);
+          Delay(1000, timeserver);
+          break;
+        }
+      }
+    }
+  }
+
 
   // Stopping train.
   Putstr(com2, "Stopping train      \n", 21);
@@ -95,6 +107,8 @@ void calibration() {
   char com1Name[] = IOSERVERCOM1_NAME;
   char trainControllerName[] = TRAIN_NAME;
   char timename[] = TIMESERVER_NAME;
+  char sensorName[] = SENSOR_NAME;
+  sensorServer = WhoIs(sensorName);
   timeserver = WhoIs(timename);
   trainController = WhoIs(trainControllerName);
   com1 = WhoIs(com1Name);
