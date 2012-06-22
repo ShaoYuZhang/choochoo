@@ -55,33 +55,30 @@ void goB(char train) {
   TrainMsg setSpeed;
   setSpeed.type = SET_SPEED;
   setSpeed.data1 = (char)train;
-  setSpeed.data2 = (char)10;
-  setSpeed.data3 = -1;
-  Send(trainController, (char*)&setSpeed, sizeof(TrainMsg), (char *)NULL, 0);
-  Delay(800, timeserver);
 
   int startTime = -1;
   // See sensor reports and estimate velocity.
-  for (int speed = 15; speed > 10; speed--) {
-    printff(com2, "Calibrating Velocity %d\n", speed);
-    setSpeed.data2 = (char)speed;
+  for (char speed = 14; speed > 9; speed--) {
+    setSpeed.data2 = speed;
     setSpeed.data3 = -1;
-    //Delay(300, timeserver);
-    //Send(trainController, (char*)&setSpeed, sizeof(TrainMsg), (char *)NULL, 0);
-    //int tid = -1;
-    //while (1) {
-    //  Sensor sensor;
-    //  Receive(&tid, &sensor, sizeof(Sensor));
-    //  Reply(tid, (char*)1, 0);
-    //  printff(com2, "S:%d %d %d\n", sensor.box, sensor.val, sensor.time);
-    //  if (startTime != -1 && sensor.box == 4 && sensor.val == 8) {
-    //    printff(com2, "exiting\n");
-    //    break;
-    //  } else if (sensor.box == 2 && sensor.val == 14) {
-    //    printff(com2, "Got time\n");
-    //    startTime = sensor.time;
-    //  }
-    //}
+    Putstr(com2, "New\n", 4);
+    Send(trainController, (char*)&setSpeed, sizeof(TrainMsg), (char *)NULL, 0);
+    int tid = -1;
+    for (int avgCount = 0; avgCount < 5; avgCount++) {
+      while (1) {
+        Sensor sensor;
+        Receive(&tid, &sensor, sizeof(Sensor));
+        Reply(tid, (char*)1, 0);
+        //printff(com2, "S:%d %d %d\n", sensor.box, sensor.val, sensor.time);
+        if (startTime != -1 && sensor.box == 2 && sensor.val == 14) {
+          printff(com2, "exiting %d\n", sensor.time);
+          break;
+        } else if (sensor.box == 4 && sensor.val == 8) {
+          printff(com2, "Got time %d\n", sensor.time);
+          startTime = sensor.time;
+        }
+      }
+    }
   }
 
   // Stopping train.
@@ -103,7 +100,7 @@ void calibration() {
   com1 = WhoIs(com1Name);
   com2 = WhoIs(com2Name);
   Putstr(com2, "Assume all tracks are curved. Which track?\n", 42);
-  goB(43);
+  goB(37);
   return;
 
   char track = Getc(com2);

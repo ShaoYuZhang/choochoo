@@ -163,9 +163,9 @@ static void ioserver_com1_task() {
     }
     else if (msg.type == PUTC) {
       add_to_buffer( &com1Out, msg.data[0]);
-      add_to_buffer( &com2Out, '0' + tid/10);
-      add_to_buffer( &com2Out, '0' + tid%10);
-      add_to_buffer( &com2Out, msg.data[0]);
+      //add_to_buffer( &com2Out, '0' + tid/10);
+      //add_to_buffer( &com2Out, '0' + tid%10);
+      //add_to_buffer( &com2Out, msg.data[0]);
       Reply(tid, (char*)1, 0);
     }
     else if (msg.type == PUTSTR) {
@@ -174,7 +174,7 @@ static void ioserver_com1_task() {
       add_to_buffer( &com2Out, '0' + tid%10);
       while (msg.data[i] != EOS) {
         add_to_buffer( &com1Out, msg.data[i]);
-        add_to_buffer( &com2Out, msg.data[i]);
+        //add_to_buffer( &com2Out, msg.data[i]);
         i++;
       }
       Reply(tid, (char*)1, 0);

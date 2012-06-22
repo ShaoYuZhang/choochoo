@@ -40,23 +40,23 @@ static void trainSetSpeed(TrainMsg* origMsg, int* numWorkerLeft) {
   msg[1] = (char)trainNum;
   if (speed >= 0) {
     if (origMsg->data3 == WORKER) {
-    //  printff(com2, "Reversing speed. cuz its worker %d\n", speed);
+      printff(com2, "Reversing speed. cuz its worker %d\n", speed);
       msg[0] = 0xf;
       msg[1] = (char)trainNum;
       msg[2] = (char)speed;
       msg[3] = (char)trainNum;
       Putstr(com1, msg, 4);
     } else {
-    //  printff(com2, "Set speed. %d %d\n", speed, trainNum);
+      printff(com2, "Set speed. %d %d\n", speed, trainNum);
       msg[0] = (char)speed;
       Putstr(com1, msg, 2);
     }
     train[trainNum].speed = speed;
   } else {
-  //  printff(com2, "Reverse... %d \n", train[trainNum].speed);
+    printff(com2, "Reverse... %d \n", train[trainNum].speed);
     origMsg->data2 = (signed char)train[trainNum].speed;
-    origMsg->data3 = 150; // 2.5s . TODO, calculate from train speed.
-  //  printff(com2, "Using worker: %d \n", *numWorkerLeft);
+    origMsg->data3 = 150; // 3s . TODO, calculate from train speed.
+    printff(com2, "Using worker: %d \n", *numWorkerLeft);
 
     Reply(worker[*numWorkerLeft], (char*)origMsg, sizeof(TrainMsg));
     (*numWorkerLeft)--;
