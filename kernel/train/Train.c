@@ -10,6 +10,7 @@
 
 #define NUM_WORKER 4
 
+extern int CALIBRATION;
 static int switchStatus[NUM_SWITCHES];
 
 typedef struct Train {
@@ -39,22 +40,23 @@ static void trainSetSpeed(TrainMsg* origMsg, int* numWorkerLeft) {
   msg[1] = (char)trainNum;
   if (speed >= 0) {
     if (origMsg->data3 == WORKER) {
-      printff(com2, "Reversing speed. cuz its worker %d\n", speed);
+    //  printff(com2, "Reversing speed. cuz its worker %d\n", speed);
       msg[0] = 0xf;
       msg[1] = (char)trainNum;
       msg[2] = (char)speed;
       msg[3] = (char)trainNum;
       Putstr(com1, msg, 4);
     } else {
+    //  printff(com2, "Set speed. %d %d\n", speed, trainNum);
       msg[0] = (char)speed;
       Putstr(com1, msg, 2);
     }
     train[trainNum].speed = speed;
   } else {
-    printff(com2, "Reverse... %d \n", train[trainNum].speed);
+  //  printff(com2, "Reverse... %d \n", train[trainNum].speed);
     origMsg->data2 = (signed char)train[trainNum].speed;
     origMsg->data3 = 150; // 2.5s . TODO, calculate from train speed.
-    printff(com2, "Using worker: %d \n", *numWorkerLeft);
+  //  printff(com2, "Using worker: %d \n", *numWorkerLeft);
 
     Reply(worker[*numWorkerLeft], (char*)origMsg, sizeof(TrainMsg));
     (*numWorkerLeft)--;
@@ -66,7 +68,7 @@ static void trainSetSpeed(TrainMsg* origMsg, int* numWorkerLeft) {
       printff(com2, "Used non-existence worker id");
       while(1);
     }
-    Putstr(com1, msg, 4);
+    Putstr(com1, msg, 2);
     train[trainNum].speed = 0;
   }
 }
@@ -81,10 +83,11 @@ static void trainWorker() {
   msg.type = WORKER;
   Send(parent, (char*)&msg, sizeof(TrainMsg), (char*)&msg, sizeof(TrainMsg));
   for (;;) {
-    int numTick = msg.data3*2; // num of 10ms
+    int numTick = msg.data3; // num of 10ms
+    numTick *= 2;
     Delay(numTick, timeserver);
     msg.data3 = WORKER;
-    printff(com2, "Worker Done.\n");
+    //printff(com2, "Worker Done. %d\n", numTick);
     Send(parent, (char*)&msg, sizeof(TrainMsg), (char*)&msg, sizeof(TrainMsg));
   }
 }
@@ -96,9 +99,10 @@ static void trainController() {
   char trainName[] = TRAIN_NAME;
   com1 = WhoIs(com1Name);
   com2 = WhoIs(com2Name);
-#ifndef CALIBRATION
-  int ui = WhoIs(uiName);
-#endif
+  int ui = -1;
+  if (!CALIBRATION) {
+    ui = WhoIs(uiName);
+  }
   RegisterAs(trainName);
 
   for (int i = 0; i < NUM_TRAINS; i++) {
@@ -118,6 +122,9 @@ static void trainController() {
   for (;;) {
     int tid = -1;
     TrainMsg msg;
+    msg.data1 = -1;
+    msg.data2 = -1;
+    msg.data3 = -1;
     Receive(&tid, (char*)&msg, sizeof(TrainMsg));
 
     switch (msg.type) {
@@ -128,12 +135,12 @@ static void trainController() {
       case SET_SWITCH: {
         Reply(tid, (char*)1, 0);
         trainSetSwitch((int)msg.data1, (int)msg.data2);
-#ifndef CALIBRATION
-        uimsg.type = UPDATE_SWITCH;
-        uimsg.data1 = msg.data1;
-        uimsg.data2 = msg.data2;
-        Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
-#endif
+        if (!CALIBRATION) {
+          uimsg.type = UPDATE_SWITCH;
+          uimsg.data1 = msg.data1;
+          uimsg.data2 = msg.data2;
+          Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
+        }
         break;
       }
       case GET_SPEED: {

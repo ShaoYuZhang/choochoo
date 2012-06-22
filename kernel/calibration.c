@@ -9,17 +9,17 @@
 #include <IoServer.h>
 #include <UserInterface.h>
 #include <Sensor.h>
+#include <CalibrationTask.h>
 
-int CALIBRATION = 0;
+int CALIBRATION = 1;
 
 void task1() {
   startNameServerTask();
-  startTimeServerTask();
+  int id = startTimeServerTask();
   startIoServerTask();
   startSensorServerTask();
-  startUserInterfaceTask();
   startTrainControllerTask();
-  startCommandDecoderTask();
+  startCalibrationTask();
 
   Exit();
 }

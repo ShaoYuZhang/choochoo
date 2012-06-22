@@ -14,15 +14,17 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32 -mno-fpu
 %.o: %.c
 	$(CC) $(CFLAGS) $*.c -o $@ $<
 
-OBJECTS = main.o bwio.o memory.o kernel.o syscall.o Scheduler.o TaskQueue.o \
+OBJECTS = bwio.o memory.o kernel.o syscall.o Scheduler.o TaskQueue.o \
 					task/NameServer.o task/idle.o task/TimeServer.o task/IoServer.o task/IoBuffer.o task/IoHelper.o task/UserInterface.o \
-					train/Train.o train/CommandDecoder.o train/Sensor.o
+					train/Train.o train/CommandDecoder.o train/Sensor.o train/CalibrationTask.o
 DEPENDS = ${OBJECTS:.o=.d} # substitute ".o" with ".d"
 ASMS = $(OBJECTS:.o=.s)
 
-all: $(ASMS) main.elf 
-	cp main.elf /u/cs452/public/tftp/ARM/${USER}.elf
-	chmod 777 /u/cs452/public/tftp/ARM/${USER}.elf
+all: $(ASMS) main.elf calibration.elf
+	cp main.elf /u/cs452/public/tftp/ARM/${USER}_m.elf
+	cp calibration.elf /u/cs452/public/tftp/ARM/${USER}_c.elf
+	chmod 777 /u/cs452/public/tftp/ARM/${USER}_m.elf
+	chmod 777 /u/cs452/public/tftp/ARM/${USER}_c.elf
 
 task/idle_asm.o : task/idle.asm
 	$(AS) $(ASFLAGS) -o $@ $<
@@ -30,8 +32,11 @@ task/idle_asm.o : task/idle.asm
 interrupt.o : interrupt.asm
 	$(AS) $(ASFLAGS) -o $@ $<
 
-main.elf: $(OBJECTS) interrupt.o task/idle_asm.o orex.ld 
-	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) interrupt.o task/idle_asm.o -lgcc
+main.elf: $(OBJECTS) main.o interrupt.o task/idle_asm.o orex.ld 
+	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) main.o interrupt.o task/idle_asm.o -lgcc
+
+calibration.elf: $(OBJECTS) calibration.o interrupt.o task/idle_asm.o orex.ld 
+	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) calibration.o interrupt.o task/idle_asm.o -lgcc
 
 clean:
 	-rm -f *.s */*.s *.o */*.o *.map *.elf */*.d *.d /u/cs452/public/tftp/ARM/${USER}.elf
