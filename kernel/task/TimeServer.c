@@ -9,14 +9,14 @@
 
 static void timernotifier_task();
 
-// Size optimization if needed.....
+// Size optimization if needed.
 typedef struct RegisteredTask {
   int tid;
   int time;
+  struct RegisteredTask* next;
 } RegisteredTask;
 
-static RegisteredTask taskQueue[TIMER_SERVER_SIZE];
-static int taskQueueLen;
+static RegisteredTask taskStack[TIMER_SERVER_SIZE];
 
 int Delay(int ticks, int timeServerTid) {
   ASSERT(ticks < 0x00ffffff, "Cannot delay this much.");
@@ -39,16 +39,23 @@ int DelayUntil(int ticks, int timeServerTid) {
 }
 
 static void timeserver_task() {
-  int counter = 0;
-  int basePos = 0;
+  int numTick= 0;
   char name[] = TIMESERVER_NAME;
   RegisterAs(name);
 
-  // Initialize sorted list of tasks.
-  taskQueueLen = 0;
-  for (int i = 0; i < TIMER_SERVER_SIZE; i++) {
-    taskQueue[i].tid = -1;
+  // Initialize stack of delay tasks.
+  for (int i = 0; i < TIMER_SERVER_SIZE-1; i++) {
+    RegisteredTask* t = &(taskStack[i]);
+    t->next = &(taskStack[i+1]);
+    t->tid = -1;
   }
+  {
+    RegisteredTask* t = &(taskStack[TIMER_SERVER_SIZE-1]);
+    t->next = (RegisteredTask*) -1;
+    t->tid = -1;
+  }
+  RegisteredTask* taskSlots = &(taskStack[0]);
+  RegisteredTask* tasks = (RegisteredTask*)-1;
 
   int notifierId = Create(HIGHEST_PRIORITY, timernotifier_task);
 
@@ -60,60 +67,48 @@ static void timeserver_task() {
     ASSERT(len == 0 || len == 4, "Bad message to time server.");
 
     if (tid == notifierId) {
-      counter += 1;
+      numTick += 1;
       Reply(tid, (char*)NULL, 0); // Reply to notifier
-
-      if(counter % 100 == 0) {
-        //bwputstr(COM2, "second..");
-      }
-
     } else if (len == 0) {
       // Timing request
-      Reply(tid, (char*)&counter, 4);
+      Reply(tid, (char*)&numTick, 4);
     } else {
       if (msgBuff & 0xf0000000) {
         // Delay message
-        msgBuff += counter;
+        msgBuff += numTick;
       }
       // Delay until message, dont need to add current time.
       msgBuff &= 0x00ffffff;
 
-      // Insert into sorted circular list.
-      int insertPoint = (basePos + taskQueueLen) & TIMER_SERVER_SIZE_MOD;
-      while (1) {
-        const int checkPos = (insertPoint-1) & TIMER_SERVER_SIZE_MOD;
-        if (msgBuff < taskQueue[checkPos].time) {
-          insertPoint = checkPos;
-        } else {
-          break;
-        }
+      // Insert into linked list
+      RegisteredTask* current = tasks;
+      RegisteredTask* previous = (RegisteredTask*)-1;
+      while (current != (RegisteredTask*)-1 && (msgBuff > current->time)) {
+        previous = current;
+        current = current->next;
       }
 
-      int swap = (basePos + taskQueueLen) & TIMER_SERVER_SIZE_MOD;
-      while (swap != insertPoint) {
-        const int pos = (swap-1) & TIMER_SERVER_SIZE_MOD;
-        taskQueue[swap].time = taskQueue[pos].time;
-        taskQueue[swap].tid = taskQueue[pos].tid;
-        swap = pos;
+      // Insert right before t1, which is t2
+      RegisteredTask* newTask = taskSlots;
+      taskSlots = taskSlots->next;
+      //ASSERT(newTask != (RegisteredTask*)-1);
+      if (previous != (RegisteredTask*)-1) {
+        previous->next = newTask;
+      } else {
+        tasks = newTask;
       }
-
-      taskQueue[insertPoint].time = msgBuff;
-      taskQueue[insertPoint].tid = tid;
-
-      ASSERT(taskQueueLen != TIMER_SERVER_SIZE, "Buffer maxed out.");
-      taskQueueLen++;
+      newTask->next = current;
+      newTask->time = msgBuff;
+      newTask->tid  = tid;
     }
 
     // Reply to applicable queues...
-    while (taskQueueLen) {
-      if (taskQueue[basePos & TIMER_SERVER_SIZE_MOD].time <= counter) {
-        Reply(taskQueue[basePos & TIMER_SERVER_SIZE_MOD].tid, (char*)NULL, 0);
-        taskQueue[basePos & TIMER_SERVER_SIZE_MOD].time = -1;
-        basePos = (basePos+1) & TIMER_SERVER_SIZE_MOD;
-        taskQueueLen--;
-      } else {
-        break;
-      }
+    while (tasks != (RegisteredTask*)-1 && tasks->time <= numTick) {
+      Reply(tasks->tid, (char*)NULL, 0);
+      RegisteredTask* unusedTask = tasks;
+      tasks = tasks->next;
+      unusedTask->next = taskSlots;
+      taskSlots = unusedTask;
     }
   } // End of serve loop
 }
