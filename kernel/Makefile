@@ -18,7 +18,7 @@ OBJECTS = bwio.o memory.o kernel.o syscall.o Scheduler.o TaskQueue.o \
 					task/NameServer.o task/idle.o task/TimeServer.o task/IoServer.o task/IoBuffer.o task/IoHelper.o task/UserInterface.o \
 					train/Train.o train/CommandDecoder.o train/Sensor.o train/CalibrationTask.o track/Track.o track/track_data.o
 DEPENDS = ${OBJECTS:.o=.d} # substitute ".o" with ".d"
-ASMS = $(OBJECTS:.o=.s)
+ASMS = $(OBJECTS:.o=.s) main.s calibration.s
 
 all: $(ASMS) main.elf calibration.elf
 	cp main.elf /u/cs452/public/tftp/ARM/${USER}_m.elf
