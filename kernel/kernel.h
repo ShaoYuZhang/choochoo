@@ -19,6 +19,8 @@ void kernel_myparenttid(int* returnVal, int, int, int);
 
 void kernel_pass();
 
+void kernel_idle();
+
 void kernel_exit();
 
 void kernel_send(int* arg0, int msg, int arg2p, int);

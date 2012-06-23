@@ -73,3 +73,7 @@ int Reply( int tid, char *reply, int replylen) {
 int AwaitEvent(int eventType){
   return asm_syscall(SYSCALL_AWAITEVENT, eventType, 0, 0);
 }
+
+int Idleness(){
+  return asm_syscall(SYSCALL_IDLE, 0, 0, 0);
+}

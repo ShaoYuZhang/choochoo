@@ -17,6 +17,7 @@ static void (*syscall_handler[LAST_SYSCALL])(int*, int, int, int) = {
   kernel_mytid,
   kernel_myparenttid,
   kernel_pass,
+  kernel_idle,
   kernel_reply,
   kernel_send,
   kernel_receive,
@@ -29,6 +30,11 @@ static unsigned int idleTid;
 static TaskDescriptor tds[NUM_MAX_TASK];
 static volatile TaskDescriptor* eventWaitingTask[64];
 static int notQuit;
+static unsigned int idleTimeStart;
+static unsigned int totalIdleTime;
+static unsigned int lastReportTime;
+static unsigned int latestIdle;
+
 
 static void install_interrupt_handlers() {
 	INSTALL_INTERRUPT_HANDLER(SWI_VECTOR, asm_handle_swi);
@@ -143,33 +149,27 @@ void kernel_handle_interrupt() {
 void kernel_runloop() {
 	volatile TaskDescriptor* td;
 	int** sp_pointer;
-#if 0
-  unsigned int kernelTimeStart = GET_TIMER4();
-  unsigned int idleTimeStart = 0;
-  unsigned int totalIdleTime = 0;
-#endif
+  idleTimeStart = 0;
+  totalIdleTime = 0;
+  lastReportTime = 0;
+  latestIdle = 999;
 
 	while (LIKELY((td = scheduler_get()) != (TaskDescriptor *)NULL && notQuit)) {
-#if 0
-    if (idleTid == td->id) {
-      idleTimeStart = GET_TIMER4();
-    }
-#endif
+    if (idleTid == td->id) idleTimeStart = GET_TIMER4();
 
 		sp_pointer = (int**)&(td->sp);
     scheduler_set_running(td);
 		int is_interrupt = asm_switch_to_usermode(sp_pointer);
 
-#if 0
     if (idleTid == td->id) {
-      totalIdleTime += GET_TIMER4() - idleTimeStart;
-      if (totalIdleTime > 20000) {
-        int kernelTime = GET_TIMER4() - kernelTimeStart;
-        bwputstr(COM2, "Kernel");//: %d idle:%d \n", kernelTime, totalIdleTime);
-        break;
+      unsigned int current = GET_TIMER4();
+      totalIdleTime += current - idleTimeStart;
+      if ((current - lastReportTime) > 200000) {
+        latestIdle = totalIdleTime*10000 / (current - lastReportTime);
+        lastReportTime = current;
+        totalIdleTime = 0;
       }
     }
-#endif
 
     if (is_interrupt) {
       scheduler_move2ready();
@@ -326,6 +326,10 @@ void kernel_reply(int* returnVal, int tid, int reply, int replylen) {
 }
 
 void kernel_pass(){}
+
+void kernel_idle(int* returnPtr, int notUsed1, int notUsed2, int notUsed3) {
+  *returnPtr = latestIdle;
+}
 
 void kernel_awaitevent(int* returnVal, int eventType, int notUsed1, int notUsed2) {
 #if MORE_CHECKING

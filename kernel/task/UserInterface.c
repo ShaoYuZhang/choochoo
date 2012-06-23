@@ -143,12 +143,28 @@ static char* updateIdle(int percentage, char* msg) {
   *msg++ = CLOCK_C1;
   *msg++ = 'f';
 
-  // Print the time
-  while(percentage/10 > 0) {
-	  *msg++ = percentage/10 + '0';
-    percentage = percentage/10;
+  // Print the idleness. ASSUME 4 digits. e.g. 99.55
+  if (percentage > 999) {
+    *msg++ = '0' + percentage / 1000;
+    percentage /= 10;
+  } else {
+    *msg++ = '0';
   }
-  *msg++ = percentage%10 + '0';
+
+  if (percentage > 99) {
+    *msg++ = '0' + percentage / 100;
+    percentage /= 10;
+  } else {
+    *msg++ = '0';
+  }
+  *msg++ = '.';
+  if (percentage > 9) {
+    *msg++ = '0' + percentage / 10;
+    percentage %= 10;
+  } else {
+    *msg++ = '0';
+  }
+  *msg++ = '0' + percentage;
 
   // Restore Cursor
   *msg++ = ESC;
@@ -318,6 +334,21 @@ static void timerDelay() {
   }
 }
 
+static void idleness() {
+  int parent = MyParentsTid();
+  char timeName[] = TIMESERVER_NAME;
+  int timeserver = WhoIs(timeName);
+  UiMsg msg;
+  msg.type = UPDATE_IDLE;
+  int ticks = Time(timeserver);
+
+  for (;;) {
+    ticks += 100; // 1 seconds
+    DelayUntil(ticks, timeserver);
+    Send(parent, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
+  }
+}
+
 static void sensorQuery() {
   int parent = MyParentsTid();
   char sensorName[] = SENSOR_NAME;
@@ -392,6 +423,7 @@ static void userInterface() {
   int com2 = WhoIs(com2name);
   Create(1, timerDelay);
   Create(1, sensorQuery);
+  Create(10, idleness);
 
   displayStaticContent(com2);
 
@@ -425,9 +457,7 @@ static void userInterface() {
         break;
       }
       case UPDATE_IDLE: {
-        //printff(com2, "\nUpdate idle%d \n", msg->data3);
-        com2msg = updateIdle(msg->data3, com2msg);
-        *com2msg++ = 'a';
+        com2msg = updateIdle(Idleness(), com2msg);
       }
       default: {
         com2msg = updateDebugMessage(receiveBuffer, com2msg, len);

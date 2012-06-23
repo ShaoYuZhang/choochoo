@@ -5,16 +5,17 @@
 
 typedef void (*func_t)();
 
-#define SYSCALL_CREATE 0
-#define SYSCALL_MYTID 1
+#define SYSCALL_CREATE      0
+#define SYSCALL_MYTID       1
 #define SYSCALL_MYPARENTTID 2
-#define SYSCALL_PASS 3
-#define SYSCALL_REPLY 4
-#define SYSCALL_SEND 5
-#define SYSCALL_RECEIVE 6
-#define SYSCALL_EXIT 7
-#define SYSCALL_AWAITEVENT 8
-#define LAST_SYSCALL 9
+#define SYSCALL_PASS        3
+#define SYSCALL_IDLE        4
+#define SYSCALL_REPLY       5
+#define SYSCALL_SEND        6
+#define SYSCALL_RECEIVE     7
+#define SYSCALL_EXIT        8
+#define SYSCALL_AWAITEVENT  9
+#define LAST_SYSCALL        10
 
 int Create(int priority, func_t code);
 
@@ -23,6 +24,8 @@ int MyTid();
 int MyParentsTid();
 
 void Pass();
+
+int Idleness();
 
 void Exit();
 
