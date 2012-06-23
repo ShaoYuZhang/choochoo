@@ -356,12 +356,15 @@ static void sensorQuery() {
   UiMsg uimsg;
   uimsg.type = UPDATE_SENSOR;
 
+  SensorMsg sensorMsg;
+  sensorMsg.type = QUERY_RECENT;
+  Send(sensorServer, (char*)&sensorMsg, sizeof(SensorMsg),
+      (char*)1, 0);
   for (;;) {
-    SensorMsg sensorMsg;
-    sensorMsg.type = QUERY_RECENT;
     Sensor sensor;
-    Send(sensorServer, (char*)&sensorMsg, sizeof(SensorMsg),
-        (char*)&sensor, sizeof(Sensor));
+    int tid;
+    Receive(&tid, (char *)&sensor, sizeof(Sensor));
+    Reply(tid, (char *)1, 0);
 
     uimsg.data1 = sensor.box;
     uimsg.data2 = sensor.val;

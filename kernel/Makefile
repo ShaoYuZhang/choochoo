@@ -16,7 +16,7 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32 -mno-fpu
 
 OBJECTS = bwio.o memory.o kernel.o syscall.o Scheduler.o TaskQueue.o \
 					task/NameServer.o task/idle.o task/TimeServer.o task/IoServer.o task/IoBuffer.o task/IoHelper.o task/UserInterface.o \
-					train/Train.o train/CommandDecoder.o train/Sensor.o track/Track.o track/track_data.o
+					train/Train.o train/CommandDecoder.o train/Sensor.o track/Track.o track/track_data.o 
 DEPENDS = ${OBJECTS:.o=.d} # substitute ".o" with ".d"
 ASMS = $(OBJECTS:.o=.s) main.s
 
@@ -37,8 +37,8 @@ interrupt.o : interrupt.asm
 main.elf: $(OBJECTS) main.o interrupt.o task/idle_asm.o orex.ld 
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) main.o interrupt.o task/idle_asm.o -lgcc
 
-calibration.elf: $(OBJECTS) calibration.o interrupt.o task/idle_asm.o orex.ld
-	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) calibration.o interrupt.o task/idle_asm.o -lgcc
+calibration.elf: $(OBJECTS) calibration.o interrupt.o task/idle_asm.o orex.ld train/CalibrationTask.o
+	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) calibration.o interrupt.o task/idle_asm.o train/CalibrationTask.o -lgcc
 
 clean:
 	-rm -f *.s */*.s *.o */*.o *.map *.elf */*.d *.d /u/cs452/public/tftp/ARM/${USER}_m.elf /u/cs452/public/tftp/ARM/${USER}_c.elf

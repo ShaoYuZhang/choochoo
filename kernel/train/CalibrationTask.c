@@ -48,16 +48,23 @@ void goB(char train) {
 
   int startTime = -1;
   // See sensor reports and estimate velocity.
+
+  SensorMsg sensorMsg;
+  sensorMsg.type = QUERY_RECENT;
+  Send(sensorServer, (char*)&sensorMsg, sizeof(SensorMsg),
+      (char*)1, 0);
+
   for (char speed = 14; speed > 8; speed--) {
     setSpeed.data2 = speed;
     setSpeed.data3 = -1;
     Putstr(com2, "New\n", 4);
     Send(trainController, (char*)&setSpeed, sizeof(TrainMsg), (char *)NULL, 0);
-    int tid = -1;
     for (int avgCount = 0; avgCount < 5; avgCount++) {
       while (1) {
         Sensor sensor;
-        getSensor(&sensor);
+        int tid;
+        Receive(&tid, (char *)&sensor, sizeof(Sensor));
+        Reply(tid, (char *)1, 0);
         //printff(com2, "S:%d %d %d\n", sensor.box, sensor.val, sensor.time);
         if (startTime != -1 && sensor.box == 2 && sensor.val == 14) {
           printff(com2, "exiting %d\n", sensor.time);

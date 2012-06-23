@@ -27,10 +27,14 @@ void test_track() {
 
   SensorMsg sensorMsg;
   sensorMsg.type = QUERY_RECENT;
+  Send(sensorServer, (char*)&sensorMsg, sizeof(SensorMsg),
+      (char*)1, 0);
 
   Sensor sensor;
-  Send(sensorServer, (char*)&sensorMsg, sizeof(SensorMsg),
-      (char*)&sensor, sizeof(Sensor));
+  int tid;
+  Receive(&tid, (char *)&sensor, sizeof(Sensor));
+  Reply(tid, (char *)1, 0);
+
   TrackLandmark pastSensor;
   TrackLandmark currentSensor;
 
@@ -42,8 +46,9 @@ void test_track() {
   currentSensor.num2 = sensor.val;
 
   for (;;) {
-    Send(sensorServer, (char*)&sensorMsg, sizeof(SensorMsg),
-        (char*)&sensor, sizeof(Sensor));
+    Receive(&tid, (char *)&sensor, sizeof(Sensor));
+    Reply(tid, (char *)1, 0);
+
     pastSensor = currentSensor;
     currentSensor.type = LANDMARK_SENSOR;
     currentSensor.num1 = sensor.box;

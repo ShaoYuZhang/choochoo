@@ -8,7 +8,8 @@
 #define QUERY_WORKER 0
 #define QUERY_RESPONSE_WORKER 1
 #define QUERY_TIMEOUT_WORKER 2
-#define QUERY_RECENT 3
+#define SENSOR_COURIER 3
+#define QUERY_RECENT 4
 
 typedef struct SensorMsg {
   char type; // Defined above
@@ -22,6 +23,11 @@ typedef struct Sensor {
   char val;
   int time;
 } Sensor;
+
+typedef struct SensorWorkUnit {
+  int tid;
+  Sensor sensor;
+} SensorWorkUnit;
 
 int startSensorServerTask();
 
