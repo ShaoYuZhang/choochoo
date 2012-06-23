@@ -128,6 +128,37 @@ static char* updateTime(unsigned int ms, char* msg) {
   return msg;
 }
 
+static char* updateIdle(int percentage, char* msg) {
+  // SaveCursor
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = 's';
+
+  // move to position
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = CLOCK_R1;
+  *msg++ = CLOCK_R2-1;
+  *msg++ = ';';
+  *msg++ = CLOCK_C1;
+  *msg++ = 'f';
+
+  // Print the time
+  while(percentage/10 > 0) {
+	  *msg++ = percentage/10 + '0';
+    percentage = percentage/10;
+  }
+  *msg++ = percentage%10 + '0';
+
+  // Restore Cursor
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = 'u';
+
+  return msg;
+}
+
+
 static int numUpdated;
 static char* updateSensor(int box, int val, char* msg) {
   int updateRow = (numUpdated % 16)+2;
@@ -392,6 +423,11 @@ static void userInterface() {
         //printff(com2, "\nUpdate switch %d %d\n", msg->data1, msg->data2);
         com2msg = updateSwitch(msg->data1 /*switch*/, msg->data2 /*state*/, com2msg);
         break;
+      }
+      case UPDATE_IDLE: {
+        //printff(com2, "\nUpdate idle%d \n", msg->data3);
+        com2msg = updateTime(msg->data3, com2msg);
+        *com2msg++ = "a";
       }
       default: {
         com2msg = updateDebugMessage(receiveBuffer, com2msg, len);
