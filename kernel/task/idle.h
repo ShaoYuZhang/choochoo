@@ -3,6 +3,6 @@
 
 void idle_task();
 
-int startIdleTask();
+//int startIdleTask();
 
 #endif // IDLE_H_

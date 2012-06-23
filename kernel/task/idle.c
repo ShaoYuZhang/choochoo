@@ -5,6 +5,7 @@
 #include <NameServer.h>
 #include <IoServer.h>
 
+#if 0
 extern int CALIBRATION;
 
 void worker() {
@@ -64,3 +65,4 @@ void idle() {
 int startIdleTask() {
   return Create(LOWEST_PRIORITY, idle);
 }
+#endif

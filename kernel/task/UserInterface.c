@@ -426,8 +426,8 @@ static void userInterface() {
       }
       case UPDATE_IDLE: {
         //printff(com2, "\nUpdate idle%d \n", msg->data3);
-        com2msg = updateTime(msg->data3, com2msg);
-        *com2msg++ = "a";
+        com2msg = updateIdle(msg->data3, com2msg);
+        *com2msg++ = 'a';
       }
       default: {
         com2msg = updateDebugMessage(receiveBuffer, com2msg, len);
