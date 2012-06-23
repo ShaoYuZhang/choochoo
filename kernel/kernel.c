@@ -72,7 +72,7 @@ void kernel_init() {
   // Clear Timer4
   *(volatile unsigned int*)(0x80810064) &= ~0x100;
   *(volatile unsigned int*)(0x80810064) |= 0x100;
-  //asm_enable_cache();
+  asm_enable_cache();
 }
 
 void kernel_close() {

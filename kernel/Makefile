@@ -4,7 +4,7 @@ AR = ar
 LD = ld
 
 # CANNOT enalbe finline-function due to syscall file messing up.
-CFLAGS  = -c -fPIC -Wall -I. -Itask/. -Itrain/. -mcpu=arm920t -msoft-float -MMD -std=c99 -O3
+CFLAGS  = -c -fPIC -Wall -I. -Itask/. -Itrain/. -Itrack/ -mcpu=arm920t -msoft-float -MMD -std=c99 -O3
 LDFLAGS = -init main -Map main.map -N -T orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 
 ASFLAGS	= -mcpu=arm920t -mapcs-32 -mno-fpu
 
@@ -16,9 +16,9 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32 -mno-fpu
 
 OBJECTS = bwio.o memory.o kernel.o syscall.o Scheduler.o TaskQueue.o \
 					task/NameServer.o task/idle.o task/TimeServer.o task/IoServer.o task/IoBuffer.o task/IoHelper.o task/UserInterface.o \
-					train/Train.o train/CommandDecoder.o train/Sensor.o train/CalibrationTask.o
+					train/Train.o train/CommandDecoder.o train/Sensor.o train/CalibrationTask.o track/Track.o track/track_data.o
 DEPENDS = ${OBJECTS:.o=.d} # substitute ".o" with ".d"
-ASMS = $(OBJECTS:.o=.s)
+ASMS = $(OBJECTS:.o=.s) main.s calibration.s
 
 all: $(ASMS) main.elf calibration.elf
 	cp main.elf /u/cs452/public/tftp/ARM/${USER}_m.elf
