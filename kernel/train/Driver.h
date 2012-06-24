@@ -8,13 +8,13 @@
 #define GET_SPEED  1
 #define WORKER     2
 
-typedef struct TrainMsg {
+typedef struct DriverMsg {
   char type;  // Defined above
-  char data1; // Train  number
+  char data1; // Driver  number
   signed char data2; // Speed (-1 for reverse)
   unsigned char data3; // Delay num, or msg came from worker
-} TrainMsg;
+} DriverMsg;
 
-int startTrainControllerTask();
+int startDriverControllerTask();
 
 #endif // TRAIN_H_

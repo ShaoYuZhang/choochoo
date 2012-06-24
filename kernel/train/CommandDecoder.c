@@ -1,5 +1,5 @@
 #include <CommandDecoder.h>
-#include <Train.h>
+#include <Driver.h>
 #include <Track.h>
 #include <IoServer.h>
 #include <NameServer.h>
@@ -34,23 +34,23 @@ static void decodeCommand() {
     c = *temp++;
     c = a2i(c, &temp, 10, &train_speed);
 
-    TrainMsg msg;
+    DriverMsg msg;
     msg.type = SET_SPEED;
     msg.data1 = train_number;
     msg.data2 = train_speed;
-    Send(trainController, (char *)&msg, sizeof(TrainMsg), (char *)NULL, 0);
+    Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
   } else if (decoderBuffer[0] == 'r' && decoderBuffer[1] == 'v') {
     int train_number = 0;
     char *temp = (char *)decoderBuffer + 3;
     char c = *temp++;
     c = a2i(c, &temp, 10, &train_number);
 
-    TrainMsg msg;
+    DriverMsg msg;
     msg.type = SET_SPEED;
     msg.type = SET_SPEED;
     msg.data1 = train_number;
     msg.data2 = -1;
-    Send(trainController, (char *)&msg, sizeof(TrainMsg), (char *)NULL, 0);
+    Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
   } else if (decoderBuffer[0] == 's' && decoderBuffer[1] == 'w') {
     int switch_number = 0;
     char switch_pos;

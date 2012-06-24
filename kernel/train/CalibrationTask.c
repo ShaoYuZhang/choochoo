@@ -1,5 +1,5 @@
 #include "CalibrationTask.h"
-#include "Train.h"
+#include "Driver.h"
 #include <Track.h>
 #include <IoServer.h>
 #include <IoHelper.h>
@@ -16,7 +16,7 @@ static int trackController;
 static int timeserver;
 static int sensorServer;
 static SensorMsg sensorMsg;
-static TrainMsg setSpeed;
+static DriverMsg setSpeed;
 
 
 void calibrateVelocity(int accending, char startBox, char startVal, char endBox, char endVal, int distance) {
@@ -31,7 +31,7 @@ void calibrateVelocity(int accending, char startBox, char startVal, char endBox,
     setSpeed.data2 = speed;
     setSpeed.data3 = -1;
     Putstr(com2, "New\n", 4);
-    Send(trainController, (char*)&setSpeed, sizeof(TrainMsg), (char *)NULL, 0);
+    Send(trainController, (char*)&setSpeed, sizeof(DriverMsg), (char *)NULL, 0);
     for (int avgCount = 0; avgCount < AVG_COUNT; avgCount++) {
       while (1) {
         Sensor sensor;
@@ -77,11 +77,11 @@ void calibrateStopping(int accending, char startBox, char startVal) {
     for (int avgCount = 0; avgCount < AVG_COUNT; avgCount++) {
       if (!accending) {
         setSpeed.data2 = 14;
-        Send(trainController, (char*)&setSpeed, sizeof(TrainMsg), (char*)NULL, 0);
+        Send(trainController, (char*)&setSpeed, sizeof(DriverMsg), (char*)NULL, 0);
         Delay(550, timeserver);
       }
       setSpeed.data2 = speed;
-      Send(trainController, (char*)&setSpeed, sizeof(TrainMsg), (char*)NULL, 0);
+      Send(trainController, (char*)&setSpeed, sizeof(DriverMsg), (char*)NULL, 0);
       while (1) {
         Sensor sensor;
         int tid;
@@ -90,7 +90,7 @@ void calibrateStopping(int accending, char startBox, char startVal) {
         //printff(com2, "S:%d %d %d\n", sensor.box, sensor.val, sensor.time);
         if (sensor.box == startBox && sensor.val == startVal) {
           setSpeed.data2 = 0;
-          Send(trainController, (char*)&setSpeed, sizeof(TrainMsg), (char*)NULL, 0);
+          Send(trainController, (char*)&setSpeed, sizeof(DriverMsg), (char*)NULL, 0);
           Putstr(com2, "STOP\n", 5);
           if (speed < 12) {
             Delay(1000, timeserver);
@@ -132,13 +132,13 @@ void go(char train,
   sw.num1 = 0;
   sw.num2 = 16; // Switch 16
   setSwitch.landmark1 = sw;
-  Send(trackController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
+  Send(trackController, (char*)&setSwitch, sizeof(DriverMsg), (char *)NULL, 0);
   sw.num2= 17; // Switch 17
   setSwitch.landmark1 = sw;
-  Send(trackController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
+  Send(trackController, (char*)&setSwitch, sizeof(DriverMsg), (char *)NULL, 0);
   sw.num2= 9;  // Switch 9
   setSwitch.landmark1 = sw;
-  Send(trackController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
+  Send(trackController, (char*)&setSwitch, sizeof(DriverMsg), (char *)NULL, 0);
 
   // Message init
   setSpeed.type = SET_SPEED;
@@ -158,19 +158,19 @@ void go(char train,
   setSwitch.data = SWITCH_CURVED;
   sw.num2 = 16; // Switch 16
   setSwitch.landmark1 = sw;
-  Send(trackController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
+  Send(trackController, (char*)&setSwitch, sizeof(DriverMsg), (char *)NULL, 0);
   sw.num2 = 13; // Switch 13
   setSwitch.landmark1 = sw;
-  Send(trackController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
+  Send(trackController, (char*)&setSwitch, sizeof(DriverMsg), (char *)NULL, 0);
   sw.num2 = 14; // Switch 14
   setSwitch.landmark1 = sw;
-  Send(trackController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
+  Send(trackController, (char*)&setSwitch, sizeof(DriverMsg), (char *)NULL, 0);
   sw.num2= 153; // Switch 153, 0x99
   setSwitch.landmark1 = sw;
-  Send(trackController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
+  Send(trackController, (char*)&setSwitch, sizeof(DriverMsg), (char *)NULL, 0);
   sw.num2 = 156; // Switch 156, 0x9c
   setSwitch.landmark1 = sw;
-  Send(trackController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
+  Send(trackController, (char*)&setSwitch, sizeof(DriverMsg), (char *)NULL, 0);
 
   calibrateVelocity(1, cStartBox, cStartVal, cEndBox, cEndVal, cDistance);
   calibrateVelocity(0, cStartBox, cStartVal, cEndBox, cEndVal, cDistance);
@@ -180,7 +180,7 @@ void go(char train,
   // Stopping train.
   Putstr(com2, "Stopping train      \n", 21);
   setSpeed.data2 = 0;
-  Send(trainController, (char*)&setSpeed, sizeof(TrainMsg), (char *)NULL, 0);
+  Send(trainController, (char*)&setSpeed, sizeof(DriverMsg), (char *)NULL, 0);
   Putstr(com2, "done                \n", 21);
   Delay(500, timeserver);
   kernel_quit();

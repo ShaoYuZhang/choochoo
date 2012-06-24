@@ -1,4 +1,4 @@
-#include "Train.h"
+#include "Driver.h"
 #include <IoServer.h>
 #include <ts7200.h>
 #include <util.h>
@@ -10,17 +10,17 @@
 
 #define NUM_WORKER 4
 
-typedef struct Train {
+typedef struct Driver {
   int speed;
-} Train;
+} Driver;
 
 static int com1;
 static int com2;
-static Train train[NUM_TRAINS];
+static Driver train[NUM_TRAINS];
 static int worker[NUM_WORKER];
 
 
-static void trainSetSpeed(TrainMsg* origMsg, int* numWorkerLeft) {
+static void trainSetSpeed(DriverMsg* origMsg, int* numWorkerLeft) {
   const int trainNum = origMsg->data1;
   const int speed = origMsg->data2;
 
@@ -46,7 +46,7 @@ static void trainSetSpeed(TrainMsg* origMsg, int* numWorkerLeft) {
     origMsg->data3 = 150; // 3s . TODO, calculate from train speed.
     printff(com2, "Using worker: %d \n", *numWorkerLeft);
 
-    Reply(worker[*numWorkerLeft], (char*)origMsg, sizeof(TrainMsg));
+    Reply(worker[*numWorkerLeft], (char*)origMsg, sizeof(DriverMsg));
     (*numWorkerLeft)--;
 
     msg[0] = 0;
@@ -67,16 +67,16 @@ static void trainWorker() {
   int timeserver = WhoIs(timename);
   int parent = MyParentsTid();
 
-  TrainMsg msg;
+  DriverMsg msg;
   msg.type = WORKER;
-  Send(parent, (char*)&msg, sizeof(TrainMsg), (char*)&msg, sizeof(TrainMsg));
+  Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)&msg, sizeof(DriverMsg));
   for (;;) {
     int numTick = msg.data3; // num of 10ms
     numTick *= 2;
     Delay(numTick, timeserver);
     msg.data3 = WORKER;
     //printff(com2, "Worker Done. %d\n", numTick);
-    Send(parent, (char*)&msg, sizeof(TrainMsg), (char*)&msg, sizeof(TrainMsg));
+    Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)&msg, sizeof(DriverMsg));
   }
 }
 
@@ -100,11 +100,11 @@ static void trainController() {
 
   for (;;) {
     int tid = -1;
-    TrainMsg msg;
+    DriverMsg msg;
     msg.data1 = -1;
     msg.data2 = -1;
     msg.data3 = -1;
-    Receive(&tid, (char*)&msg, sizeof(TrainMsg));
+    Receive(&tid, (char*)&msg, sizeof(DriverMsg));
 
     switch (msg.type) {
       case GET_SPEED: {
@@ -131,6 +131,6 @@ static void trainController() {
   }
 }
 
-int startTrainControllerTask() {
+int startDriverControllerTask() {
   return Create(2, trainController);
 }

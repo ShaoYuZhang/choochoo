@@ -4,7 +4,7 @@
 #include <memory.h>
 #include <NameServer.h>
 #include <TimeServer.h>
-#include <Train.h>
+#include <Driver.h>
 #include <CommandDecoder.h>
 #include <IoServer.h>
 #include <UserInterface.h>
@@ -77,7 +77,7 @@ void task1() {
   startIoServerTask();
   startSensorServerTask();
   startUserInterfaceTask();
-  startTrainControllerTask();
+  startDriverControllerTask();
   startTrackManagerTask();
   startCommandDecoderTask();
 
