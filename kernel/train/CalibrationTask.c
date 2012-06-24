@@ -113,9 +113,11 @@ void calibrateStopping(int accending, char startBox, char startVal) {
   }
 }
 
-void goA(char train) {}
-
-void goB(char train) {
+void go(char train,
+        char sStartBox, char sStartVal,
+        char sEndBox, char sEndVal, int sDistance,
+        char cStartBox, char cStartVal,
+        char cEndBox, char cEndVal, int cDistance) {
 
   Putstr(com2, "Calibrating Velocity\n", 21);
   // Change track for velocity calibration
@@ -137,11 +139,11 @@ void goB(char train) {
       (char*)1, 0);
 
 #if 0
-  calibrateVelocity(1, 4, 8, 2, 14, 7850000);
-  calibrateVelocity(0, 4, 8, 2, 14, 7850000);
+  calibrateVelocity(1, sStartBox, sStartVal, sEndBox, sEndVal, sDistance);
+  calibrateVelocity(0, sStartBox, sStartVal, sEndBox, sEndVal, sDistance);
 
-  calibrateStopping(1, 4, 8);
-  calibrateStopping(0, 4, 8);
+  calibrateStopping(1, sStartBox, sStartVal);
+  calibrateStopping(0, sStartBox, sStartVal);
 #endif
 
   setSwitch.data2 = SWITCH_CURVED;
@@ -156,11 +158,10 @@ void goB(char train) {
   setSwitch.data1 = 156; // Switch 156, 0x9c
   Send(trainController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
 
-  calibrateVelocity(1, 1, 3, 4, 15, 8950000);
-  calibrateVelocity(0, 1, 3, 4, 15, 8950000);
-
-  calibrateStopping(1, 1, 3);
-  calibrateStopping(0, 1, 3);
+  calibrateVelocity(1, cStartBox, cStartVal, cEndBox, cEndVal, cDistance);
+  calibrateVelocity(0, cStartBox, cStartVal, cEndBox, cEndVal, cDistance);
+  calibrateStopping(1, cStartBox, cStartVal);
+  calibrateStopping(0, cStartBox, cStartVal);
 
   // Stopping train.
   Putstr(com2, "Stopping train      \n", 21);
@@ -183,7 +184,12 @@ void calibration() {
   com1 = WhoIs(com1Name);
   com2 = WhoIs(com2Name);
   Putstr(com2, "Assume all tracks are curved. Which track?\n", 42);
-  goB(37);
+  go(37,
+        // Straight stuff
+       4,8, 2,14, 7850000,
+        // Curve stuff
+       1,3, 4,15, 8950000
+      );
   return;
 
   char track = Getc(com2);
@@ -193,11 +199,21 @@ void calibration() {
 
   if (track == 'a') {
     Putstr(com2, "Using track a\n", 14);
-    goA(train);
+    go(train,
+        // Straight stuff
+       2,15, 4,11, 6880000,
+        // Curve stuff
+       1,3, 4,15, 8950000
+      );
   }
   else {
     Putstr(com2, "Using track b\n", 14);
-    goB(train);
+    go(train,
+        // Straight stuff
+       4,8, 2,14, 7850000,
+        // Curve stuff
+       1,3, 4,15, 8950000
+      );
   }
 }
 
