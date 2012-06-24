@@ -7,7 +7,7 @@
 #include <Sensor.h>
 #include <kernel.h>
 
-#define AVG_COUNT 1
+#define AVG_COUNT 3
 static int com1;
 static int com2;
 static int trainController;
@@ -136,11 +136,13 @@ void goB(char train) {
   Send(sensorServer, (char*)&sensorMsg, sizeof(SensorMsg),
       (char*)1, 0);
 
+#if 0
   calibrateVelocity(1, 4, 8, 2, 14, 7850000);
   calibrateVelocity(0, 4, 8, 2, 14, 7850000);
 
   calibrateStopping(1, 4, 8);
   calibrateStopping(0, 4, 8);
+#endif
 
   setSwitch.data2 = SWITCH_CURVED;
   setSwitch.data1 = 16; // Switch 16
@@ -154,8 +156,8 @@ void goB(char train) {
   setSwitch.data1 = 156; // Switch 156, 0x9c
   Send(trainController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
 
-  calibrateVelocity(1, 1, 3, 4, 15, 9390000);
-  calibrateVelocity(0, 1, 3, 4, 15, 9390000);
+  calibrateVelocity(1, 1, 3, 4, 15, 8950000);
+  calibrateVelocity(0, 1, 3, 4, 15, 8950000);
 
   calibrateStopping(1, 1, 3);
   calibrateStopping(0, 1, 3);
@@ -181,7 +183,7 @@ void calibration() {
   com1 = WhoIs(com1Name);
   com2 = WhoIs(com2Name);
   Putstr(com2, "Assume all tracks are curved. Which track?\n", 42);
-  goB(43);
+  goB(37);
   return;
 
   char track = Getc(com2);
