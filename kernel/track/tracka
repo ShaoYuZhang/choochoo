@@ -626,7 +626,7 @@ edge B1 D14:
 edge B2 MR16:
   distance 225 mm
 edge B3 C2:
-  distance 230 mm
+  distance 202 mm
 edge B4 MR16:
   distance 220 mm
 edge B5 D3:
@@ -646,7 +646,7 @@ edge B14 D16:
 edge B16 BR15:
   distance 70 mm
 edge C2 MR153:
-  distance 228 mm
+  distance 197 mm
 edge C3 EX3:
   distance 410 mm
 edge C4 MR5:
@@ -666,7 +666,7 @@ edge C10 BR16:
 edge C11 BR13:
   distance 140 mm
 edge C12 MR14:
-  distance 314 mm
+  distance 305 mm
 edge C13 E7:
   distance 877 mm
 edge C14 BR11:
@@ -676,7 +676,7 @@ edge C15 D12:
 edge C16 MR6:
   distance 223 mm
 edge D1 MR155:
-  distance 227 mm
+  distance 195 mm
 edge D2 E4:
   distance 200 mm
 edge D3 MR10:
@@ -686,7 +686,7 @@ edge D5 E6:
 edge D6 MR9:
   distance 213 mm
 edge D7 MR9:
-  distance 290 mm
+  distance 280 mm
 edge D8 E8:
   distance 375 mm
 edge D9 E12:
@@ -698,9 +698,9 @@ edge D12 MR7:
 edge D14 MR17:
   distance 225 mm
 edge D16 MR17:
-  distance 230 mm
+  distance 221 mm
 edge E1 MR156:
-  distance 222 mm
+  distance 190 mm
 edge E2 E15:
   distance 203 mm
 edge E4 MR10:

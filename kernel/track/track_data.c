@@ -179,7 +179,7 @@ void init_tracka(track_node *track) {
   track[18].edge[DIR_AHEAD].reverse = &track[32].edge[DIR_AHEAD];
   track[18].edge[DIR_AHEAD].src = &track[18];
   track[18].edge[DIR_AHEAD].dest = &track[33];
-  track[18].edge[DIR_AHEAD].dist = 230;
+  track[18].edge[DIR_AHEAD].dist = 202;
   track[18].edge[DIR_AHEAD].curveness = 0;
   track[19].name = "B4";
   track[19].type = NODE_SENSOR;
@@ -305,7 +305,7 @@ void init_tracka(track_node *track) {
   track[32].edge[DIR_AHEAD].reverse = &track[18].edge[DIR_AHEAD];
   track[32].edge[DIR_AHEAD].src = &track[32];
   track[32].edge[DIR_AHEAD].dest = &track[19];
-  track[32].edge[DIR_AHEAD].dist = 230;
+  track[32].edge[DIR_AHEAD].dist = 202;
   track[32].edge[DIR_AHEAD].curveness = 0;
   track[33].name = "C2";
   track[33].type = NODE_SENSOR;
@@ -314,7 +314,7 @@ void init_tracka(track_node *track) {
   track[33].edge[DIR_AHEAD].reverse = &track[116].edge[DIR_CURVED];
   track[33].edge[DIR_AHEAD].src = &track[33];
   track[33].edge[DIR_AHEAD].dest = &track[117];
-  track[33].edge[DIR_AHEAD].dist = 228;
+  track[33].edge[DIR_AHEAD].dist = 197;
   track[33].edge[DIR_AHEAD].curveness = 0;
   track[34].name = "C3";
   track[34].type = NODE_SENSOR;
@@ -404,7 +404,7 @@ void init_tracka(track_node *track) {
   track[43].edge[DIR_AHEAD].reverse = &track[106].edge[DIR_CURVED];
   track[43].edge[DIR_AHEAD].src = &track[43];
   track[43].edge[DIR_AHEAD].dest = &track[107];
-  track[43].edge[DIR_AHEAD].dist = 314;
+  track[43].edge[DIR_AHEAD].dist = 305;
   track[43].edge[DIR_AHEAD].curveness = 0;
   track[44].name = "C13";
   track[44].type = NODE_SENSOR;
@@ -449,7 +449,7 @@ void init_tracka(track_node *track) {
   track[48].edge[DIR_AHEAD].reverse = &track[120].edge[DIR_CURVED];
   track[48].edge[DIR_AHEAD].src = &track[48];
   track[48].edge[DIR_AHEAD].dest = &track[121];
-  track[48].edge[DIR_AHEAD].dist = 227;
+  track[48].edge[DIR_AHEAD].dist = 195;
   track[48].edge[DIR_AHEAD].curveness = 0;
   track[49].name = "D2";
   track[49].type = NODE_SENSOR;
@@ -503,7 +503,7 @@ void init_tracka(track_node *track) {
   track[54].edge[DIR_AHEAD].reverse = &track[96].edge[DIR_STRAIGHT];
   track[54].edge[DIR_AHEAD].src = &track[54];
   track[54].edge[DIR_AHEAD].dest = &track[97];
-  track[54].edge[DIR_AHEAD].dist = 290;
+  track[54].edge[DIR_AHEAD].dist = 280;
   track[54].edge[DIR_AHEAD].curveness = 0;
   track[55].name = "D8";
   track[55].type = NODE_SENSOR;
@@ -584,7 +584,7 @@ void init_tracka(track_node *track) {
   track[63].edge[DIR_AHEAD].reverse = &track[112].edge[DIR_CURVED];
   track[63].edge[DIR_AHEAD].src = &track[63];
   track[63].edge[DIR_AHEAD].dest = &track[113];
-  track[63].edge[DIR_AHEAD].dist = 230;
+  track[63].edge[DIR_AHEAD].dist = 221;
   track[63].edge[DIR_AHEAD].curveness = 0;
   track[64].name = "E1";
   track[64].type = NODE_SENSOR;
@@ -593,7 +593,7 @@ void init_tracka(track_node *track) {
   track[64].edge[DIR_AHEAD].reverse = &track[122].edge[DIR_CURVED];
   track[64].edge[DIR_AHEAD].src = &track[64];
   track[64].edge[DIR_AHEAD].dest = &track[123];
-  track[64].edge[DIR_AHEAD].dist = 222;
+  track[64].edge[DIR_AHEAD].dist = 190;
   track[64].edge[DIR_AHEAD].curveness = 0;
   track[65].name = "E2";
   track[65].type = NODE_SENSOR;
@@ -921,7 +921,7 @@ void init_tracka(track_node *track) {
   track[96].edge[DIR_STRAIGHT].reverse = &track[54].edge[DIR_AHEAD];
   track[96].edge[DIR_STRAIGHT].src = &track[96];
   track[96].edge[DIR_STRAIGHT].dest = &track[55];
-  track[96].edge[DIR_STRAIGHT].dist = 290;
+  track[96].edge[DIR_STRAIGHT].dist = 280;
   track[96].edge[DIR_STRAIGHT].curveness = 0;
   track[96].edge[DIR_CURVED].reverse = &track[53].edge[DIR_AHEAD];
   track[96].edge[DIR_CURVED].src = &track[96];
@@ -1041,7 +1041,7 @@ void init_tracka(track_node *track) {
   track[106].edge[DIR_CURVED].reverse = &track[43].edge[DIR_AHEAD];
   track[106].edge[DIR_CURVED].src = &track[106];
   track[106].edge[DIR_CURVED].dest = &track[42];
-  track[106].edge[DIR_CURVED].dist = 314;
+  track[106].edge[DIR_CURVED].dist = 305;
   track[106].edge[DIR_CURVED].curveness = 0;
   track[107].name = "MR14";
   track[107].type = NODE_MERGE;
@@ -1110,7 +1110,7 @@ void init_tracka(track_node *track) {
   track[112].edge[DIR_CURVED].reverse = &track[63].edge[DIR_AHEAD];
   track[112].edge[DIR_CURVED].src = &track[112];
   track[112].edge[DIR_CURVED].dest = &track[62];
-  track[112].edge[DIR_CURVED].dist = 230;
+  track[112].edge[DIR_CURVED].dist = 221;
   track[112].edge[DIR_CURVED].curveness = 0;
   track[113].name = "MR17";
   track[113].type = NODE_MERGE;
@@ -1156,7 +1156,7 @@ void init_tracka(track_node *track) {
   track[116].edge[DIR_CURVED].reverse = &track[33].edge[DIR_AHEAD];
   track[116].edge[DIR_CURVED].src = &track[116];
   track[116].edge[DIR_CURVED].dest = &track[32];
-  track[116].edge[DIR_CURVED].dist = 228;
+  track[116].edge[DIR_CURVED].dist = 197;
   track[116].edge[DIR_CURVED].curveness = 0;
   track[117].name = "MR153";
   track[117].type = NODE_MERGE;
@@ -1202,7 +1202,7 @@ void init_tracka(track_node *track) {
   track[120].edge[DIR_CURVED].reverse = &track[48].edge[DIR_AHEAD];
   track[120].edge[DIR_CURVED].src = &track[120];
   track[120].edge[DIR_CURVED].dest = &track[49];
-  track[120].edge[DIR_CURVED].dist = 227;
+  track[120].edge[DIR_CURVED].dist = 195;
   track[120].edge[DIR_CURVED].curveness = 0;
   track[121].name = "MR155";
   track[121].type = NODE_MERGE;
@@ -1225,7 +1225,7 @@ void init_tracka(track_node *track) {
   track[122].edge[DIR_CURVED].reverse = &track[64].edge[DIR_AHEAD];
   track[122].edge[DIR_CURVED].src = &track[122];
   track[122].edge[DIR_CURVED].dest = &track[65];
-  track[122].edge[DIR_CURVED].dist = 222;
+  track[122].edge[DIR_CURVED].dist = 190;
   track[122].edge[DIR_CURVED].curveness = 0;
   track[123].name = "MR156";
   track[123].type = NODE_MERGE;
@@ -1384,7 +1384,7 @@ void init_trackb(track_node *track) {
   track[3].edge[DIR_AHEAD].reverse = &track[30].edge[DIR_AHEAD];
   track[3].edge[DIR_AHEAD].src = &track[3];
   track[3].edge[DIR_AHEAD].dest = &track[31];
-  track[3].edge[DIR_AHEAD].dist = 440;
+  track[3].edge[DIR_AHEAD].dist = 431;
   track[3].edge[DIR_AHEAD].curveness = 0;
   track[4].name = "A5";
   track[4].type = NODE_SENSOR;
@@ -1420,7 +1420,7 @@ void init_trackb(track_node *track) {
   track[7].edge[DIR_AHEAD].reverse = &track[82].edge[DIR_CURVED];
   track[7].edge[DIR_AHEAD].src = &track[7];
   track[7].edge[DIR_AHEAD].dest = &track[83];
-  track[7].edge[DIR_AHEAD].dist = 211;
+  track[7].edge[DIR_AHEAD].dist = 210;
   track[7].edge[DIR_AHEAD].curveness = 0;
   track[8].name = "A9";
   track[8].type = NODE_SENSOR;
@@ -1519,7 +1519,7 @@ void init_trackb(track_node *track) {
   track[18].edge[DIR_AHEAD].reverse = &track[32].edge[DIR_AHEAD];
   track[18].edge[DIR_AHEAD].src = &track[18];
   track[18].edge[DIR_AHEAD].dest = &track[33];
-  track[18].edge[DIR_AHEAD].dist = 230;
+  track[18].edge[DIR_AHEAD].dist = 204;
   track[18].edge[DIR_AHEAD].curveness = 0;
   track[19].name = "B4";
   track[19].type = NODE_SENSOR;
@@ -1609,7 +1609,7 @@ void init_trackb(track_node *track) {
   track[28].edge[DIR_AHEAD].reverse = &track[118].edge[DIR_CURVED];
   track[28].edge[DIR_AHEAD].src = &track[28];
   track[28].edge[DIR_AHEAD].dest = &track[119];
-  track[28].edge[DIR_AHEAD].dist = 224;
+  track[28].edge[DIR_AHEAD].dist = 214;
   track[28].edge[DIR_AHEAD].curveness = 0;
   track[29].name = "B14";
   track[29].type = NODE_SENSOR;
@@ -1627,7 +1627,7 @@ void init_trackb(track_node *track) {
   track[30].edge[DIR_AHEAD].reverse = &track[3].edge[DIR_AHEAD];
   track[30].edge[DIR_AHEAD].src = &track[30];
   track[30].edge[DIR_AHEAD].dest = &track[2];
-  track[30].edge[DIR_AHEAD].dist = 440;
+  track[30].edge[DIR_AHEAD].dist = 431;
   track[30].edge[DIR_AHEAD].curveness = 0;
   track[31].name = "B16";
   track[31].type = NODE_SENSOR;
@@ -1645,7 +1645,7 @@ void init_trackb(track_node *track) {
   track[32].edge[DIR_AHEAD].reverse = &track[18].edge[DIR_AHEAD];
   track[32].edge[DIR_AHEAD].src = &track[32];
   track[32].edge[DIR_AHEAD].dest = &track[19];
-  track[32].edge[DIR_AHEAD].dist = 230;
+  track[32].edge[DIR_AHEAD].dist = 204;
   track[32].edge[DIR_AHEAD].curveness = 0;
   track[33].name = "C2";
   track[33].type = NODE_SENSOR;
@@ -1654,7 +1654,7 @@ void init_trackb(track_node *track) {
   track[33].edge[DIR_AHEAD].reverse = &track[116].edge[DIR_CURVED];
   track[33].edge[DIR_AHEAD].src = &track[33];
   track[33].edge[DIR_AHEAD].dest = &track[117];
-  track[33].edge[DIR_AHEAD].dist = 228;
+  track[33].edge[DIR_AHEAD].dist = 196;
   track[33].edge[DIR_AHEAD].curveness = 0;
   track[34].name = "C3";
   track[34].type = NODE_SENSOR;
@@ -1717,7 +1717,7 @@ void init_trackb(track_node *track) {
   track[40].edge[DIR_AHEAD].reverse = &track[108].edge[DIR_CURVED];
   track[40].edge[DIR_AHEAD].src = &track[40];
   track[40].edge[DIR_AHEAD].dest = &track[109];
-  track[40].edge[DIR_AHEAD].dist = 305;
+  track[40].edge[DIR_AHEAD].dist = 294;
   track[40].edge[DIR_AHEAD].curveness = 0;
   track[41].name = "C10";
   track[41].type = NODE_SENSOR;
@@ -1789,7 +1789,7 @@ void init_trackb(track_node *track) {
   track[48].edge[DIR_AHEAD].reverse = &track[120].edge[DIR_CURVED];
   track[48].edge[DIR_AHEAD].src = &track[48];
   track[48].edge[DIR_AHEAD].dest = &track[121];
-  track[48].edge[DIR_AHEAD].dist = 227;
+  track[48].edge[DIR_AHEAD].dist = 194;
   track[48].edge[DIR_AHEAD].curveness = 0;
   track[49].name = "D2";
   track[49].type = NODE_SENSOR;
@@ -1825,7 +1825,7 @@ void init_trackb(track_node *track) {
   track[52].edge[DIR_AHEAD].reverse = &track[68].edge[DIR_AHEAD];
   track[52].edge[DIR_AHEAD].src = &track[52];
   track[52].edge[DIR_AHEAD].dest = &track[69];
-  track[52].edge[DIR_AHEAD].dist = 275;
+  track[52].edge[DIR_AHEAD].dist = 282;
   track[52].edge[DIR_AHEAD].curveness = 0;
   track[53].name = "D6";
   track[53].type = NODE_SENSOR;
@@ -1834,7 +1834,7 @@ void init_trackb(track_node *track) {
   track[53].edge[DIR_AHEAD].reverse = &track[96].edge[DIR_CURVED];
   track[53].edge[DIR_AHEAD].src = &track[53];
   track[53].edge[DIR_AHEAD].dest = &track[97];
-  track[53].edge[DIR_AHEAD].dist = 213;
+  track[53].edge[DIR_AHEAD].dist = 207;
   track[53].edge[DIR_AHEAD].curveness = 0;
   track[54].name = "D7";
   track[54].type = NODE_SENSOR;
@@ -1924,7 +1924,7 @@ void init_trackb(track_node *track) {
   track[63].edge[DIR_AHEAD].reverse = &track[112].edge[DIR_CURVED];
   track[63].edge[DIR_AHEAD].src = &track[63];
   track[63].edge[DIR_AHEAD].dest = &track[113];
-  track[63].edge[DIR_AHEAD].dist = 230;
+  track[63].edge[DIR_AHEAD].dist = 220;
   track[63].edge[DIR_AHEAD].curveness = 0;
   track[64].name = "E1";
   track[64].type = NODE_SENSOR;
@@ -1933,7 +1933,7 @@ void init_trackb(track_node *track) {
   track[64].edge[DIR_AHEAD].reverse = &track[122].edge[DIR_CURVED];
   track[64].edge[DIR_AHEAD].src = &track[64];
   track[64].edge[DIR_AHEAD].dest = &track[123];
-  track[64].edge[DIR_AHEAD].dist = 222;
+  track[64].edge[DIR_AHEAD].dist = 216;
   track[64].edge[DIR_AHEAD].curveness = 0;
   track[65].name = "E2";
   track[65].type = NODE_SENSOR;
@@ -1960,7 +1960,7 @@ void init_trackb(track_node *track) {
   track[67].edge[DIR_AHEAD].reverse = &track[98].edge[DIR_CURVED];
   track[67].edge[DIR_AHEAD].src = &track[67];
   track[67].edge[DIR_AHEAD].dest = &track[99];
-  track[67].edge[DIR_AHEAD].dist = 220;
+  track[67].edge[DIR_AHEAD].dist = 215;
   track[67].edge[DIR_AHEAD].curveness = 0;
   track[68].name = "E5";
   track[68].type = NODE_SENSOR;
@@ -1969,7 +1969,7 @@ void init_trackb(track_node *track) {
   track[68].edge[DIR_AHEAD].reverse = &track[52].edge[DIR_AHEAD];
   track[68].edge[DIR_AHEAD].src = &track[68];
   track[68].edge[DIR_AHEAD].dest = &track[53];
-  track[68].edge[DIR_AHEAD].dist = 275;
+  track[68].edge[DIR_AHEAD].dist = 282;
   track[68].edge[DIR_AHEAD].curveness = 0;
   track[69].name = "E6";
   track[69].type = NODE_SENSOR;
@@ -2005,7 +2005,7 @@ void init_trackb(track_node *track) {
   track[72].edge[DIR_AHEAD].reverse = &track[94].edge[DIR_CURVED];
   track[72].edge[DIR_AHEAD].src = &track[72];
   track[72].edge[DIR_AHEAD].dest = &track[95];
-  track[72].edge[DIR_AHEAD].dist = 215;
+  track[72].edge[DIR_AHEAD].dist = 218;
   track[72].edge[DIR_AHEAD].curveness = 0;
   track[73].name = "E10";
   track[73].type = NODE_SENSOR;
@@ -2105,7 +2105,7 @@ void init_trackb(track_node *track) {
   track[82].edge[DIR_CURVED].reverse = &track[7].edge[DIR_AHEAD];
   track[82].edge[DIR_CURVED].src = &track[82];
   track[82].edge[DIR_CURVED].dest = &track[6];
-  track[82].edge[DIR_CURVED].dist = 211;
+  track[82].edge[DIR_CURVED].dist = 210;
   track[82].edge[DIR_CURVED].curveness = 0;
   track[83].name = "MR2";
   track[83].type = NODE_MERGE;
@@ -2114,7 +2114,7 @@ void init_trackb(track_node *track) {
   track[83].edge[DIR_AHEAD].reverse = &track[84].edge[DIR_CURVED];
   track[83].edge[DIR_AHEAD].src = &track[83];
   track[83].edge[DIR_AHEAD].dest = &track[85];
-  track[83].edge[DIR_AHEAD].dist = 182;
+  track[83].edge[DIR_AHEAD].dist = 185;
   track[83].edge[DIR_AHEAD].curveness = 0;
   track[84].name = "BR3";
   track[84].type = NODE_BRANCH;
@@ -2128,7 +2128,7 @@ void init_trackb(track_node *track) {
   track[84].edge[DIR_CURVED].reverse = &track[83].edge[DIR_AHEAD];
   track[84].edge[DIR_CURVED].src = &track[84];
   track[84].edge[DIR_CURVED].dest = &track[82];
-  track[84].edge[DIR_CURVED].dist = 182;
+  track[84].edge[DIR_CURVED].dist = 185;
   track[84].edge[DIR_CURVED].curveness = 0;
   track[85].name = "MR3";
   track[85].type = NODE_MERGE;
@@ -2174,7 +2174,7 @@ void init_trackb(track_node *track) {
   track[88].edge[DIR_CURVED].reverse = &track[92].edge[DIR_CURVED];
   track[88].edge[DIR_CURVED].src = &track[88];
   track[88].edge[DIR_CURVED].dest = &track[93];
-  track[88].edge[DIR_CURVED].dist = 334;
+  track[88].edge[DIR_CURVED].dist = 328;
   track[88].edge[DIR_CURVED].curveness = 0;
   track[89].name = "MR5";
   track[89].type = NODE_MERGE;
@@ -2197,7 +2197,7 @@ void init_trackb(track_node *track) {
   track[90].edge[DIR_CURVED].reverse = &track[114].edge[DIR_CURVED];
   track[90].edge[DIR_CURVED].src = &track[90];
   track[90].edge[DIR_CURVED].dest = &track[115];
-  track[90].edge[DIR_CURVED].dist = 338;
+  track[90].edge[DIR_CURVED].dist = 325;
   track[90].edge[DIR_CURVED].curveness = 0;
   track[91].name = "MR6";
   track[91].type = NODE_MERGE;
@@ -2220,7 +2220,7 @@ void init_trackb(track_node *track) {
   track[92].edge[DIR_CURVED].reverse = &track[88].edge[DIR_CURVED];
   track[92].edge[DIR_CURVED].src = &track[92];
   track[92].edge[DIR_CURVED].dest = &track[89];
-  track[92].edge[DIR_CURVED].dist = 334;
+  track[92].edge[DIR_CURVED].dist = 328;
   track[92].edge[DIR_CURVED].curveness = 0;
   track[93].name = "MR7";
   track[93].type = NODE_MERGE;
@@ -2243,7 +2243,7 @@ void init_trackb(track_node *track) {
   track[94].edge[DIR_CURVED].reverse = &track[72].edge[DIR_AHEAD];
   track[94].edge[DIR_CURVED].src = &track[94];
   track[94].edge[DIR_CURVED].dest = &track[73];
-  track[94].edge[DIR_CURVED].dist = 215;
+  track[94].edge[DIR_CURVED].dist = 218;
   track[94].edge[DIR_CURVED].curveness = 0;
   track[95].name = "MR8";
   track[95].type = NODE_MERGE;
@@ -2266,7 +2266,7 @@ void init_trackb(track_node *track) {
   track[96].edge[DIR_CURVED].reverse = &track[53].edge[DIR_AHEAD];
   track[96].edge[DIR_CURVED].src = &track[96];
   track[96].edge[DIR_CURVED].dest = &track[52];
-  track[96].edge[DIR_CURVED].dist = 213;
+  track[96].edge[DIR_CURVED].dist = 207;
   track[96].edge[DIR_CURVED].curveness = 0;
   track[97].name = "MR9";
   track[97].type = NODE_MERGE;
@@ -2289,7 +2289,7 @@ void init_trackb(track_node *track) {
   track[98].edge[DIR_CURVED].reverse = &track[67].edge[DIR_AHEAD];
   track[98].edge[DIR_CURVED].src = &track[98];
   track[98].edge[DIR_CURVED].dest = &track[66];
-  track[98].edge[DIR_CURVED].dist = 220;
+  track[98].edge[DIR_CURVED].dist = 215;
   track[98].edge[DIR_CURVED].curveness = 0;
   track[99].name = "MR10";
   track[99].type = NODE_MERGE;
@@ -2404,7 +2404,7 @@ void init_trackb(track_node *track) {
   track[108].edge[DIR_CURVED].reverse = &track[40].edge[DIR_AHEAD];
   track[108].edge[DIR_CURVED].src = &track[108];
   track[108].edge[DIR_CURVED].dest = &track[41];
-  track[108].edge[DIR_CURVED].dist = 305;
+  track[108].edge[DIR_CURVED].dist = 294;
   track[108].edge[DIR_CURVED].curveness = 0;
   track[109].name = "MR15";
   track[109].type = NODE_MERGE;
@@ -2450,7 +2450,7 @@ void init_trackb(track_node *track) {
   track[112].edge[DIR_CURVED].reverse = &track[63].edge[DIR_AHEAD];
   track[112].edge[DIR_CURVED].src = &track[112];
   track[112].edge[DIR_CURVED].dest = &track[62];
-  track[112].edge[DIR_CURVED].dist = 230;
+  track[112].edge[DIR_CURVED].dist = 220;
   track[112].edge[DIR_CURVED].curveness = 0;
   track[113].name = "MR17";
   track[113].type = NODE_MERGE;
@@ -2473,7 +2473,7 @@ void init_trackb(track_node *track) {
   track[114].edge[DIR_CURVED].reverse = &track[90].edge[DIR_CURVED];
   track[114].edge[DIR_CURVED].src = &track[114];
   track[114].edge[DIR_CURVED].dest = &track[91];
-  track[114].edge[DIR_CURVED].dist = 338;
+  track[114].edge[DIR_CURVED].dist = 325;
   track[114].edge[DIR_CURVED].curveness = 0;
   track[115].name = "MR18";
   track[115].type = NODE_MERGE;
@@ -2496,7 +2496,7 @@ void init_trackb(track_node *track) {
   track[116].edge[DIR_CURVED].reverse = &track[33].edge[DIR_AHEAD];
   track[116].edge[DIR_CURVED].src = &track[116];
   track[116].edge[DIR_CURVED].dest = &track[32];
-  track[116].edge[DIR_CURVED].dist = 228;
+  track[116].edge[DIR_CURVED].dist = 196;
   track[116].edge[DIR_CURVED].curveness = 0;
   track[117].name = "MR153";
   track[117].type = NODE_MERGE;
@@ -2519,7 +2519,7 @@ void init_trackb(track_node *track) {
   track[118].edge[DIR_CURVED].reverse = &track[28].edge[DIR_AHEAD];
   track[118].edge[DIR_CURVED].src = &track[118];
   track[118].edge[DIR_CURVED].dest = &track[29];
-  track[118].edge[DIR_CURVED].dist = 224;
+  track[118].edge[DIR_CURVED].dist = 214;
   track[118].edge[DIR_CURVED].curveness = 0;
   track[119].name = "MR154";
   track[119].type = NODE_MERGE;
@@ -2542,7 +2542,7 @@ void init_trackb(track_node *track) {
   track[120].edge[DIR_CURVED].reverse = &track[48].edge[DIR_AHEAD];
   track[120].edge[DIR_CURVED].src = &track[120];
   track[120].edge[DIR_CURVED].dest = &track[49];
-  track[120].edge[DIR_CURVED].dist = 227;
+  track[120].edge[DIR_CURVED].dist = 194;
   track[120].edge[DIR_CURVED].curveness = 0;
   track[121].name = "MR155";
   track[121].type = NODE_MERGE;
@@ -2565,7 +2565,7 @@ void init_trackb(track_node *track) {
   track[122].edge[DIR_CURVED].reverse = &track[64].edge[DIR_AHEAD];
   track[122].edge[DIR_CURVED].src = &track[122];
   track[122].edge[DIR_CURVED].dest = &track[65];
-  track[122].edge[DIR_CURVED].dist = 222;
+  track[122].edge[DIR_CURVED].dist = 216;
   track[122].edge[DIR_CURVED].curveness = 0;
   track[123].name = "MR156";
   track[123].type = NODE_MERGE;

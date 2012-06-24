@@ -582,7 +582,7 @@ edge A2 EX5:
 edge A3 BR14:
   distance 62 mm
 edge A4 B16:
-  distance 440 mm
+  distance 431 mm
 edge A5 MR3:
   distance 216 mm
 edge A6 B10:
@@ -590,7 +590,7 @@ edge A6 B10:
 edge A7 B12:
   distance 473 mm
 edge A8 MR2:
-  distance 211 mm
+  distance 210 mm
 edge A9 B8:
   distance 289 mm
 edge A10 MR1:
@@ -610,7 +610,7 @@ edge B1 D14:
 edge B2 MR16:
   distance 225 mm
 edge B3 C2:
-  distance 230 mm
+  distance 204 mm
 edge B4 MR16:
   distance 220 mm
 edge B5 D3:
@@ -624,13 +624,13 @@ edge B10 EX9:
 edge B12 EX10:
   distance 70 mm
 edge B13 MR154:
-  distance 224 mm
+  distance 214 mm
 edge B14 D16:
   distance 202 mm
 edge B16 BR15:
   distance 70 mm
 edge C2 MR153:
-  distance 228 mm
+  distance 196 mm
 edge C3 EX3:
   distance 410 mm
 edge C4 MR5:
@@ -644,7 +644,7 @@ edge C7 MR18:
 edge C8 BR3:
   distance 145 mm
 edge C9 MR15:
-  distance 305 mm
+  distance 294 mm
 edge C10 BR16:
   distance 146 mm
 edge C11 BR13:
@@ -660,15 +660,15 @@ edge C15 D12:
 edge C16 MR6:
   distance 223 mm
 edge D1 MR155:
-  distance 227 mm
+  distance 194 mm
 edge D2 E4:
   distance 200 mm
 edge D3 MR10:
   distance 223 mm
 edge D5 E6:
-  distance 275 mm
+  distance 282 mm
 edge D6 MR9:
-  distance 213 mm
+  distance 207 mm
 edge D7 MR9:
   distance 290 mm
 edge D8 E8:
@@ -682,17 +682,17 @@ edge D12 MR7:
 edge D14 MR17:
   distance 225 mm
 edge D16 MR17:
-  distance 230 mm
+  distance 220 mm
 edge E1 MR156:
-  distance 222 mm
+  distance 216 mm
 edge E2 E15:
   distance 203 mm
 edge E4 MR10:
-  distance 220 mm
+  distance 215 mm
 edge E6 BR10:
   distance 74 mm
 edge E9 MR8:
-  distance 215 mm
+  distance 218 mm
 edge E10 E13:
   distance 275 mm
 edge E12 BR7:
@@ -704,15 +704,15 @@ edge E15 MR13:
 edge MR1 MR2:
   distance 191 mm
 edge MR2 MR3:
-  distance 182 mm
+  distance 185 mm
 edge MR4 MR12:
   distance 185 mm
 edge BR5 MR7:
-  distance 334 mm
+  distance 328 mm
 edge MR5 BR18:
   distance 187 mm
 edge BR6 MR18:
-  distance 338 mm
+  distance 325 mm
 edge MR8 BR9:
   distance 193 mm
 edge BR11 BR12:
