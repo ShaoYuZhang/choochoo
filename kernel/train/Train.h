@@ -2,21 +2,16 @@
 #define TRAIN_H_
 
 #define TRAIN_NAME "TRAINN\0"
-#define NUM_SWITCHES 0xff
 #define NUM_TRAINS 80
-#define SWITCH_STRAIGHT 35
-#define SWITCH_CURVED   34
 
-#define GET_SWITCH 0
-#define SET_SWITCH 1
-#define SET_SPEED  2
-#define GET_SPEED  3
-#define WORKER     4
+#define SET_SPEED  0
+#define GET_SPEED  1
+#define WORKER     2
 
 typedef struct TrainMsg {
   char type;  // Defined above
-  char data1; // Train or Switch number
-  signed char data2; // Speed or switch state (-1 for reverse)
+  char data1; // Train  number
+  signed char data2; // Speed (-1 for reverse)
   unsigned char data3; // Delay num, or msg came from worker
 } TrainMsg;
 

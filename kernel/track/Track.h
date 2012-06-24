@@ -3,7 +3,13 @@
 
 #define TRACK_NAME "TRACKK\0"
 
-#define QUERY_DISTANCE 0
+#define NUM_SWITCHES 0xff
+#define SWITCH_STRAIGHT 35
+#define SWITCH_CURVED   34
+
+#define GET_SWITCH 0
+#define SET_SWITCH 1
+#define QUERY_DISTANCE 2
 
 typedef enum {
   LANDMARK_SENSOR,
@@ -27,6 +33,7 @@ typedef struct TrackMsg {
   int type;
   TrackLandmark landmark1;
   TrackLandmark landmark2;
+  char data;
 } TrackMsg;
 
 int startTrackManagerTask();

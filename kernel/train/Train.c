@@ -10,9 +10,6 @@
 
 #define NUM_WORKER 4
 
-extern int CALIBRATION;
-static int switchStatus[NUM_SWITCHES];
-
 typedef struct Train {
   int speed;
 } Train;
@@ -22,15 +19,6 @@ static int com2;
 static Train train[NUM_TRAINS];
 static int worker[NUM_WORKER];
 
-static void trainSetSwitch(int sw, int state) {
-  char msg[2];
-  msg[0] = (char)state;
-  msg[1] = (char)sw;
-
-  Putstr(com1, msg, 2);
-  //printff(com1, "Sw: %d State: %d \n", sw, state);
-  switchStatus[sw] = state;
-}
 
 static void trainSetSpeed(TrainMsg* origMsg, int* numWorkerLeft) {
   const int trainNum = origMsg->data1;
@@ -95,14 +83,10 @@ static void trainWorker() {
 static void trainController() {
   char com1Name[] = IOSERVERCOM1_NAME;
   char com2Name[] = IOSERVERCOM2_NAME;
-  char uiName[] = UI_TASK_NAME;
   char trainName[] = TRAIN_NAME;
   com1 = WhoIs(com1Name);
   com2 = WhoIs(com2Name);
-  int ui = -1;
-  if (!CALIBRATION) {
-    ui = WhoIs(uiName);
-  }
+
   RegisterAs(trainName);
 
   for (int i = 0; i < NUM_TRAINS; i++) {
@@ -114,11 +98,6 @@ static void trainController() {
     worker[i] = Create(1, trainWorker);
   }
 
-  for (int i = 1; i < 19; i++) {
-    //trainSetSwitch(i, SWITCH_CURVED);
-  }
-
-  UiMsg uimsg;
   for (;;) {
     int tid = -1;
     TrainMsg msg;
@@ -128,21 +107,6 @@ static void trainController() {
     Receive(&tid, (char*)&msg, sizeof(TrainMsg));
 
     switch (msg.type) {
-      case GET_SWITCH: {
-        Reply(tid, (char*)(switchStatus + msg.data1), 4);
-        break;
-      }
-      case SET_SWITCH: {
-        Reply(tid, (char*)1, 0);
-        trainSetSwitch((int)msg.data1, (int)msg.data2);
-        if (!CALIBRATION) {
-          uimsg.type = UPDATE_SWITCH;
-          uimsg.data1 = msg.data1;
-          uimsg.data2 = msg.data2;
-          Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
-        }
-        break;
-      }
       case GET_SPEED: {
         const int trainNum = msg.data1;
         Reply(tid, (char*)&(train[trainNum].speed), 4);

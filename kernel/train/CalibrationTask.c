@@ -1,5 +1,6 @@
 #include "CalibrationTask.h"
 #include "Train.h"
+#include <Track.h>
 #include <IoServer.h>
 #include <IoHelper.h>
 #include <NameServer.h>
@@ -11,6 +12,7 @@
 static int com1;
 static int com2;
 static int trainController;
+static int trackController;
 static int timeserver;
 static int sensorServer;
 static SensorMsg sensorMsg;
@@ -121,15 +123,22 @@ void go(char train,
 
   Putstr(com2, "Calibrating Velocity\n", 21);
   // Change track for velocity calibration
-  TrainMsg setSwitch;
+  TrackMsg setSwitch;
   setSwitch.type = SET_SWITCH;
-  setSwitch.data2 = SWITCH_STRAIGHT;
-  setSwitch.data1 = 16; // Switch 16
-  Send(trainController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
-  setSwitch.data1 = 17; // Switch 17
-  Send(trainController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
-  setSwitch.data1 = 9;  // Switch 9
-  Send(trainController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
+  setSwitch.data = SWITCH_STRAIGHT;
+
+  TrackLandmark sw;
+  sw.type = LANDMARK_SWITCH;
+  sw.num1 = 0;
+  sw.num2 = 16; // Switch 16
+  setSwitch.landmark1 = sw;
+  Send(trackController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
+  sw.num2= 17; // Switch 17
+  setSwitch.landmark1 = sw;
+  Send(trackController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
+  sw.num2= 9;  // Switch 9
+  setSwitch.landmark1 = sw;
+  Send(trackController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
 
   // Message init
   setSpeed.type = SET_SPEED;
@@ -146,17 +155,22 @@ void go(char train,
   calibrateStopping(0, sStartBox, sStartVal);
 #endif
 
-  setSwitch.data2 = SWITCH_CURVED;
-  setSwitch.data1 = 16; // Switch 16
-  Send(trainController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
-  setSwitch.data1 = 13; // Switch 13
-  Send(trainController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
-  setSwitch.data1 = 14; // Switch 14
-  Send(trainController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
-  setSwitch.data1 = 153; // Switch 153, 0x99
-  Send(trainController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
-  setSwitch.data1 = 156; // Switch 156, 0x9c
-  Send(trainController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
+  setSwitch.data = SWITCH_CURVED;
+  sw.num2 = 16; // Switch 16
+  setSwitch.landmark1 = sw;
+  Send(trackController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
+  sw.num2 = 13; // Switch 13
+  setSwitch.landmark1 = sw;
+  Send(trackController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
+  sw.num2 = 14; // Switch 14
+  setSwitch.landmark1 = sw;
+  Send(trackController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
+  sw.num2= 153; // Switch 153, 0x99
+  setSwitch.landmark1 = sw;
+  Send(trackController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
+  sw.num2 = 156; // Switch 156, 0x9c
+  setSwitch.landmark1 = sw;
+  Send(trackController, (char*)&setSwitch, sizeof(TrainMsg), (char *)NULL, 0);
 
   calibrateVelocity(1, cStartBox, cStartVal, cEndBox, cEndVal, cDistance);
   calibrateVelocity(0, cStartBox, cStartVal, cEndBox, cEndVal, cDistance);

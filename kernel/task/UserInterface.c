@@ -2,6 +2,7 @@
 #include <util.h>
 #include <NameServer.h>
 #include <Train.h>
+#include <Track.h>
 #include <TimeServer.h>
 #include <IoServer.h>
 #include <IoHelper.h>
@@ -461,6 +462,7 @@ static void userInterface() {
       }
       case UPDATE_IDLE: {
         com2msg = updateIdle(Idleness(), com2msg);
+        break;
       }
       default: {
         com2msg = updateDebugMessage(receiveBuffer, com2msg, len);

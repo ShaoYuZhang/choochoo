@@ -5,6 +5,7 @@
 #include <NameServer.h>
 #include <TimeServer.h>
 #include <Train.h>
+#include <Track.h>
 #include <CommandDecoder.h>
 #include <IoServer.h>
 #include <UserInterface.h>
@@ -19,6 +20,7 @@ void task1() {
   startIoServerTask();
   startSensorServerTask();
   startTrainControllerTask();
+  startTrackManagerTask();
   startCalibrationTask();
 
   Exit();

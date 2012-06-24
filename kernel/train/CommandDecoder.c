@@ -1,5 +1,6 @@
 #include <CommandDecoder.h>
 #include <Train.h>
+#include <Track.h>
 #include <IoServer.h>
 #include <NameServer.h>
 #include <UserInterface.h>
@@ -12,6 +13,7 @@ static char decoderBuffer[DECODER_BUFFER_SIZE];
 static unsigned int decoderCurrBufferPos;
 
 static int trainController;
+static int trackController;
 static int com2;
 
 static void decodeCommand() {
@@ -23,7 +25,6 @@ static void decodeCommand() {
   decoderCurrBufferPos = 0;
   if (shortEvalulation) return;
 
-  TrainMsg msg;
   if (decoderBuffer[0] == 't' && decoderBuffer[1] == 'r') {
     int train_number = 0;
     int train_speed;
@@ -33,6 +34,7 @@ static void decodeCommand() {
     c = *temp++;
     c = a2i(c, &temp, 10, &train_speed);
 
+    TrainMsg msg;
     msg.type = SET_SPEED;
     msg.data1 = train_number;
     msg.data2 = train_speed;
@@ -43,6 +45,8 @@ static void decodeCommand() {
     char c = *temp++;
     c = a2i(c, &temp, 10, &train_number);
 
+    TrainMsg msg;
+    msg.type = SET_SPEED;
     msg.type = SET_SPEED;
     msg.data1 = train_number;
     msg.data2 = -1;
@@ -55,10 +59,17 @@ static void decodeCommand() {
     c = a2i(c, &temp, 10, &switch_number);
     switch_pos = *temp++;
     if (switch_pos == 's' || switch_pos == 'c') {
+      TrackMsg msg;
+
+      TrackLandmark sw;
+      sw.type = LANDMARK_SWITCH;
+      sw.num1 = 0;
+      sw.num2 = (char)switch_number;
+
       msg.type = SET_SWITCH;
-      msg.data1 = switch_number;
-      msg.data2 = switch_pos == 'c' ? SWITCH_CURVED : SWITCH_STRAIGHT;
-      Send(trainController, (char *)&msg, sizeof(TrainMsg), (char *)NULL, 0);
+      msg.landmark1 = sw;
+      msg.data = switch_pos == 'c' ? SWITCH_CURVED : SWITCH_STRAIGHT;
+      Send(trackController, (char *)&msg, sizeof(TrackMsg), (char *)NULL, 0);
     }
   }
 }
@@ -69,6 +80,8 @@ static void commandDecoder() {
   com2 = WhoIs(com2Name);
   char trainControllerName[] = TRAIN_NAME;
   trainController = WhoIs(trainControllerName);
+  char trackControllerName[] = TRACK_NAME;
+  trackController = WhoIs(trackControllerName);
   char uiName[] = UI_TASK_NAME;
   int ui = WhoIs(uiName);
 

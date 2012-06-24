@@ -2,9 +2,15 @@
 #include <track_node.h>
 #include <Track.h>
 #include <NameServer.h>
+#include <IoServer.h>
 #include <IoHelper.h>
+#include <UserInterface.h>
 #include <ts7200.h>
 #include <util.h>
+
+extern int CALIBRATION;
+static int switchStatus[NUM_SWITCHES];
+static int com1;
 
 static int get_node_type(TrackLandmark landmark) {
   int type;
@@ -76,7 +82,7 @@ static track_node* findNode(track_node* track, TrackLandmark landmark) {
 
 // TODO currently only support landmarks that are relatively close to each other, arbitrary landmark require route planning
 static int calculateDistance(track_node* currentNode, track_node* targetNode, int depth) {
-  if (depth > 5) {
+  if (depth > 7) {
     return -1;
   }
   if (currentNode == targetNode) {
@@ -107,16 +113,57 @@ static int calculateDistance(track_node* currentNode, track_node* targetNode, in
   }
 }
 
+static void trackSetSwitch(int sw, int state) {
+  char msg[2];
+  msg[0] = (char)state;
+  msg[1] = (char)sw;
+
+  Putstr(com1, msg, 2);
+  switchStatus[sw] = state;
+}
+
 static void trackController() {
   char trackName[] = TRACK_NAME;
   RegisterAs(trackName);
+
+
+  char com1Name[] = IOSERVERCOM1_NAME;
+  com1 = WhoIs(com1Name);
+
+  char uiName[] = UI_TASK_NAME;
+  int ui = -1;
+  if (!CALIBRATION) {
+    ui = WhoIs(uiName);
+  }
+
+  for (int i = 1; i < 19; i++) {
+    //trackSetSwitch(i, SWITCH_CURVED);
+  }
+
   track_node track[TRACK_MAX];
-  init_tracka(track);
+  init_trackb(track);
+  UiMsg uimsg;
   for ( ;; ) {
     int tid = -1;
     TrackMsg msg;
     Receive(&tid, (char*)&msg, sizeof(TrackMsg));
     switch (msg.type) {
+      case GET_SWITCH: {
+        Reply(tid, (char*)(switchStatus + msg.data), 4);
+        break;
+      }
+      case SET_SWITCH: {
+        Reply(tid, (char*)1, 0);
+        TrackLandmark sw = msg.landmark1;
+        trackSetSwitch((int)sw.num2, (int)msg.data);
+        if (!CALIBRATION) {
+          uimsg.type = UPDATE_SWITCH;
+          uimsg.data1 = sw.num2;
+          uimsg.data2 = msg.data;
+          Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
+        }
+        break;
+      }
       case QUERY_DISTANCE: {
         track_node* from = findNode(track, msg.landmark1);
         track_node* to = findNode(track, msg.landmark2);

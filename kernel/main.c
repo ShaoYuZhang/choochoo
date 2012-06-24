@@ -12,7 +12,7 @@
 #include <Track.h>
 #include <IoHelper.h>
 
-int CALIBRATION = 0;
+int CALIBRATION;
 
 void test_track() {
   // Testing track
@@ -78,8 +78,8 @@ void task1() {
   startSensorServerTask();
   startUserInterfaceTask();
   startTrainControllerTask();
-  startCommandDecoderTask();
   startTrackManagerTask();
+  startCommandDecoderTask();
 
   // Testing
   //Create(20, test_track);
@@ -88,6 +88,7 @@ void task1() {
 }
 
 int main(int argc, char* argv[]) {
+  CALIBRATION = 0;
 	kernel_init();
 
   int returnVal;
