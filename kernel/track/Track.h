@@ -10,6 +10,7 @@
 #define GET_SWITCH 0
 #define SET_SWITCH 1
 #define QUERY_DISTANCE 2
+#define QUERY_NEXT_SENSOR 3
 
 typedef enum {
   LANDMARK_SENSOR,
@@ -35,6 +36,11 @@ typedef struct TrackMsg {
   TrackLandmark landmark2;
   char data;
 } TrackMsg;
+
+typedef struct TrackNextSensorMsg {
+  TrackLandmark sensor;
+  int dist;
+} TrackNextSensorMsg;
 
 int startTrackManagerTask();
 

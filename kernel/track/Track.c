@@ -113,6 +113,34 @@ static int calculateDistance(track_node* currentNode, track_node* targetNode, in
   }
 }
 
+static int findNextSensor(track_node* from, TrackLandmark* dst) {
+  track_node* currentNode = from;
+  int dist = 0;
+  while(currentNode->type != NODE_EXIT) {
+    track_edge edge;
+    if (currentNode->type == NODE_BRANCH) {
+      int switch_num = currentNode->num;
+      if (switchStatus[switch_num] ==  SWITCH_CURVED) {
+        edge = currentNode->edge[DIR_CURVED];
+      } else {
+        edge = currentNode->edge[DIR_STRAIGHT];
+      }
+    } else {
+      edge = currentNode->edge[DIR_AHEAD];
+    }
+    dist += edge.dist;
+    currentNode = edge.dest;
+
+    if (currentNode->type == NODE_SENSOR) {
+      dst->type = LANDMARK_SENSOR;
+      dst->num1 = currentNode->num / 16;
+      dst->num2 = currentNode->num % 16 + 1;
+      return dist;
+    }
+  }
+  return -1;
+}
+
 static void trackSetSwitch(int sw, int state) {
   char msg[2];
   msg[0] = (char)state;
@@ -126,7 +154,6 @@ static void trackController() {
   char trackName[] = TRACK_NAME;
   RegisterAs(trackName);
 
-
   char com1Name[] = IOSERVERCOM1_NAME;
   com1 = WhoIs(com1Name);
 
@@ -136,8 +163,13 @@ static void trackController() {
     ui = WhoIs(uiName);
   }
 
-  for (int i = 1; i < 19; i++) {
-    //trackSetSwitch(i, SWITCH_CURVED);
+  if (!CALIBRATION) {
+    for (int i = 1; i < 19; i++) {
+      trackSetSwitch(i, SWITCH_CURVED);
+    }
+    for (int i = 153; i< 157; i++) {
+      trackSetSwitch(i, SWITCH_CURVED);
+    }
   }
 
   track_node track[TRACK_MAX];
@@ -169,6 +201,18 @@ static void trackController() {
         track_node* to = findNode(track, msg.landmark2);
         int distance = calculateDistance(from, to, 0);
         Reply(tid, (char *)&distance, sizeof(int));
+        break;
+      }
+      case QUERY_NEXT_SENSOR: {
+        track_node* from = findNode(track, msg.landmark1);
+        TrackLandmark nextSensor = {0, 0, 0};
+        int distance = findNextSensor(from, &nextSensor);
+
+        TrackNextSensorMsg sensorMsg;
+        sensorMsg.sensor = nextSensor;
+        sensorMsg.dist = distance;
+
+        Reply(tid, (char *)&sensorMsg, sizeof(TrackNextSensorMsg));
         break;
       }
       default: {
