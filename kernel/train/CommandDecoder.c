@@ -36,7 +36,7 @@ static void decodeCommand() {
 
     DriverMsg msg;
     msg.type = SET_SPEED;
-    msg.data1 = train_number;
+    msg.trainNum = train_number;
     msg.data2 = train_speed;
     Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
   } else if (decoderBuffer[0] == 'r' && decoderBuffer[1] == 'v') {
@@ -47,8 +47,7 @@ static void decodeCommand() {
 
     DriverMsg msg;
     msg.type = SET_SPEED;
-    msg.type = SET_SPEED;
-    msg.data1 = train_number;
+    msg.trainNum = train_number;
     msg.data2 = -1;
     Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
   } else if (decoderBuffer[0] == 's' && decoderBuffer[1] == 'w') {
@@ -78,7 +77,7 @@ static void commandDecoder() {
   decoderCurrBufferPos = 0;
   char com2Name[] = IOSERVERCOM2_NAME;
   com2 = WhoIs(com2Name);
-  char trainControllerName[] = TRAIN_NAME;
+  char trainControllerName[] = TRAIN_CONTROLLER_NAME;
   trainController = WhoIs(trainControllerName);
   char trackControllerName[] = TRACK_NAME;
   trackController = WhoIs(trackControllerName);

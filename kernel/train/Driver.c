@@ -8,20 +8,16 @@
 #include <syscall.h>
 #include <UserInterface.h>
 
-#define NUM_WORKER 4
-
 typedef struct Driver {
   int speed;
+  int worker;
 } Driver;
 
 static int com1;
 static int com2;
-static Driver train[NUM_TRAINS];
-static int worker[NUM_WORKER];
 
-
-static void trainSetSpeed(DriverMsg* origMsg, int* numWorkerLeft) {
-  const int trainNum = origMsg->data1;
+static void trainSetSpeed(DriverMsg* origMsg, Driver* me) {
+  const int trainNum = origMsg->trainNum;
   const int speed = origMsg->data2;
 
   char msg[4];
@@ -39,25 +35,21 @@ static void trainSetSpeed(DriverMsg* origMsg, int* numWorkerLeft) {
       msg[0] = (char)speed;
       Putstr(com1, msg, 2);
     }
-    train[trainNum].speed = speed;
+    me->speed = speed;
   } else {
-    printff(com2, "Reverse... %d \n", train[trainNum].speed);
-    origMsg->data2 = (signed char)train[trainNum].speed;
-    origMsg->data3 = 150; // 3s . TODO, calculate from train speed.
-    printff(com2, "Using worker: %d \n", *numWorkerLeft);
+    printff(com2, "Reverse... %d \n", me->speed);
+    origMsg->data2 = (signed char)me->speed;
+    // TODO, calculate from train speed.
+    origMsg->data3 = 150; // YES IT IS 3s
+    printff(com2, "Using worker: %d \n", me->worker);
 
-    Reply(worker[*numWorkerLeft], (char*)origMsg, sizeof(DriverMsg));
-    (*numWorkerLeft)--;
+    Reply(me->worker, (char*)origMsg, sizeof(DriverMsg));
 
     msg[0] = 0;
     msg[1] = (char)trainNum;
 
-    if (*numWorkerLeft < -1) {
-      printff(com2, "Used non-existence worker id");
-      while(1);
-    }
     Putstr(com1, msg, 2);
-    train[trainNum].speed = 0;
+    me->speed = 0;
   }
 }
 
@@ -69,59 +61,51 @@ static void trainWorker() {
 
   DriverMsg msg;
   msg.type = WORKER;
-  Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)&msg, sizeof(DriverMsg));
   for (;;) {
+    Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)&msg, sizeof(DriverMsg));
     int numTick = msg.data3; // num of 10ms
     numTick *= 2;
     Delay(numTick, timeserver);
     msg.data3 = WORKER;
-    //printff(com2, "Worker Done. %d\n", numTick);
-    Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)&msg, sizeof(DriverMsg));
+    //printff(com2, "Worker Done. %d %d\n", numTick, parent);
   }
 }
 
-static void trainController() {
-  char com1Name[] = IOSERVERCOM1_NAME;
-  char com2Name[] = IOSERVERCOM2_NAME;
-  char trainName[] = TRAIN_NAME;
-  com1 = WhoIs(com1Name);
-  com2 = WhoIs(com2Name);
-
-  RegisterAs(trainName);
-
-  for (int i = 0; i < NUM_TRAINS; i++) {
-    train[i].speed = 0;
-  }
-
-  int numWorkerLeft = -1;
-  for (int i = 0; i < NUM_WORKER; i++) {
-    worker[i] = Create(1, trainWorker);
-  }
+static void driver() {
+  Driver me;
+  me.speed= 0;
+  me.worker = Create(1, trainWorker);
 
   for (;;) {
     int tid = -1;
     DriverMsg msg;
-    msg.data1 = -1;
+    msg.trainNum = -1;
     msg.data2 = -1;
     msg.data3 = -1;
+    msg.replyTid = -1;
     Receive(&tid, (char*)&msg, sizeof(DriverMsg));
+    if (tid != me.worker) {
+      Reply(tid, (char*)1, 0);
+    }
+    const int replyTid = msg.replyTid;
 
     switch (msg.type) {
       case GET_SPEED: {
-        const int trainNum = msg.data1;
-        Reply(tid, (char*)&(train[trainNum].speed), 4);
+        Reply(replyTid, (char*)&me.speed, 4);
         break;
       }
       case SET_SPEED: {
-        trainSetSpeed(&msg, &numWorkerLeft);
+        trainSetSpeed(&msg, &me);
         if (msg.data3 != WORKER) {
-          Reply(tid, (char*)1, 0);
+          //printff(com2, "Replied to %d\n", replyTid);
+          Reply(replyTid, (char*)1, 0);
           break;
         }
         // else fall through
+        //printff(com2, "Worker setted speed%d\n", me.speed);
       }
       case WORKER: {
-        worker[++numWorkerLeft] = tid;
+        // Worker reporting back.
         break;
       }
       default: {
@@ -131,6 +115,45 @@ static void trainController() {
   }
 }
 
+// Basically a courier to pass message to train.
+// Additionally create train if it does not exist.
+static void trainController() {
+  char trainName[] = TRAIN_CONTROLLER_NAME;
+  RegisterAs(trainName);
+
+  char com1Name[] = IOSERVERCOM1_NAME;
+  char com2Name[] = IOSERVERCOM2_NAME;
+  com1 = WhoIs(com1Name);
+  com2 = WhoIs(com2Name);
+
+  int trainTid[80]; // Train num -> train tid
+  for (int i = 0; i < 80; i++) {
+    trainTid[i] = -1;
+  }
+
+  for (;;) {
+    int tid = -1;
+    DriverMsg msg;
+    msg.trainNum = -1;
+    msg.data2 = -1;
+    msg.data3 = -1;
+    Receive(&tid, (char*)&msg, sizeof(DriverMsg));
+
+    if (trainTid[(int)msg.trainNum] == -1) {
+      // Create train task
+      trainTid[(int)msg.trainNum] = Create(4, driver);
+    }
+
+    msg.replyTid = (char)tid;
+    printff(com2, "\nWoooooo\n");
+    printff(com2, "\nWoooooo\n");
+    printff(com2, "\nWoooooo\n");
+    printff(com2, "\nWoooooo\n");
+    // Pass the message on.
+    Send(trainTid[(int)msg.trainNum], (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
+  }
+}
+
 int startDriverControllerTask() {
-  return Create(2, trainController);
+  return Create(5, trainController);
 }
