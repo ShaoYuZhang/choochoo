@@ -35,3 +35,10 @@ void memcpy_no_overlap_asm(char* from, char* to, int len) {
     to[i] = from[i];
   }
 }
+
+void* memcpy(char* to, char* from, int len) {
+  for (int i = 0; i < len; i++){
+    to[i] = from[i];
+  }
+  return to;
+}

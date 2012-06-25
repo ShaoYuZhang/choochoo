@@ -1,7 +1,6 @@
 #ifndef MEMORY_H_
 #define MEMORY_H_
 
-#include <util.h>
 #include <task.h>
 
 #define BYTES2WORDS(x) ((x) >> 2)
@@ -9,9 +8,9 @@
 
 void mem_reset();
 
-addr allocate_user_memory();
+char* allocate_user_memory();
 
-void free_user_memory(addr a);
+void free_user_memory(char* a);
 
 void memcpy_no_overlap_asm(char* from, char* to, int len);
 
