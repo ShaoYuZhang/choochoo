@@ -17,6 +17,21 @@ typedef struct UiMsg {
   int data3;  // time
 } UiMsg;
 
+typedef struct TrainUiMsg {
+  char type;       // always UPDATE_TRAIN  (used for consistency with UiMsg)
+  char lastSensor;
+  char speed;      // -14 -> 14
+  char velocity;   // mm/s
+  char nextSensor;
+
+  int lastSensorTime;
+  int nextSensorTime;
+  int lastPredictionTime;
+  int distanceFromLastSensor;
+} TrainUiMsg;
+
+
+
 int startUserInterfaceTask();
 
 #endif // USER_INTERFACE_H_

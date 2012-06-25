@@ -11,6 +11,8 @@
 typedef struct Driver {
   int speed;
   int worker;
+  int ui;
+  int nth; // the nth driver to be initialized. For UI display
 } Driver;
 
 static int com1;
@@ -71,10 +73,26 @@ static void trainWorker() {
   }
 }
 
+static void trainUiUpdate() {
+  char timename[] = TIMESERVER_NAME;
+  int timeserver = WhoIs(timename);
+  int parent = MyParentsTid();
+
+  DriverMsg msg;
+  msg.type = UPDATE_UI;
+  for (;;) {
+    Delay(500, timeserver); // .5 seconds
+    Send(parent, (char*)&msg, 1, (char*)1, 0);
+  }
+}
+
 static void driver() {
   Driver me;
-  me.speed= 0;
+  me.speed = 0;
   me.worker = Create(1, trainWorker);
+  me.ui     = Create(3, trainUiUpdate);
+  int controller;
+  Receive(&controller, (char*)&me.nth, 4);
 
   for (;;) {
     int tid = -1;
@@ -108,6 +126,10 @@ static void driver() {
         // Worker reporting back.
         break;
       }
+      case UPDATE_UI: {
+        // Make ui report
+        break;
+      }
       default: {
         ASSERT(FALSE, "Not suppported train message type.");
       }
@@ -126,6 +148,7 @@ static void trainController() {
   com1 = WhoIs(com1Name);
   com2 = WhoIs(com2Name);
 
+  int numTrain = 0;
   int trainTid[80]; // Train num -> train tid
   for (int i = 0; i < 80; i++) {
     trainTid[i] = -1;
@@ -142,13 +165,11 @@ static void trainController() {
     if (trainTid[(int)msg.trainNum] == -1) {
       // Create train task
       trainTid[(int)msg.trainNum] = Create(4, driver);
+      Send(trainTid[(int)msg.trainNum], (char*)&numTrain, 4, (char*)1, 0);
+      numTrain++;
     }
 
     msg.replyTid = (char)tid;
-    printff(com2, "\nWoooooo\n");
-    printff(com2, "\nWoooooo\n");
-    printff(com2, "\nWoooooo\n");
-    printff(com2, "\nWoooooo\n");
     // Pass the message on.
     Send(trainTid[(int)msg.trainNum], (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
   }

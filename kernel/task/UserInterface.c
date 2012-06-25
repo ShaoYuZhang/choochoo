@@ -17,6 +17,110 @@
 #define CLOCK_R1 '0'+2
 #define CLOCK_R2 '0'+6
 #define CLOCK_C1 '1'
+static char* moveTo(char row, char col, char* msg) {
+  // Move to position
+  *msg++ = ESC;
+  *msg++ = '[';
+  if (row > 9) {
+    *msg++ = '0' + row/10; // line
+  }
+  *msg++ = '0' + row%10; // line
+  *msg++ = ';';
+  if (col > 9) {
+    *msg++ = '0' + col/10; // co
+  }
+  *msg++ = '0' + col%10; // line
+  *msg++ = 'f';
+  return msg;
+}
+
+static char* timeu(unsigned int ms, char* msg) {
+  int min = (ms / 60000) % 60;
+  int sec = (ms / 1000) % 60;
+  int mso = (ms / 100) % 10;
+
+  // move to position
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = CLOCK_R1;
+  *msg++ = CLOCK_R2;
+  *msg++ = ';';
+  *msg++ = CLOCK_C1;
+  *msg++ = 'f';
+
+  // Print the time
+	*msg++ = min/10 + '0';
+	*msg++ = min%10 + '0';
+	*msg++ = ':';
+	*msg++ = sec/10 + '0';
+	*msg++ = sec%10 + '0';
+	*msg++ = '.';
+	*msg++ = mso + '0';
+
+  return msg;
+}
+// .-------------+----------+
+// |    Train    |  %d      |
+// +-------------+----------|
+// | L Sensor    |
+// | L Sensor T  |
+// | L Predic T  |            <-- red if high
+// |             |
+// | Speed       |  2       |
+// | Velocity    |  42mm/s  |
+// | D From Last |
+// |             |
+// | N Sensor    |
+// | N Sensor T  |
+static char* updateTrain(TrainUiMsg* train, char* msg) {
+  msg = moveTo(3, 42, msg);
+  if (train->lastSensor > 9) {
+    *msg++ = '0' + train->lastSensor/10;
+  }
+  *msg++ = '0' + train->lastSensor%10;
+
+  msg = moveTo(4, 42, msg);
+  msg = timeu(train->lastSensorTime, msg);
+
+  msg = moveTo(5, 42, msg);
+  msg = timeu(train->lastPredictionTime, msg);
+
+  msg = moveTo(7, 42, msg);
+  if (train->speed > 9) {
+    *msg++ = '0' + train->speed/10;
+  }
+  *msg++ = '0' + train->speed%10;
+
+  msg = moveTo(8, 42, msg);
+  if (train->velocity > 9) {
+    *msg++ = '0' + train->velocity/10;
+  }
+  *msg++ = '0' + train->velocity%10;
+
+  msg = moveTo(8, 42, msg);
+  if (train->distanceFromLastSensor > 99) {
+    *msg++ = '0' + train->velocity/100;
+    train->velocity/=100;
+
+  }
+  if (train->distanceFromLastSensor > 9) {
+    *msg++ = '0' + train->velocity/10;
+  }
+  *msg++ = '0' + train->velocity%10;
+
+  msg = moveTo(10, 42, msg);
+  if (train->lastSensor > 9) {
+    *msg++ = '0' + train->nextSensor/10;
+  }
+  *msg++ = '0' + train->nextSensor%10;
+
+  msg = moveTo(11, 42, msg);
+  msg = timeu(train->nextSensorTime, msg);
+
+
+
+  return msg;
+}
 
 static char* promptChar(char col, char c, char* msg) {
   // move to position
@@ -95,32 +199,12 @@ static char* updateDebugMessage(char* receive, char* msg, int len) {
 }
 
 static char* updateTime(unsigned int ms, char* msg) {
-  int min = (ms / 60000) % 60;
-  int sec = (ms / 1000) % 60;
-  int mso = (ms / 100) % 10;
   // SaveCursor
   *msg++ = ESC;
   *msg++ = '[';
   *msg++ = 's';
 
-  // move to position
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = CLOCK_R1;
-  *msg++ = CLOCK_R2;
-  *msg++ = ';';
-  *msg++ = CLOCK_C1;
-  *msg++ = 'f';
-
-  // Print the time
-	*msg++ = min/10 + '0';
-	*msg++ = min%10 + '0';
-	*msg++ = ':';
-	*msg++ = sec/10 + '0';
-	*msg++ = sec%10 + '0';
-	*msg++ = '.';
-	*msg++ = mso + '0';
-
+  msg = timeu(ms, msg);
   // Restore Cursor
   *msg++ = ESC;
   *msg++ = '[';
@@ -212,6 +296,76 @@ static char* updateSensor(int box, int val, char* msg) {
   *msg++ = 'u';
 
   numUpdated++;
+  return msg;
+}
+
+static char* drawTrainFrameHelper(
+    char* msg, char leftCorner, char center, char rightCorner,
+    char* text1, char* text2) {
+  *msg++ = leftCorner;
+  for (int i = 0; i < 13; i++){
+    if (text1 == NULL) {
+      *msg++ = ' ';
+    }
+    else {
+      *msg++ = text1[i];
+    }
+  }
+  *msg++ = center;
+  for (int i = 0; i < 9; i++){
+    if (text2 == NULL) {
+      *msg++ = ' ';
+    }
+    else {
+      *msg++ = text2[i];
+    }
+  }
+  *msg++ = rightCorner;
+  return msg;
+}
+
+static char* drawTrainFrame(char* msg) {
+  msg = moveTo(1, 25, msg);
+  msg = drawTrainFrameHelper(msg, '.', '+', '+', "-------------", "----------");
+
+  msg = moveTo(2, 25, msg);
+  msg = drawTrainFrameHelper(msg, '|', '|', '|', "    Train    ", "          ");
+
+  msg = moveTo(3, 25, msg);
+  msg = drawTrainFrameHelper(msg, '+', '+', '+', "-------------", "----------");
+
+  msg = moveTo(4, 25, msg);
+  msg = drawTrainFrameHelper(msg, '|', '|', '|', " L Sensor    ", "          ");
+
+  msg = moveTo(5, 25, msg);
+  msg = drawTrainFrameHelper(msg, '|', '|', '|', " L Sensor T  ", "          ");
+
+  msg = moveTo(6, 25, msg);
+  msg = drawTrainFrameHelper(msg, '|', '|', '|', " L Predic T  ", "          ");
+
+  msg = moveTo(7, 25, msg);
+  msg = drawTrainFrameHelper(msg, '|', '|', '|', "             ", "          ");
+
+  msg = moveTo(8, 25, msg);
+  msg = drawTrainFrameHelper(msg, '|', '|', '|', " Speed       ", "          ");
+
+  msg = moveTo(9, 25, msg);
+  msg = drawTrainFrameHelper(msg, '|', '|', '|', " Velocity    ", "          ");
+
+  msg = moveTo(10, 25, msg);
+  msg = drawTrainFrameHelper(msg, '|', '|', '|', " D From Last ", "          ");
+
+  msg = moveTo(11, 25, msg);
+  msg = drawTrainFrameHelper(msg, '|', '|', '|', "             ", "          ");
+
+  msg = moveTo(12, 25, msg);
+  msg = drawTrainFrameHelper(msg, '|', '|', '|', " N Sensor    ", "          ");
+
+  msg = moveTo(13, 25, msg);
+  msg = drawTrainFrameHelper(msg, '|', '|', '|', " N Sensor T  ", "          ");
+
+  msg = moveTo(13, 25, msg);
+  msg = drawTrainFrameHelper(msg, '`', '-', '`', "-------------", "----------");
   return msg;
 }
 
@@ -396,7 +550,7 @@ static void displayStaticContent(int com2) {
   msg = drawSwitches(msg);
 
   // Draw sensor
-	const int startX = UI_WIDTH / 2 + 1;
+	int startX = 15;
   // Move to position
   *msg++ = ESC;
   *msg++ = '[';
@@ -414,7 +568,10 @@ static void displayStaticContent(int com2) {
   *msg++ = 'o';
   *msg++ = 'r';
 
+  msg = drawTrainFrame(msg);
+
   msg = promptChar(1, '>', msg);
+
 
   Putstr(com2, msgStart, msg-msgStart);
 
@@ -462,6 +619,10 @@ static void userInterface() {
       }
       case UPDATE_IDLE: {
         com2msg = updateIdle(Idleness(), com2msg);
+        break;
+      }
+      case UPDATE_TRAIN: {
+        com2msg = updateTrain((TrainUiMsg*)receiveBuffer, com2msg);
         break;
       }
       default: {

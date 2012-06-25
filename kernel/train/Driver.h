@@ -7,7 +7,8 @@
 #define SET_SPEED  0
 #define GET_SPEED  1
 #define GOTO_DEST  2
-#define WORKER     3
+#define UPDATE_UI  3
+#define WORKER     4
 
 typedef struct DriverMsg {
   char type;           // As defined above
