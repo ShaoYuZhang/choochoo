@@ -17,6 +17,7 @@ typedef struct DriverMsg {
   signed char data2;   // Speed (-1 for reverse)
   unsigned char data3; // Delay num, or msg came from worker
   char replyTid;       // The user that first send the message.
+  int timestamp;
 } DriverMsg;
 
 

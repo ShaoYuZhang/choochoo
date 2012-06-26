@@ -21,6 +21,7 @@ typedef struct Driver {
   int sensorWatcher;
   int track; // Tid
   int distance;
+  int predictedTime;
   TrainUiMsg uiMsg;
 
   int v[15][2];
@@ -97,9 +98,11 @@ static void trainSensor() {
 
     msg.data2 = sensor.box;
     msg.data3 = sensor.val;
+    msg.timestamp = sensor.time * 10; // MS per tick
 
     // TODO:zhang confirm with prediction for multi-train setup.
-    Send(parent, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
+    //  so that irrelevant triggers can be dropped.
+    Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
   }
 }
 
@@ -202,21 +205,27 @@ static void driver() {
         break;
       }
       case UI_NAGGER: {
-        //TrackNextSensorMsg tMsg;
-        //TrackMsg qMsg;
-        //qMsg.type = QUERY_NEXT_SENSOR;
-        //qMsg.landmark1.type = LANDMARK_SENSOR;
-        //qMsg.landmark1.num1 = me.uiMsg.lastSensorBox;
-        //qMsg.landmark1.num2 = me.uiMsg.lastSensorVal;
-        //Send(me.track, (char*)&tMsg, sizeof(TrackMsg),
-        //    (char*)&qMsg, sizeof(TrackNextSensorMsg));
-        //me.distance = tMsg.dist;
         sendUiReport(&me);
         break;
       }
       case SENSOR_TRIGGER: {
         me.uiMsg.lastSensorBox = msg.data2; // Box
         me.uiMsg.lastSensorVal = msg.data3; // Val
+        me.uiMsg.lastSensorTime = msg.timestamp;
+        // TODO, invalid if sensor mismatch
+        me.uiMsg.lastSensorPredictedTime = me.predictedTime;
+
+        TrackNextSensorMsg tMsg;
+        TrackMsg qMsg;
+        qMsg.type = QUERY_NEXT_SENSOR;
+        qMsg.landmark1.type = LANDMARK_SENSOR;
+        qMsg.landmark1.num1 = me.uiMsg.lastSensorBox;
+        qMsg.landmark1.num2 = me.uiMsg.lastSensorVal;
+        Send(me.track, (char*)&qMsg, sizeof(TrackMsg),
+            (char*)&tMsg, sizeof(TrackNextSensorMsg));
+        me.distance = tMsg.dist;
+        me.predictedTime = me.distance*100 / me.v[me.speedDir][me.speed];
+
         sendUiReport(&me);
         break;
       }

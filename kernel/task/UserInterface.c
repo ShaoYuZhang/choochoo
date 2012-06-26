@@ -65,15 +65,6 @@ static char* timeu(unsigned int ms, char* msg) {
   int sec = (ms / 1000) % 60;
   int mso = (ms / 100) % 10;
 
-  // move to position
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = CLOCK_R1;
-  *msg++ = CLOCK_R2;
-  *msg++ = ';';
-  *msg++ = CLOCK_C1;
-  *msg++ = 'f';
-
   // Print the time
   *msg++ = min/10 + '0';
   *msg++ = min%10 + '0';
@@ -88,16 +79,23 @@ static char* timeu(unsigned int ms, char* msg) {
 // .-------------+----------+
 // |    Train    |  %d      |
 // +-------------+----------|
-// | L Sensor    |
-// | L Sensor T  |
-// | L Predic T  |            <-- red if high
-// |             |
+// | L Sensor    |          |
+// | L Sensor T  |          |
+// | L Predic T  |          | <-- red if high
+// |             |          |
 // | Speed       |  2       |
 // | Velocity    |  32mm/s  |
-// | D From Last |
+// | D From Last |          |
 // |             |
 // | N Sensor    |
 // | N Sensor T  |
+// | Location    | LMARK    |
+// |             |   |      |
+// |             |  256     |
+// |             |   *      |
+// |             |  25      |
+// |             |   |      |
+// |             | LMARK    |
 static char* updateTrain(TrainUiMsg* train, char* msg) {
   msg = saveCursor(msg);
 
@@ -111,6 +109,7 @@ static char* updateTrain(TrainUiMsg* train, char* msg) {
   msg = moveTo(5, 26, msg);
   msg = timeu(train->lastSensorTime, msg);
 
+  // TODO: if delta to sensorTime is long, make this red.
   msg = moveTo(6, 26, msg);
   msg = timeu(train->lastPredictionTime, msg);
 
@@ -206,11 +205,10 @@ static char* updateDebugMessage(char* receive, char* msg, int len) {
 static char* updateTime(unsigned int ms, char* msg) {
   msg = saveCursor(msg);
 
+  msg = moveTo(25, 8, msg);
   msg = timeu(ms, msg);
 
-  msg = restoreCursor(msg);
-
-  return msg;
+  return restoreCursor(msg);
 }
 
 static char* updateIdle(int percentage, char* msg) {
