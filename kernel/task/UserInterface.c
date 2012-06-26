@@ -17,6 +17,7 @@
 #define CLOCK_R1 '0'+2
 #define CLOCK_R2 '0'+5
 #define CLOCK_C1 '8'
+
 static char* moveTo(char row, char col, char* msg) {
   // Move to position
   *msg++ = ESC;
@@ -31,6 +32,22 @@ static char* moveTo(char row, char col, char* msg) {
   }
   *msg++ = '0' + col%10; // line
   *msg++ = 'f';
+  return msg;
+}
+
+static char* saveCursor(char* msg) {
+  // SaveCursor
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = 's';
+
+  return msg;
+}
+
+static char* restoreCursor(char* msg) {
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = 'u';
   return msg;
 }
 
@@ -67,44 +84,39 @@ static char* timeu(unsigned int ms, char* msg) {
 // | L Predic T  |            <-- red if high
 // |             |
 // | Speed       |  2       |
-// | Velocity    |  42mm/s  |
+// | Velocity    |  32mm/s  |
 // | D From Last |
 // |             |
 // | N Sensor    |
 // | N Sensor T  |
 static char* updateTrain(TrainUiMsg* train, char* msg) {
-  // SaveCursor
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = 's';
-
-  msg = moveTo(4, 42, msg);
+  msg = saveCursor(msg);
+  msg = moveTo(4, 32, msg);
   if (train->lastSensor > 9) {
     *msg++ = '0';// + train->lastSensor/10;
   }
   *msg++ = '0';// + train->lastSensor%10;
   *msg++ = 'a';// + train->lastSensor%10;
 
-#if 0
-  msg = moveTo(5, 42, msg);
+  msg = moveTo(5, 32, msg);
   msg = timeu(train->lastSensorTime, msg);
 
-  msg = moveTo(6, 42, msg);
+  msg = moveTo(6, 32, msg);
   msg = timeu(train->lastPredictionTime, msg);
 
-  msg = moveTo(8, 42, msg);
+  msg = moveTo(8, 32, msg);
   if (train->speed > 9) {
     *msg++ = '0' + train->speed/10;
   }
   *msg++ = '0' + train->speed%10;
 
-  msg = moveTo(9, 42, msg);
+  msg = moveTo(9, 32, msg);
   if (train->velocity > 9) {
     *msg++ = '0' + train->velocity/10;
   }
   *msg++ = '0' + train->velocity%10;
 
-  msg = moveTo(10, 42, msg);
+  msg = moveTo(10, 32, msg);
   if (train->distanceFromLastSensor > 99) {
     *msg++ = '0' + train->velocity/100;
     train->velocity/=100;
@@ -115,19 +127,17 @@ static char* updateTrain(TrainUiMsg* train, char* msg) {
   }
   *msg++ = '0' + train->velocity%10;
 
-  msg = moveTo(11, 42, msg);
+  msg = moveTo(11, 32, msg);
   if (train->lastSensor > 9) {
     *msg++ = '0' + train->nextSensor/10;
   }
   *msg++ = '0' + train->nextSensor%10;
 
-  msg = moveTo(12, 42, msg);
+  msg = moveTo(12, 32, msg);
   msg = timeu(train->nextSensorTime, msg);
-#endif
+
   // Restore Cursor
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = 'u';
+  msg = restoreCursor(msg);
 
   return msg;
 }
@@ -181,10 +191,7 @@ static int debugUpdateNum;
 static char* updateDebugMessage(char* receive, char* msg, int len) {
   int updateRow = debugUpdateNum%8 + 29;
 
-  // SaveCursor
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = 's';
+  msg = saveCursor(msg);
 
   // move to position
   *msg++ = ESC;
@@ -199,35 +206,24 @@ static char* updateDebugMessage(char* receive, char* msg, int len) {
     *msg++ = receive[i];
   }
 
-  // Restore Cursor
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = 'u';
+  msg = restoreCursor(msg);
 
   debugUpdateNum += 1;
   return msg;
 }
 
 static char* updateTime(unsigned int ms, char* msg) {
-  // SaveCursor
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = 's';
+  msg = saveCursor(msg);
 
   msg = timeu(ms, msg);
-  // Restore Cursor
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = 'u';
+
+  msg = restoreCursor(msg);
 
   return msg;
 }
 
 static char* updateIdle(int percentage, char* msg) {
-  // SaveCursor
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = 's';
+  msg = saveCursor(msg);
 
   // move to position
   *msg++ = ESC;
@@ -261,20 +257,14 @@ static char* updateIdle(int percentage, char* msg) {
   }
   *msg++ = '0' + percentage;
 
-  // Restore Cursor
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = 'u';
+  msg = restoreCursor(msg);
 
   return msg;
 }
 
 static int numUpdated;
 static char* updateSensor(int box, int val, char* msg) {
-  // SaveCursor
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = 's';
+  msg = saveCursor(msg);
 
   // move to position
   if (numUpdated == 0) {
@@ -299,10 +289,7 @@ static char* updateSensor(int box, int val, char* msg) {
     *msg++ = ' ';
   }
 
-  // Restore Cursor
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = 'u';
+  msg = restoreCursor(msg);
 
   numUpdated++;
   numUpdated &= 7; // Mod 8
@@ -451,10 +438,7 @@ static char* drawSwitches(char* msg) {
 }
 
 static char* updateSwitch(int sw, int ss, char* msg) {
-  // SaveCursor
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = 's';
+  msg = saveCursor(msg);
 
 	char state = ss == SWITCH_STRAIGHT ? '-' : '~';
 
@@ -475,10 +459,7 @@ static char* updateSwitch(int sw, int ss, char* msg) {
 
   *msg++ = state;
 
-  // Restore Cursor
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = 'u';
+  msg = restoreCursor(msg);
 
   return msg;
 }
@@ -560,7 +541,6 @@ static void displayStaticContent(int com2) {
   msg = drawSwitches(msg);
 
   // Draw sensor
-	int startX = 15;
   msg = moveTo(26, 1, msg);
 
   // Text
