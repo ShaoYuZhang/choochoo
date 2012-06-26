@@ -15,8 +15,8 @@
 #define PROMPT_R1 '0'+2
 #define PROMPT_R2 '0'+7
 #define CLOCK_R1 '0'+2
-#define CLOCK_R2 '0'+6
-#define CLOCK_C1 '1'
+#define CLOCK_R2 '0'+5
+#define CLOCK_C1 '8'
 static char* moveTo(char row, char col, char* msg) {
   // Move to position
   *msg++ = ESC;
@@ -73,31 +73,38 @@ static char* timeu(unsigned int ms, char* msg) {
 // | N Sensor    |
 // | N Sensor T  |
 static char* updateTrain(TrainUiMsg* train, char* msg) {
-  msg = moveTo(3, 42, msg);
-  if (train->lastSensor > 9) {
-    *msg++ = '0' + train->lastSensor/10;
-  }
-  *msg++ = '0' + train->lastSensor%10;
+  // SaveCursor
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = 's';
 
   msg = moveTo(4, 42, msg);
+  if (train->lastSensor > 9) {
+    *msg++ = '0';// + train->lastSensor/10;
+  }
+  *msg++ = '0';// + train->lastSensor%10;
+  *msg++ = 'a';// + train->lastSensor%10;
+
+#if 0
+  msg = moveTo(5, 42, msg);
   msg = timeu(train->lastSensorTime, msg);
 
-  msg = moveTo(5, 42, msg);
+  msg = moveTo(6, 42, msg);
   msg = timeu(train->lastPredictionTime, msg);
 
-  msg = moveTo(7, 42, msg);
+  msg = moveTo(8, 42, msg);
   if (train->speed > 9) {
     *msg++ = '0' + train->speed/10;
   }
   *msg++ = '0' + train->speed%10;
 
-  msg = moveTo(8, 42, msg);
+  msg = moveTo(9, 42, msg);
   if (train->velocity > 9) {
     *msg++ = '0' + train->velocity/10;
   }
   *msg++ = '0' + train->velocity%10;
 
-  msg = moveTo(8, 42, msg);
+  msg = moveTo(10, 42, msg);
   if (train->distanceFromLastSensor > 99) {
     *msg++ = '0' + train->velocity/100;
     train->velocity/=100;
@@ -108,16 +115,19 @@ static char* updateTrain(TrainUiMsg* train, char* msg) {
   }
   *msg++ = '0' + train->velocity%10;
 
-  msg = moveTo(10, 42, msg);
+  msg = moveTo(11, 42, msg);
   if (train->lastSensor > 9) {
     *msg++ = '0' + train->nextSensor/10;
   }
   *msg++ = '0' + train->nextSensor%10;
 
-  msg = moveTo(11, 42, msg);
+  msg = moveTo(12, 42, msg);
   msg = timeu(train->nextSensorTime, msg);
-
-
+#endif
+  // Restore Cursor
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = 'u';
 
   return msg;
 }
@@ -223,9 +233,9 @@ static char* updateIdle(int percentage, char* msg) {
   *msg++ = ESC;
   *msg++ = '[';
   *msg++ = CLOCK_R1;
-  *msg++ = CLOCK_R2-1;
+  *msg++ = CLOCK_R2;
   *msg++ = ';';
-  *msg++ = CLOCK_C1;
+  *msg++ = '1';
   *msg++ = 'f';
 
   // Print the idleness. ASSUME 4 digits. e.g. 99.55
@@ -259,36 +269,35 @@ static char* updateIdle(int percentage, char* msg) {
   return msg;
 }
 
-
 static int numUpdated;
 static char* updateSensor(int box, int val, char* msg) {
-  int updateRow = (numUpdated % 16)+2;
-
   // SaveCursor
   *msg++ = ESC;
   *msg++ = '[';
   *msg++ = 's';
 
   // move to position
-  *msg++ = ESC;
-  *msg++ = '[';
-  if (updateRow >= 10) {
-    *msg++ = '1'; // line
+  if (numUpdated == 0) {
+    msg = moveTo(26, 10, msg);
+    // Clear line
+    *msg++ = ESC;
+    *msg++ = '[';
+    *msg++ = 'K';
   }
-  *msg++ = '0' + updateRow%10; // line
-  *msg++ = ';';
-  *msg++ = '4';
-  *msg++ = '1';
-  *msg++ = 'f';
+  else {
+    msg = moveTo(26, 10 + numUpdated*5, msg);
+  }
 
   // Print sensor info
 	*msg++ = 'A' + box;
-	*msg++ = ':';
   if (val >= 10) {
 	  *msg++ = '0'+ val/10;
+    *msg++ = '0'+ val%10;
   }
-  *msg++ = '0'+ val%10;
-  *msg++ = ' '; // Extra space to clear previous char on screen.
+  else {
+    *msg++ = '0'+ val%10;
+    *msg++ = ' ';
+  }
 
   // Restore Cursor
   *msg++ = ESC;
@@ -296,6 +305,7 @@ static char* updateSensor(int box, int val, char* msg) {
   *msg++ = 'u';
 
   numUpdated++;
+  numUpdated &= 7; // Mod 8
   return msg;
 }
 
@@ -551,14 +561,7 @@ static void displayStaticContent(int com2) {
 
   // Draw sensor
 	int startX = 15;
-  // Move to position
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = '1'; // line
-  *msg++ = ';';
-  *msg++ = '0'+startX/10; // Col
-  *msg++ = '0'+startX%10; // Col
-  *msg++ = 'f';
+  msg = moveTo(26, 1, msg);
 
   // Text
   *msg++ = 'S';
@@ -567,6 +570,7 @@ static void displayStaticContent(int com2) {
   *msg++ = 's';
   *msg++ = 'o';
   *msg++ = 'r';
+  *msg++ = ':';
 
   msg = drawTrainFrame(msg);
 

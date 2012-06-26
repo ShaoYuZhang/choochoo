@@ -11,8 +11,10 @@
 typedef struct Driver {
   int speed;
   int worker;
-  int ui;
-  int nth; // the nth driver to be initialized. For UI display
+  int nth;      // the nth driver to be initialized. For UI display
+  int uiAlert;  // Tasks that reminds train to print
+  int ui;       // Ui Tid
+  TrainUiMsg uiMsg;
 } Driver;
 
 static int com1;
@@ -25,7 +27,7 @@ static void trainSetSpeed(DriverMsg* origMsg, Driver* me) {
   char msg[4];
   msg[1] = (char)trainNum;
   if (speed >= 0) {
-    if (origMsg->data3 == WORKER) {
+    if (origMsg->data3 == DELAYER) {
       printff(com2, "Reversing speed. cuz its worker %d\n", speed);
       msg[0] = 0xf;
       msg[1] = (char)trainNum;
@@ -62,13 +64,13 @@ static void trainWorker() {
   int parent = MyParentsTid();
 
   DriverMsg msg;
-  msg.type = WORKER;
+  msg.type = DELAYER;
   for (;;) {
     Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)&msg, sizeof(DriverMsg));
     int numTick = msg.data3; // num of 10ms
     numTick *= 2;
     Delay(numTick, timeserver);
-    msg.data3 = WORKER;
+    msg.data3 = DELAYER;
     //printff(com2, "Worker Done. %d %d\n", numTick, parent);
   }
 }
@@ -86,13 +88,26 @@ static void trainUiUpdate() {
   }
 }
 
+static void initDriver(Driver* me) {
+  char uiName[] = UI_TASK_NAME;
+  me->ui = WhoIs(uiName);
+
+  me->speed = 0;
+  me->worker  = Create(1, trainWorker);
+  me->uiAlert = Create(3, trainUiUpdate);
+  int controller;
+  Receive(&controller, (char*)&(me->nth), 4);
+
+  me->uiMsg.type = UPDATE_TRAIN;
+}
+
+static void makeUiReport(Driver* me) {
+  //me->uiMsg.
+}
+
 static void driver() {
   Driver me;
-  me.speed = 0;
-  me.worker = Create(1, trainWorker);
-  me.ui     = Create(3, trainUiUpdate);
-  int controller;
-  Receive(&controller, (char*)&me.nth, 4);
+  initDriver(&me);
 
   for (;;) {
     int tid = -1;
@@ -114,7 +129,7 @@ static void driver() {
       }
       case SET_SPEED: {
         trainSetSpeed(&msg, &me);
-        if (msg.data3 != WORKER) {
+        if (msg.data3 != DELAYER) {
           //printff(com2, "Replied to %d\n", replyTid);
           Reply(replyTid, (char*)1, 0);
           break;
@@ -122,12 +137,13 @@ static void driver() {
         // else fall through
         //printff(com2, "Worker setted speed%d\n", me.speed);
       }
-      case WORKER: {
+      case DELAYER: {
         // Worker reporting back.
         break;
       }
       case UPDATE_UI: {
-        // Make ui report
+        makeUiReport(&me);
+        Send(me.ui, (char*)&me.uiMsg, sizeof(TrainUiMsg), (char*)1, 0);
         break;
       }
       default: {
