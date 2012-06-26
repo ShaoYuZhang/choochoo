@@ -11,6 +11,7 @@
 #define SET_SWITCH 1
 #define QUERY_DISTANCE 2
 #define QUERY_NEXT_SENSOR 3
+#define ROUTE_PLANNING 4
 
 typedef enum {
   LANDMARK_SENSOR,
@@ -41,6 +42,20 @@ typedef struct TrackNextSensorMsg {
   TrackLandmark sensor;   //
   int dist;               // In mm
 } TrackNextSensorMsg;
+
+typedef struct RouteNode {
+  TrackLandmark landmark;
+  int num; // num = -1 if reverse command, num = SWITCH_CURVED/SWITCH_STRAIGHT if landmark is BR switch
+} RouteNode;
+
+#define MAX_ROUTE_NODE 150
+#define REVERSE_DIST_OFFSET 0
+
+typedef struct Route {
+  int dist;
+  int length; // -1 = can't reach, 0 = nothing to be done
+  RouteNode nodes[150];
+} Route;
 
 int startTrackManagerTask();
 

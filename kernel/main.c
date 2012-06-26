@@ -25,48 +25,40 @@ void test_track() {
   char timename[] = TIMESERVER_NAME;
   int timeserver = WhoIs(timename);
 
-  SensorMsg sensorMsg;
-  sensorMsg.type = QUERY_RECENT;
-  Send(sensorServer, (char*)&sensorMsg, sizeof(SensorMsg),
-      (char*)1, 0);
+  TrackLandmark landmark1;
+  TrackLandmark landmark2;
 
-  Sensor sensor;
-  int tid;
-  Receive(&tid, (char *)&sensor, sizeof(Sensor));
-  Reply(tid, (char *)1, 0);
+  landmark1.type = LANDMARK_END;
+  landmark1.num1 = EN;
+  landmark1.num2 = 5;
 
-  TrackLandmark pastSensor;
-  TrackLandmark currentSensor;
+  landmark2.type = LANDMARK_END;
+  landmark2.num1 = EX;
+  landmark2.num2 = 3;
 
-  int previousTime;
-  int currentTime = Time(timeserver);
+  TrackMsg trackmsg;
+  trackmsg.type = ROUTE_PLANNING;
+  trackmsg.landmark1 = landmark1;
+  trackmsg.landmark2 = landmark2;
 
-  currentSensor.type = LANDMARK_SENSOR;
-  currentSensor.num1 = sensor.box;
-  currentSensor.num2 = sensor.val;
+  Route route;
+  Send(trackManager, (char*)&trackmsg, sizeof(TrackMsg), (char*)&route, sizeof(Route));
 
-  for (;;) {
-    Receive(&tid, (char *)&sensor, sizeof(Sensor));
-    Reply(tid, (char *)1, 0);
+  printff(com2, "Distance %d \n", route.dist);
+  printff(com2, "Num Node %d \n", route.length);
 
-    pastSensor = currentSensor;
-    currentSensor.type = LANDMARK_SENSOR;
-    currentSensor.num1 = sensor.box;
-    currentSensor.num2 = sensor.val;
+  for (int i = 0; i < route.length; i++) {
+    RouteNode node = route.nodes[i];
+    if (node.num == -1) {
+      printff(com2, "reverse \n");
+    } else {
+      printff(com2, "Landmark %d %d %d ", node.landmark.type, node.landmark.num1, node.landmark.num2);
+      if (node.landmark.type == LANDMARK_SWITCH && node.landmark.num1 == BR) {
+        printff(com2, "Switch %d ", node.num);
+      }
 
-    TrackMsg trackmsg;
-    trackmsg.type = QUERY_DISTANCE;
-    trackmsg.landmark1 = pastSensor;
-    trackmsg.landmark2 = currentSensor;
-
-    int dist;
-    Send(trackManager, (char*)&trackmsg, sizeof(TrackMsg), (char*)&dist, 4);
-
-    previousTime = currentTime;
-    currentTime = Time(timeserver);
-    int diff = currentTime - previousTime;
-
-    printff(com2, "%d ",  dist * 100 / diff);
+      printff(com2, "\n");
+    }
   }
   Exit();
 }

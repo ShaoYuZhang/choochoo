@@ -4,6 +4,8 @@
 #include <ts7200.h>
 #include <bwio.h>
 
+#define INT_MAX 0x7FFFFFFF
+
 ////////// HARDWARE Stuff
 #define UART_BASE(_x) (((_x) == COM1) ? UART1_BASE : UART2_BASE)
 

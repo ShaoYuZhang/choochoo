@@ -30,5 +30,9 @@ struct track_node {
   int num;              /* sensor or switch number */
   track_node *reverse;  /* same location, but opposite direction */
   track_edge edge[2];
+
+  int curr_dist; // for route planning
+  int in_queue; // for route planning
+  track_node* route_previous; // for route planning
 };
 #endif

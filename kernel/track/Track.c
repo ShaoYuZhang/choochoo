@@ -65,6 +65,34 @@ static int get_node_num(TrackLandmark landmark) {
   return num;
 }
 
+static TrackLandmark getLandmark(track_node* node) {
+  TrackLandmark landmark;
+  if (node->type == NODE_SENSOR) {
+    landmark.type = LANDMARK_SENSOR;
+    landmark.num1 = node->num / 16;
+    landmark.num2 = node->num % 16 + 1;
+  } else if (node->type == NODE_BRANCH) {
+    landmark.type = LANDMARK_SWITCH;
+    landmark.num1 = BR;
+    landmark.num2 = node->num;
+  } else if (node->type == NODE_MERGE) {
+    landmark.type = LANDMARK_SWITCH;
+    landmark.num1 = MR;
+    landmark.num2 = node->num;
+  } else if (node->type == NODE_ENTER) {
+    landmark.type = LANDMARK_END;
+    landmark.num1 = EN;
+    landmark.num2 = node->num;
+  } else if (node->type == NODE_EXIT) {
+    landmark.type = LANDMARK_END;
+    landmark.num1 = EX;
+    landmark.num2 = node->num;
+  } else {
+    ASSERT(FALSE, "invalid track node");
+  }
+  return landmark;
+}
+
 // TODO slow, should worry about it?
 static track_node* findNode(track_node* track, TrackLandmark landmark) {
   int node_type = get_node_type(landmark);
@@ -132,13 +160,116 @@ static int findNextSensor(track_node* from, TrackLandmark* dst) {
     currentNode = edge.dest;
 
     if (currentNode->type == NODE_SENSOR) {
-      dst->type = LANDMARK_SENSOR;
-      dst->num1 = currentNode->num / 16;
-      dst->num2 = currentNode->num % 16 + 1;
+      *dst = getLandmark(currentNode);
       return dist;
     }
   }
   return -1;
+}
+
+// Dijkstra's algorithm, currently slow, need a heap for efficiency
+static void findRoute(track_node* track, track_node* from, track_node* to, Route* result) {
+  for (int i = 0 ; i < TRACK_MAX; i++) {
+    if (track[i].type == NODE_NONE) {
+      continue;
+    }
+    track[i].curr_dist = INT_MAX;
+    track[i].in_queue = 1;
+    track[i].route_previous = (track_node*)NULL;
+  }
+  from->curr_dist = 0;
+
+  // Dijkstra's
+  while (1) {
+    int min_dist = INT_MAX;
+    track_node* curr_node = (track_node*)NULL;
+    for (int i = 0 ; i < TRACK_MAX; i++) {
+      if (track[i].type == NODE_NONE) {
+        continue;
+      }
+      if (!track[i].in_queue) {
+        continue;
+      }
+
+      if (track[i].curr_dist < min_dist) {
+        min_dist = track[i].curr_dist;
+        curr_node = &track[i];
+      }
+    }
+
+    if (curr_node == (track_node*)NULL || curr_node == to) {
+      break;
+    }
+
+    curr_node->in_queue = 0;
+
+    track_node* neighbours[3];
+    int neighbours_dist[3];
+    int neighbour_count = 0;
+
+    // reverse
+    neighbours[neighbour_count] = curr_node->reverse;
+    neighbours_dist[neighbour_count++] = REVERSE_DIST_OFFSET;
+
+    if (curr_node->type == NODE_BRANCH) {
+      neighbours[neighbour_count] = curr_node->edge[DIR_STRAIGHT].dest;
+      neighbours_dist[neighbour_count++] = curr_node->edge[DIR_STRAIGHT].dist;
+      neighbours[neighbour_count] = curr_node->edge[DIR_CURVED].dest;
+      neighbours_dist[neighbour_count++] = curr_node->edge[DIR_CURVED].dist;
+    }
+    else if (curr_node->type != NODE_EXIT) {
+      neighbours[neighbour_count] = curr_node->edge[DIR_AHEAD].dest;
+      neighbours_dist[neighbour_count++] = curr_node->edge[DIR_AHEAD].dist;
+    }
+
+    for (int i = 0; i < neighbour_count; i ++) {
+      int temp_dist = neighbours_dist[i] + curr_node->curr_dist;
+      if (temp_dist < neighbours[i]->curr_dist) {
+        neighbours[i]->curr_dist = temp_dist;
+        neighbours[i]->route_previous = curr_node;
+      }
+    }
+  }
+
+  // construct path
+  RouteNode tempRoute[150];
+  int index = 150;
+  result->dist = to->curr_dist;
+
+  // construct backwards on temp
+  track_node *next_node = (track_node*)NULL;
+  track_node *curr_node = to;
+  while (curr_node != (track_node*)NULL) {
+    RouteNode tempRouteNode;
+
+    if (curr_node->reverse == next_node) {
+      tempRouteNode.num = -1;
+      tempRoute[--index] = tempRouteNode;
+    }
+
+    tempRouteNode.num = 0;
+
+    TrackLandmark landmark = getLandmark(curr_node);
+    tempRouteNode.landmark = landmark;
+
+    if (curr_node->type == NODE_BRANCH) {
+      if (curr_node->edge[DIR_STRAIGHT].dest == next_node) {
+        tempRouteNode.num = SWITCH_STRAIGHT;
+      } else {
+        tempRouteNode.num = SWITCH_CURVED;
+      }
+    }
+    tempRoute[--index] = tempRouteNode;
+
+    next_node = curr_node;
+    curr_node = next_node->route_previous;
+  }
+
+  // copy to output
+  for (int i = index; i < 150; i++) {
+    result->nodes[i-index] = tempRoute[i];
+  }
+  result->length = 150 - index;
 }
 
 static void trackSetSwitch(int sw, int state) {
@@ -213,6 +344,15 @@ static void trackController() {
         sensorMsg.dist = distance;
 
         Reply(tid, (char *)&sensorMsg, sizeof(TrackNextSensorMsg));
+        break;
+      }
+      case ROUTE_PLANNING: {
+        track_node* from = findNode(track, msg.landmark1);
+        track_node* to = findNode(track, msg.landmark2);
+        Route route;
+        findRoute(track, from, to , &route);
+
+        Reply(tid, (char *)&route, 8 + sizeof(RouteNode) * route.length);
         break;
       }
       default: {
