@@ -1238,6 +1238,7 @@ void init_tracka(track_node *track) {
   track[123].edge[DIR_AHEAD].curveness = 0;
   track[124].name = "EN1";
   track[124].type = NODE_ENTER;
+  track[124].num = 1;
   track[124].reverse = &track[125];
   track[124].edge[DIR_AHEAD].reverse = &track[116].edge[DIR_STRAIGHT];
   track[124].edge[DIR_AHEAD].src = &track[124];
@@ -1246,9 +1247,11 @@ void init_tracka(track_node *track) {
   track[124].edge[DIR_AHEAD].curveness = 0;
   track[125].name = "EX1";
   track[125].type = NODE_EXIT;
+  track[125].num = 1;
   track[125].reverse = &track[124];
   track[126].name = "EN2";
   track[126].type = NODE_ENTER;
+  track[126].num = 2;
   track[126].reverse = &track[127];
   track[126].edge[DIR_AHEAD].reverse = &track[120].edge[DIR_STRAIGHT];
   track[126].edge[DIR_AHEAD].src = &track[126];
@@ -1257,9 +1260,11 @@ void init_tracka(track_node *track) {
   track[126].edge[DIR_AHEAD].curveness = 0;
   track[127].name = "EX2";
   track[127].type = NODE_EXIT;
+  track[127].num = 2;
   track[127].reverse = &track[126];
   track[128].name = "EN3";
   track[128].type = NODE_ENTER;
+  track[128].num = 3;
   track[128].reverse = &track[129];
   track[128].edge[DIR_AHEAD].reverse = &track[34].edge[DIR_AHEAD];
   track[128].edge[DIR_AHEAD].src = &track[128];
@@ -1268,9 +1273,11 @@ void init_tracka(track_node *track) {
   track[128].edge[DIR_AHEAD].curveness = 0;
   track[129].name = "EX3";
   track[129].type = NODE_EXIT;
+  track[129].num = 3;
   track[129].reverse = &track[128];
   track[130].name = "EN4";
   track[130].type = NODE_ENTER;
+  track[130].num = 4;
   track[130].reverse = &track[131];
   track[130].edge[DIR_AHEAD].reverse = &track[13].edge[DIR_AHEAD];
   track[130].edge[DIR_AHEAD].src = &track[130];
@@ -1279,9 +1286,11 @@ void init_tracka(track_node *track) {
   track[130].edge[DIR_AHEAD].curveness = 0;
   track[131].name = "EX4";
   track[131].type = NODE_EXIT;
+  track[131].num = 4;
   track[131].reverse = &track[130];
   track[132].name = "EN5";
   track[132].type = NODE_ENTER;
+  track[132].num = 5;
   track[132].reverse = &track[133];
   track[132].edge[DIR_AHEAD].reverse = &track[1].edge[DIR_AHEAD];
   track[132].edge[DIR_AHEAD].src = &track[132];
@@ -1290,9 +1299,11 @@ void init_tracka(track_node *track) {
   track[132].edge[DIR_AHEAD].curveness = 0;
   track[133].name = "EX5";
   track[133].type = NODE_EXIT;
+  track[133].num = 5;
   track[133].reverse = &track[132];
   track[134].name = "EN6";
   track[134].type = NODE_ENTER;
+  track[134].num = 6;
   track[134].reverse = &track[135];
   track[134].edge[DIR_AHEAD].reverse = &track[14].edge[DIR_AHEAD];
   track[134].edge[DIR_AHEAD].src = &track[134];
@@ -1301,9 +1312,11 @@ void init_tracka(track_node *track) {
   track[134].edge[DIR_AHEAD].curveness = 0;
   track[135].name = "EX6";
   track[135].type = NODE_EXIT;
+  track[135].num = 6;
   track[135].reverse = &track[134];
   track[136].name = "EN7";
   track[136].type = NODE_ENTER;
+  track[136].num = 7;
   track[136].reverse = &track[137];
   track[136].edge[DIR_AHEAD].reverse = &track[23].edge[DIR_AHEAD];
   track[136].edge[DIR_AHEAD].src = &track[136];
@@ -1312,9 +1325,11 @@ void init_tracka(track_node *track) {
   track[136].edge[DIR_AHEAD].curveness = 0;
   track[137].name = "EX7";
   track[137].type = NODE_EXIT;
+  track[137].num = 7;
   track[137].reverse = &track[136];
   track[138].name = "EN8";
   track[138].type = NODE_ENTER;
+  track[138].num = 8;
   track[138].reverse = &track[139];
   track[138].edge[DIR_AHEAD].reverse = &track[11].edge[DIR_AHEAD];
   track[138].edge[DIR_AHEAD].src = &track[138];
@@ -1323,9 +1338,11 @@ void init_tracka(track_node *track) {
   track[138].edge[DIR_AHEAD].curveness = 0;
   track[139].name = "EX8";
   track[139].type = NODE_EXIT;
+  track[139].num = 8;
   track[139].reverse = &track[138];
   track[140].name = "EN9";
   track[140].type = NODE_ENTER;
+  track[140].num = 9;
   track[140].reverse = &track[141];
   track[140].edge[DIR_AHEAD].reverse = &track[25].edge[DIR_AHEAD];
   track[140].edge[DIR_AHEAD].src = &track[140];
@@ -1334,9 +1351,11 @@ void init_tracka(track_node *track) {
   track[140].edge[DIR_AHEAD].curveness = 0;
   track[141].name = "EX9";
   track[141].type = NODE_EXIT;
+  track[141].num = 9;
   track[141].reverse = &track[140];
   track[142].name = "EN10";
   track[142].type = NODE_ENTER;
+  track[142].num = 10;
   track[142].reverse = &track[143];
   track[142].edge[DIR_AHEAD].reverse = &track[27].edge[DIR_AHEAD];
   track[142].edge[DIR_AHEAD].src = &track[142];
@@ -1345,6 +1364,7 @@ void init_tracka(track_node *track) {
   track[142].edge[DIR_AHEAD].curveness = 0;
   track[143].name = "EX10";
   track[143].type = NODE_EXIT;
+  track[143].num = 10;
   track[143].reverse = &track[142];
 }
 
@@ -2578,6 +2598,7 @@ void init_trackb(track_node *track) {
   track[123].edge[DIR_AHEAD].curveness = 0;
   track[124].name = "EN1";
   track[124].type = NODE_ENTER;
+  track[124].num = 1;
   track[124].reverse = &track[125];
   track[124].edge[DIR_AHEAD].reverse = &track[116].edge[DIR_STRAIGHT];
   track[124].edge[DIR_AHEAD].src = &track[124];
@@ -2586,9 +2607,11 @@ void init_trackb(track_node *track) {
   track[124].edge[DIR_AHEAD].curveness = 0;
   track[125].name = "EX1";
   track[125].type = NODE_EXIT;
+  track[125].num = 1;
   track[125].reverse = &track[124];
   track[126].name = "EN2";
   track[126].type = NODE_ENTER;
+  track[126].num = 2;
   track[126].reverse = &track[127];
   track[126].edge[DIR_AHEAD].reverse = &track[120].edge[DIR_STRAIGHT];
   track[126].edge[DIR_AHEAD].src = &track[126];
@@ -2597,9 +2620,11 @@ void init_trackb(track_node *track) {
   track[126].edge[DIR_AHEAD].curveness = 0;
   track[127].name = "EX2";
   track[127].type = NODE_EXIT;
+  track[127].num = 2;
   track[127].reverse = &track[126];
   track[128].name = "EN3";
   track[128].type = NODE_ENTER;
+  track[128].num = 3;
   track[128].reverse = &track[129];
   track[128].edge[DIR_AHEAD].reverse = &track[34].edge[DIR_AHEAD];
   track[128].edge[DIR_AHEAD].src = &track[128];
@@ -2608,9 +2633,11 @@ void init_trackb(track_node *track) {
   track[128].edge[DIR_AHEAD].curveness = 0;
   track[129].name = "EX3";
   track[129].type = NODE_EXIT;
+  track[129].num = 3;
   track[129].reverse = &track[128];
   track[130].name = "EN4";
   track[130].type = NODE_ENTER;
+  track[130].num = 4;
   track[130].reverse = &track[131];
   track[130].edge[DIR_AHEAD].reverse = &track[13].edge[DIR_AHEAD];
   track[130].edge[DIR_AHEAD].src = &track[130];
@@ -2619,9 +2646,11 @@ void init_trackb(track_node *track) {
   track[130].edge[DIR_AHEAD].curveness = 0;
   track[131].name = "EX4";
   track[131].type = NODE_EXIT;
+  track[131].num = 4;
   track[131].reverse = &track[130];
   track[132].name = "EN5";
   track[132].type = NODE_ENTER;
+  track[132].num = 5;
   track[132].reverse = &track[133];
   track[132].edge[DIR_AHEAD].reverse = &track[1].edge[DIR_AHEAD];
   track[132].edge[DIR_AHEAD].src = &track[132];
@@ -2630,9 +2659,11 @@ void init_trackb(track_node *track) {
   track[132].edge[DIR_AHEAD].curveness = 0;
   track[133].name = "EX5";
   track[133].type = NODE_EXIT;
+  track[133].num = 5;
   track[133].reverse = &track[132];
   track[134].name = "EN7";
   track[134].type = NODE_ENTER;
+  track[134].num = 7;
   track[134].reverse = &track[135];
   track[134].edge[DIR_AHEAD].reverse = &track[23].edge[DIR_AHEAD];
   track[134].edge[DIR_AHEAD].src = &track[134];
@@ -2641,9 +2672,11 @@ void init_trackb(track_node *track) {
   track[134].edge[DIR_AHEAD].curveness = 0;
   track[135].name = "EX7";
   track[135].type = NODE_EXIT;
+  track[135].num = 7;
   track[135].reverse = &track[134];
   track[136].name = "EN9";
   track[136].type = NODE_ENTER;
+  track[136].num = 9;
   track[136].reverse = &track[137];
   track[136].edge[DIR_AHEAD].reverse = &track[25].edge[DIR_AHEAD];
   track[136].edge[DIR_AHEAD].src = &track[136];
@@ -2652,9 +2685,11 @@ void init_trackb(track_node *track) {
   track[136].edge[DIR_AHEAD].curveness = 0;
   track[137].name = "EX9";
   track[137].type = NODE_EXIT;
+  track[137].num = 9;
   track[137].reverse = &track[136];
   track[138].name = "EN10";
   track[138].type = NODE_ENTER;
+  track[138].num = 10;
   track[138].reverse = &track[139];
   track[138].edge[DIR_AHEAD].reverse = &track[27].edge[DIR_AHEAD];
   track[138].edge[DIR_AHEAD].src = &track[138];
@@ -2663,5 +2698,6 @@ void init_trackb(track_node *track) {
   track[138].edge[DIR_AHEAD].curveness = 0;
   track[139].name = "EX10";
   track[139].type = NODE_EXIT;
+  track[139].num = 10;
   track[139].reverse = &track[138];
 }

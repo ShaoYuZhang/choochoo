@@ -173,14 +173,15 @@ class node:
         except (AssertionError, ValueError):
           state.error("expected '%s <SWITCH_NUM>'" % line[0])
       elif line[0] in ['enter', 'exit']:
-        # enter/exit
+        # enter/exit <ENTER/EXIT_NUM>
         if self.nodetype != None:
           state.error("duplicate node type")
         self.nodetype = line[0]
         try:
-          assert len(line) == 1
+          assert len(line) == 2
+          self.num = int(line[1]);
         except (AssertionError, ValueError):
-          state.error("expected '%s'" % line[0])
+          state.error("expected '%s <ENTER/EXIT_NUM>'" % line[0])
       elif line[0] in ['reverse', 'ahead', 'straight', 'curved']:
         # reverse/ahead/straight/curved <NODE>
         if self.__dict__[line[0]] != None:

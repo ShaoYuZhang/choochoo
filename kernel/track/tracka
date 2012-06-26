@@ -519,74 +519,74 @@ node MR156:
   reverse BR156
   ahead BR154
 node EN1:
-  enter
+  enter 1
   reverse EX1
   ahead MR153
 node EX1:
-  exit
+  exit 1
   reverse EN1
 node EN2:
-  enter
+  enter 2
   reverse EX2
   ahead MR155
 node EX2:
-  exit
+  exit 2
   reverse EN2
 node EN3:
-  enter
+  enter 3
   reverse EX3
   ahead C4
 node EX3:
-  exit
+  exit 3
   reverse EN3
 node EN4:
-  enter
+  enter 4
   reverse EX4
   ahead A13
 node EX4:
-  exit
+  exit 4
   reverse EN4
 node EN5:
-  enter
+  enter 5
   reverse EX5
   ahead A1
 node EX5:
-  exit
+  exit 5
   reverse EN5
 node EN6:
-  enter
+  enter 6
   reverse EX6
   ahead A16
 node EX6:
-  exit
+  exit 6
   reverse EN6
 node EN7:
-  enter
+  enter 7
   reverse EX7
   ahead B7
 node EX7:
-  exit
+  exit 7
   reverse EN7
 node EN8:
-  enter
+  enter 8
   reverse EX8
   ahead A11
 node EX8:
-  exit
+  exit 8
   reverse EN8
 node EN9:
-  enter
+  enter 9
   reverse EX9
   ahead B9
 node EX9:
-  exit
+  exit 9
   reverse EN9
 node EN10:
-  enter
+  enter 10
   reverse EX10
   ahead B11
 node EX10:
-  exit
+  exit 10
   reverse EN10
 
 edge A1 MR12:
