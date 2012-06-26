@@ -7,8 +7,9 @@
 #define SET_SPEED  0
 #define GET_SPEED  1
 #define GOTO_DEST  2
-#define UPDATE_UI  3
+#define UI_NAGGER  3
 #define DELAYER    4
+#define SENSOR_TRIGGER 5
 
 typedef struct DriverMsg {
   char type;           // As defined above

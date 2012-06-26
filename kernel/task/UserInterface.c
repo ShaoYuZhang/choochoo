@@ -18,6 +18,15 @@
 #define CLOCK_R2 '0'+5
 #define CLOCK_C1 '8'
 
+static char* formatInt(int n, int numDigit, char* msg) {
+  for (int i = numDigit-1; i >= 0; i--) {
+    msg[i] = (n != 0) ? '0' + n%10 : ' ';
+
+    n /= 10;
+  }
+  return msg + numDigit;
+}
+
 static char* moveTo(char row, char col, char* msg) {
   // Move to position
   *msg++ = ESC;
@@ -66,13 +75,13 @@ static char* timeu(unsigned int ms, char* msg) {
   *msg++ = 'f';
 
   // Print the time
-	*msg++ = min/10 + '0';
-	*msg++ = min%10 + '0';
-	*msg++ = ':';
-	*msg++ = sec/10 + '0';
-	*msg++ = sec%10 + '0';
-	*msg++ = '.';
-	*msg++ = mso + '0';
+  *msg++ = min/10 + '0';
+  *msg++ = min%10 + '0';
+  *msg++ = ':';
+  *msg++ = sec/10 + '0';
+  *msg++ = sec%10 + '0';
+  *msg++ = '.';
+  *msg++ = mso + '0';
 
   return msg;
 }
@@ -91,55 +100,37 @@ static char* timeu(unsigned int ms, char* msg) {
 // | N Sensor T  |
 static char* updateTrain(TrainUiMsg* train, char* msg) {
   msg = saveCursor(msg);
-  msg = moveTo(4, 32, msg);
-  if (train->lastSensor > 9) {
-    *msg++ = '0';// + train->lastSensor/10;
-  }
-  *msg++ = '0';// + train->lastSensor%10;
-  *msg++ = 'a';// + train->lastSensor%10;
 
-  msg = moveTo(5, 32, msg);
+  msg = moveTo(4, 26, msg);
+  *msg++ = '0' + train->nth;
+
+  msg = moveTo(4, 26, msg);
+  *msg++ = 'A' + train->lastSensorBox;
+  msg = formatInt(train->lastSensorVal, 2, msg);
+
+  msg = moveTo(5, 26, msg);
   msg = timeu(train->lastSensorTime, msg);
 
-  msg = moveTo(6, 32, msg);
+  msg = moveTo(6, 26, msg);
   msg = timeu(train->lastPredictionTime, msg);
 
-  msg = moveTo(8, 32, msg);
-  if (train->speed > 9) {
-    *msg++ = '0' + train->speed/10;
-  }
-  *msg++ = '0' + train->speed%10;
+  msg = moveTo(8, 26, msg);
+  msg = formatInt(train->speed, 2, msg);
 
-  msg = moveTo(9, 32, msg);
-  if (train->velocity > 9) {
-    *msg++ = '0' + train->velocity/10;
-  }
-  *msg++ = '0' + train->velocity%10;
+  msg = moveTo(9, 26, msg);
+  msg = formatInt(train->velocity, 3, msg);
 
-  msg = moveTo(10, 32, msg);
-  if (train->distanceFromLastSensor > 99) {
-    *msg++ = '0' + train->velocity/100;
-    train->velocity/=100;
+  msg = moveTo(10, 26, msg);
+  msg = formatInt(train->distanceFromLastSensor, 4, msg);
 
-  }
-  if (train->distanceFromLastSensor > 9) {
-    *msg++ = '0' + train->velocity/10;
-  }
-  *msg++ = '0' + train->velocity%10;
+  msg = moveTo(11, 26, msg);
+  *msg++ = 'A' + train->nextSensorBox;
+  msg = formatInt(train->nextSensorVal, 2, msg);
 
-  msg = moveTo(11, 32, msg);
-  if (train->lastSensor > 9) {
-    *msg++ = '0' + train->nextSensor/10;
-  }
-  *msg++ = '0' + train->nextSensor%10;
-
-  msg = moveTo(12, 32, msg);
+  msg = moveTo(12, 26, msg);
   msg = timeu(train->nextSensorTime, msg);
 
-  // Restore Cursor
-  msg = restoreCursor(msg);
-
-  return msg;
+  return restoreCursor(msg);
 }
 
 static char* promptChar(char col, char c, char* msg) {
@@ -273,19 +264,26 @@ static char* updateSensor(int box, int val, char* msg) {
     *msg++ = ESC;
     *msg++ = '[';
     *msg++ = 'K';
-  }
-  else {
+  } else {
     msg = moveTo(26, 10 + numUpdated*5, msg);
   }
 
   // Print sensor info
-	*msg++ = 'A' + box;
-  if (val >= 10) {
-	  *msg++ = '0'+ val/10;
+  *msg++ = 'A' + box;
+  if (val >= 100) {
+    *msg++ = '0' + val/100;
+    val /= 10;
+    *msg++ = '0'+ val/10;
     *msg++ = '0'+ val%10;
+  }
+  else if (val >= 10) {
+    *msg++ = '0'+ val/10;
+    *msg++ = '0'+ val%10;
+    *msg++ = ' ';
   }
   else {
     *msg++ = '0'+ val%10;
+    *msg++ = ' ';
     *msg++ = ' ';
   }
 
@@ -322,46 +320,46 @@ static char* drawTrainFrameHelper(
 }
 
 static char* drawTrainFrame(char* msg) {
-  msg = moveTo(1, 25, msg);
+  msg = moveTo(1, 10, msg);
   msg = drawTrainFrameHelper(msg, '.', '+', '+', "-------------", "----------");
 
-  msg = moveTo(2, 25, msg);
+  msg = moveTo(2, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', "    Train    ", "          ");
 
-  msg = moveTo(3, 25, msg);
+  msg = moveTo(3, 10, msg);
   msg = drawTrainFrameHelper(msg, '+', '+', '+', "-------------", "----------");
 
-  msg = moveTo(4, 25, msg);
+  msg = moveTo(4, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " L Sensor    ", "          ");
 
-  msg = moveTo(5, 25, msg);
+  msg = moveTo(5, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " L Sensor T  ", "          ");
 
-  msg = moveTo(6, 25, msg);
+  msg = moveTo(6, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " L Predic T  ", "          ");
 
-  msg = moveTo(7, 25, msg);
+  msg = moveTo(7, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', "             ", "          ");
 
-  msg = moveTo(8, 25, msg);
+  msg = moveTo(8, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " Speed       ", "          ");
 
-  msg = moveTo(9, 25, msg);
+  msg = moveTo(9, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " Velocity    ", "          ");
 
-  msg = moveTo(10, 25, msg);
+  msg = moveTo(10, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " D From Last ", "          ");
 
-  msg = moveTo(11, 25, msg);
+  msg = moveTo(11, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', "             ", "          ");
 
-  msg = moveTo(12, 25, msg);
+  msg = moveTo(12, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " N Sensor    ", "          ");
 
-  msg = moveTo(13, 25, msg);
+  msg = moveTo(13, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " N Sensor T  ", "          ");
 
-  msg = moveTo(13, 25, msg);
+  msg = moveTo(13, 10, msg);
   msg = drawTrainFrameHelper(msg, '`', '-', '`', "-------------", "----------");
   return msg;
 }
@@ -383,7 +381,7 @@ static char* drawSwitches(char* msg) {
   *msg++ = 'c';
   *msg++ = 'h';
 
-	for (int i = 1; i <= 18; i++) {
+  for (int i = 1; i <= 18; i++) {
     // Move again
     *msg++ = ESC;
     *msg++ = '[';
@@ -403,9 +401,9 @@ static char* drawSwitches(char* msg) {
     *msg++  = ' ';
     *msg++  = ':';
     *msg++  = '~';
-	}
+  }
 
-	for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 4; i++) {
     // Move cursor
     *msg++ = ESC;
     *msg++ = '[';
@@ -432,7 +430,7 @@ static char* drawSwitches(char* msg) {
     }
     *msg++ = ':';
     *msg++ = '~';
-	}
+  }
 
   return msg;
 }
@@ -440,7 +438,7 @@ static char* drawSwitches(char* msg) {
 static char* updateSwitch(int sw, int ss, char* msg) {
   msg = saveCursor(msg);
 
-	char state = ss == SWITCH_STRAIGHT ? '-' : '~';
+  char state = ss == SWITCH_STRAIGHT ? '-' : '~';
 
   if (sw >= 0x99 && sw <= 0x9c) {
     sw -= 134; // make 0x99 19
@@ -553,9 +551,7 @@ static void displayStaticContent(int com2) {
   *msg++ = ':';
 
   msg = drawTrainFrame(msg);
-
   msg = promptChar(1, '>', msg);
-
 
   Putstr(com2, msgStart, msg-msgStart);
 

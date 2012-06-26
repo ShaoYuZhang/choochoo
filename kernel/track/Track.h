@@ -38,8 +38,8 @@ typedef struct TrackMsg {
 } TrackMsg;
 
 typedef struct TrackNextSensorMsg {
-  TrackLandmark sensor;
-  int dist;
+  TrackLandmark sensor;   //
+  int dist;               // In mm
 } TrackNextSensorMsg;
 
 int startTrackManagerTask();

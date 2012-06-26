@@ -7,14 +7,24 @@
 #include <IoHelper.h>
 #include <syscall.h>
 #include <UserInterface.h>
+#include <CalibrationData.h>
+#include <Sensor.h>
+#include <Track.h>
 
 typedef struct Driver {
   int speed;
-  int worker;
-  int nth;      // the nth driver to be initialized. For UI display
-  int uiAlert;  // Tasks that reminds train to print
-  int ui;       // Ui Tid
+  int speedDir;
+  int delayer;
+  int nth;       // the nth driver to be initialized. For UI display
+  int uiNagger;   // Tasks that reminds train to print
+  int ui;        // Ui Tid
+  int sensorWatcher;
+  int track; // Tid
+  int distance;
   TrainUiMsg uiMsg;
+
+  int v[15][2];
+  int d[15][2][2];
 } Driver;
 
 static int com1;
@@ -39,26 +49,62 @@ static void trainSetSpeed(DriverMsg* origMsg, Driver* me) {
       msg[0] = (char)speed;
       Putstr(com1, msg, 2);
     }
+    if (speed > me->speed) {
+      me->speedDir = ACCELERATE;
+    } else if (speed < me->speed) {
+      me->speedDir = DECELERATE;
+    }
     me->speed = speed;
   } else {
     printff(com2, "Reverse... %d \n", me->speed);
     origMsg->data2 = (signed char)me->speed;
     // TODO, calculate from train speed.
     origMsg->data3 = 150; // YES IT IS 3s
-    printff(com2, "Using worker: %d \n", me->worker);
+    printff(com2, "Using delayer: %d \n", me->delayer);
 
-    Reply(me->worker, (char*)origMsg, sizeof(DriverMsg));
+    Reply(me->delayer, (char*)origMsg, sizeof(DriverMsg));
 
     msg[0] = 0;
     msg[1] = (char)trainNum;
 
     Putstr(com1, msg, 2);
     me->speed = 0;
+    me->speedDir = DECELERATE;
+  }
+}
+
+// It is SensorQuery's responsibility to return whether SensorServer's
+// response is relevant to this Train.
+//
+// If the message from server is not for this train. It is dropped.
+static void trainSensor() {
+  int parent = MyParentsTid();
+  char sensorName[] = SENSOR_NAME;
+  int sensorServer = WhoIs(sensorName);
+
+  DriverMsg msg;
+  msg.type = SENSOR_TRIGGER;
+
+  SensorMsg sensorMsg;
+  sensorMsg.type = QUERY_RECENT;
+  Send(sensorServer, (char*)&sensorMsg, sizeof(SensorMsg),
+      (char*)1, 0);
+  for (;;) {
+    Sensor sensor;
+    int tid;
+    Receive(&tid, (char *)&sensor, sizeof(Sensor));
+    Reply(tid, (char *)1, 0);
+
+    msg.data2 = sensor.box;
+    msg.data3 = sensor.val;
+
+    // TODO:zhang confirm with prediction for multi-train setup.
+    Send(parent, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
   }
 }
 
 // Responsider for delag msg server about positive train speed
-static void trainWorker() {
+static void trainDelayer() {
   char timename[] = TIMESERVER_NAME;
   int timeserver = WhoIs(timename);
   int parent = MyParentsTid();
@@ -71,17 +117,17 @@ static void trainWorker() {
     numTick *= 2;
     Delay(numTick, timeserver);
     msg.data3 = DELAYER;
-    //printff(com2, "Worker Done. %d %d\n", numTick, parent);
+    //printff(com2, "Delayer Done. %d %d\n", numTick, parent);
   }
 }
 
-static void trainUiUpdate() {
+static void trainUiNagger() {
   char timename[] = TIMESERVER_NAME;
   int timeserver = WhoIs(timename);
   int parent = MyParentsTid();
 
   DriverMsg msg;
-  msg.type = UPDATE_UI;
+  msg.type = UI_NAGGER;
   for (;;) {
     Delay(500, timeserver); // .5 seconds
     Send(parent, (char*)&msg, 1, (char*)1, 0);
@@ -92,17 +138,30 @@ static void initDriver(Driver* me) {
   char uiName[] = UI_TASK_NAME;
   me->ui = WhoIs(uiName);
 
+  char trackName[] = TRACK_NAME;
+  me->track = WhoIs(trackName);
+
   me->speed = 0;
-  me->worker  = Create(1, trainWorker);
-  me->uiAlert = Create(3, trainUiUpdate);
+  me->speedDir = ACCELERATE;
+
+  me->delayer = Create(1, trainDelayer);
+  me->uiNagger = Create(3, trainUiNagger);
+  me->sensorWatcher = Create(3, trainSensor);
   int controller;
   Receive(&controller, (char*)&(me->nth), 4);
 
   me->uiMsg.type = UPDATE_TRAIN;
+
+  initStoppingDistance((int*)me->d);
+  initVelocity((int*)me->v);
 }
 
-static void makeUiReport(Driver* me) {
-  //me->uiMsg.
+static void sendUiReport(Driver* me) {
+  me->uiMsg.speed = me->speed;
+  me->uiMsg.velocity = me->v[me->speedDir][me->speed] / 100;
+  me->uiMsg.distanceFromLastSensor = me->distance;
+
+  Send(me->ui, (char*)&(me->uiMsg), sizeof(TrainUiMsg), (char*)1, 0);
 }
 
 static void driver() {
@@ -117,7 +176,7 @@ static void driver() {
     msg.data3 = -1;
     msg.replyTid = -1;
     Receive(&tid, (char*)&msg, sizeof(DriverMsg));
-    if (tid != me.worker) {
+    if (tid != me.delayer) {
       Reply(tid, (char*)1, 0);
     }
     const int replyTid = msg.replyTid;
@@ -132,6 +191,7 @@ static void driver() {
         if (msg.data3 != DELAYER) {
           //printff(com2, "Replied to %d\n", replyTid);
           Reply(replyTid, (char*)1, 0);
+          sendUiReport(&me);
           break;
         }
         // else fall through
@@ -141,9 +201,23 @@ static void driver() {
         // Worker reporting back.
         break;
       }
-      case UPDATE_UI: {
-        makeUiReport(&me);
-        Send(me.ui, (char*)&me.uiMsg, sizeof(TrainUiMsg), (char*)1, 0);
+      case UI_NAGGER: {
+        //TrackNextSensorMsg tMsg;
+        //TrackMsg qMsg;
+        //qMsg.type = QUERY_NEXT_SENSOR;
+        //qMsg.landmark1.type = LANDMARK_SENSOR;
+        //qMsg.landmark1.num1 = me.uiMsg.lastSensorBox;
+        //qMsg.landmark1.num2 = me.uiMsg.lastSensorVal;
+        //Send(me.track, (char*)&tMsg, sizeof(TrackMsg),
+        //    (char*)&qMsg, sizeof(TrackNextSensorMsg));
+        //me.distance = tMsg.dist;
+        sendUiReport(&me);
+        break;
+      }
+      case SENSOR_TRIGGER: {
+        me.uiMsg.lastSensorBox = msg.data2; // Box
+        me.uiMsg.lastSensorVal = msg.data3; // Val
+        sendUiReport(&me);
         break;
       }
       default: {
@@ -153,7 +227,7 @@ static void driver() {
   }
 }
 
-// Basically a courier to pass message to train.
+// An admin that pass message to train.
 // Additionally create train if it does not exist.
 static void trainController() {
   char trainName[] = TRAIN_CONTROLLER_NAME;
