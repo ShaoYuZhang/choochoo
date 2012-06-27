@@ -33,6 +33,16 @@ void putw( int tid, int n, char fc, char *bf ) {
 	while( ( ch = *bf++ ) ) Putc( tid, ch );
 }
 
+char *w2a(int n, char fc, char* bf, char* result) {
+	char ch;
+	char *p = bf;
+
+	while( *p++ && n > 0 ) n--;
+	while( n-- > 0 ) *result++ = fc;
+	while( ( ch = *bf++ ) ) *result++ = ch;
+  return result;
+}
+
 int a2d( char ch ) {
 	if( ch >= '0' && ch <= '9' ) return ch - '0';
 	if( ch >= 'a' && ch <= 'f' ) return ch - 'a' + 10;
@@ -80,15 +90,15 @@ void i2a( int num, char *bf ) {
 	ui2a( num, 10, bf );
 }
 
-void format ( int tid, char *fmt, va_list va ) {
+static int format (char*buffer, char *fmt, va_list va ) {
+  char *bufferStart = buffer;
 	char bf[12];
 	char ch, lz;
 	int w;
 
-
 	while ( ( ch = *(fmt++) ) ) {
 		if ( ch != '%' )
-			Putc( tid, ch );
+      *buffer++ = ch;
 		else {
 			lz = 0; w = 0;
 			ch = *(fmt++);
@@ -109,37 +119,50 @@ void format ( int tid, char *fmt, va_list va ) {
 				break;
 			}
 			switch( ch ) {
-			case 0: return;
+			case 0: return buffer - bufferStart;
 			case 'c':
-				Putc( tid, va_arg( va, char ) );
+				*buffer++ = va_arg( va, char );
 				break;
 			case 's':
-				putw( tid, w, 0, va_arg( va, char* ) );
+				buffer = w2a( w, 0, va_arg( va, char* ), buffer);
 				break;
 			case 'u':
 				ui2a( va_arg( va, unsigned int ), 10, bf );
-				putw( tid, w, lz, bf );
+				buffer = w2a(w, lz, bf, buffer);
 				break;
 			case 'd':
 				i2a( va_arg( va, int ), bf );
-				putw( tid, w, lz, bf );
+				buffer = w2a( w, lz, bf, buffer);
 				break;
 			case 'x':
 				ui2a( va_arg( va, unsigned int ), 16, bf );
-				putw( tid, w, lz, bf );
+				buffer = w2a( w, lz, bf, buffer );
 				break;
 			case '%':
-				Putc( tid, ch );
+				*buffer++ = ch;
 				break;
 			}
 		}
 	}
+  return buffer - bufferStart;
 }
 
 void printff( int tid, char *fmt, ... ) {
+  char buffer[1000];
   va_list va;
 
   va_start(va,fmt);
-  format( tid, fmt, va );
+  int len = format( buffer, fmt, va );
   va_end(va);
+  Putstr(tid, buffer, len);
+}
+
+int sprintff( char* str, char *fmt, ...) {
+  va_list va;
+
+  va_start(va,fmt);
+  int len = format( str, fmt, va );
+  va_end(va);
+
+  return len;
 }

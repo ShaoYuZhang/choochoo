@@ -53,7 +53,7 @@ typedef struct RouteNode {
 
 typedef struct Route {
   int dist;
-  int length; // -1 = can't reach, 0 = nothing to be done
+  int length;
   RouteNode nodes[150];
 } Route;
 

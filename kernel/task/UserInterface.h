@@ -40,4 +40,12 @@ typedef struct TrainUiMsg {
 
 int startUserInterfaceTask();
 
+#define PrintDebug(tid, fmt, ...) \
+{ \
+  char buffer[128]; \
+  buffer[0] = DEBUG_MSG; \
+  int len = sprintff(buffer+1, fmt, ##__VA_ARGS__ ); \
+  Send(tid, buffer, len + 1, (char*)1, 0);  \
+}
+
 #endif // USER_INTERFACE_H_

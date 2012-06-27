@@ -430,13 +430,7 @@ static char* drawSwitches(char* msg) {
   *msg++ = 'h';
 
   for (int i = 1; i <= 18; i++) {
-    // Move again
-    *msg++ = ESC;
-    *msg++ = '[';
-    msg = pad2(i+1, msg); // Row
-    *msg++ = ';';
-    *msg++ = '1'; // Col
-    *msg++ = 'f';
+    *msg++ = '\n';
 
     // Switch info
     *msg++ = 'S';
@@ -452,15 +446,7 @@ static char* drawSwitches(char* msg) {
   }
 
   for (int i = 0; i < 4; i++) {
-    // Move cursor
-    *msg++ = ESC;
-    *msg++ = '[';
-    *msg++ = '2';
-    *msg++ = '0'+ i%10;
-    *msg++ = ';';
-    *msg++ = '1'; // Col
-    *msg++ = 'f';
-
+    *msg++ = '\n';
     // Text
     *msg++ = 'S';
     *msg++ = 'w';
@@ -654,7 +640,7 @@ static void userInterface() {
         break;
       }
       default: {
-        com2msg = updateDebugMessage(receiveBuffer, com2msg, len);
+        com2msg = updateDebugMessage(receiveBuffer + 1, com2msg, len - 1);
       }
     }
     Putstr(com2, com2msgStart, com2msg-com2msgStart);
