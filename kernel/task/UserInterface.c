@@ -233,7 +233,7 @@ static char* pad2(int n, char* msg){
 
 static int debugUpdateNum;
 static char* updateDebugMessage(char* receive, char* msg, int len) {
-  int updateRow = debugUpdateNum%8 + 29;
+  int updateRow = debugUpdateNum%25 + 29;
 
   msg = saveCursor(msg);
 

@@ -46,6 +46,7 @@ typedef struct TrackNextSensorMsg {
 typedef struct RouteNode {
   TrackLandmark landmark;
   int num; // num = -1 if reverse command, num = SWITCH_CURVED/SWITCH_STRAIGHT if landmark is BR switch
+  int dist;
 } RouteNode;
 
 #define MAX_ROUTE_NODE 150
