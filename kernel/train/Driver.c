@@ -6,30 +6,16 @@
 #include <NameServer.h>
 #include <IoHelper.h>
 #include <syscall.h>
-#include <UserInterface.h>
 #include <CalibrationData.h>
 #include <Sensor.h>
 #include <Track.h>
 
-typedef struct Driver {
-  int speed;
-  int speedDir;
-  int delayer;
-  int nth;       // the nth driver to be initialized. For UI display
-  int uiNagger;   // Tasks that reminds train to print
-  int ui;        // Ui Tid
-  int sensorWatcher;
-  int track; // Tid
-  int distance;
-  int predictedTime;
-  TrainUiMsg uiMsg;
-
-  int v[15][2];
-  int d[15][2][2];
-} Driver;
-
 static int com1;
 static int com2;
+
+static int getStoppingDistance(Driver* me) {
+  return me->d[me->speed][me->speedDir][MAX_VAL];
+}
 
 static void trainSetSpeed(DriverMsg* origMsg, Driver* me) {
   const int trainNum = origMsg->trainNum;
@@ -133,7 +119,8 @@ static void trainUiNagger() {
   msg.type = UI_NAGGER;
   for (;;) {
     Delay(500, timeserver); // .5 seconds
-    Send(parent, (char*)&msg, 1, (char*)1, 0);
+    msg.timestamp = Time(timeserver);
+    Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
   }
 }
 
@@ -151,7 +138,7 @@ static void initDriver(Driver* me) {
   me->uiNagger = Create(3, trainUiNagger);
   me->sensorWatcher = Create(3, trainSensor);
   int controller;
-  Receive(&controller, (char*)&(me->nth), 4);
+  Receive(&controller, (char*)&(me->uiMsg.nth), 4);
 
   me->uiMsg.type = UPDATE_TRAIN;
 
@@ -159,10 +146,17 @@ static void initDriver(Driver* me) {
   initVelocity((int*)me->v);
 }
 
-static void sendUiReport(Driver* me) {
+static void sendUiReport(Driver* me, int time) {
   me->uiMsg.speed = me->speed;
-  me->uiMsg.velocity = me->v[me->speedDir][me->speed] / 100;
-  me->uiMsg.distanceFromLastSensor = me->distance;
+  me->uiMsg.speedDir = me->speedDir;
+  me->uiMsg.velocity = me->v[me->speed][me->speedDir] / 100;
+  if (time) {
+    // In mm
+    int dPosition = (time - me->reportTime) * me->uiMsg.velocity /10000;
+    me->reportTime = time;
+    me->uiMsg.distanceFromLastSensor += dPosition;
+    me->uiMsg.distanceToNextSensor -= dPosition;
+  }
 
   Send(me->ui, (char*)&(me->uiMsg), sizeof(TrainUiMsg), (char*)1, 0);
 }
@@ -194,7 +188,7 @@ static void driver() {
         if (msg.data3 != DELAYER) {
           //printff(com2, "Replied to %d\n", replyTid);
           Reply(replyTid, (char*)1, 0);
-          sendUiReport(&me);
+          sendUiReport(&me, 0); // Don't update time
           break;
         }
         // else fall through
@@ -205,15 +199,19 @@ static void driver() {
         break;
       }
       case UI_NAGGER: {
-        sendUiReport(&me);
+        sendUiReport(&me, 0);
         break;
       }
       case SENSOR_TRIGGER: {
+        if (msg.data2 != me.uiMsg.nextSensorBox || msg.data3 != me.uiMsg.nextSensorVal){
+          me.uiMsg.lastSensorUnexpected = 1;
+        } else {
+          me.uiMsg.lastSensorUnexpected = 0;
+        }
         me.uiMsg.lastSensorBox = msg.data2; // Box
         me.uiMsg.lastSensorVal = msg.data3; // Val
-        me.uiMsg.lastSensorTime = msg.timestamp;
-        // TODO, invalid if sensor mismatch
-        me.uiMsg.lastSensorPredictedTime = me.predictedTime;
+        me.uiMsg.lastSensorActualTime = msg.timestamp;
+        me.uiMsg.lastSensorPredictedTime = me.uiMsg.nextSensorPredictedTime;
 
         TrackNextSensorMsg tMsg;
         TrackMsg qMsg;
@@ -222,11 +220,15 @@ static void driver() {
         qMsg.landmark1.num1 = me.uiMsg.lastSensorBox;
         qMsg.landmark1.num2 = me.uiMsg.lastSensorVal;
         Send(me.track, (char*)&qMsg, sizeof(TrackMsg),
-            (char*)&tMsg, sizeof(TrackNextSensorMsg));
-        me.distance = tMsg.dist;
-        me.predictedTime = me.distance*100 / me.v[me.speedDir][me.speed];
+              (char*)&tMsg, sizeof(TrackNextSensorMsg));
+        me.uiMsg.distanceFromLastSensor = 0;
+        me.uiMsg.distanceToNextSensor = tMsg.dist;
+        me.uiMsg.nextSensorBox = tMsg.sensor.num1;
+        me.uiMsg.nextSensorVal = tMsg.sensor.num2;
+        me.uiMsg.nextSensorPredictedTime =
+          msg.timestamp + me.uiMsg.distanceToNextSensor*100000 / me.v[me.speed][me.speedDir];
 
-        sendUiReport(&me);
+        sendUiReport(&me, msg.timestamp);
         break;
       }
       default: {
@@ -247,7 +249,7 @@ static void trainController() {
   com1 = WhoIs(com1Name);
   com2 = WhoIs(com2Name);
 
-  int numTrain = 0;
+  int nth = 0;
   int trainTid[80]; // Train num -> train tid
   for (int i = 0; i < 80; i++) {
     trainTid[i] = -1;
@@ -264,8 +266,8 @@ static void trainController() {
     if (trainTid[(int)msg.trainNum] == -1) {
       // Create train task
       trainTid[(int)msg.trainNum] = Create(4, driver);
-      Send(trainTid[(int)msg.trainNum], (char*)&numTrain, 4, (char*)1, 0);
-      numTrain++;
+      Send(trainTid[(int)msg.trainNum], (char*)&nth, 4, (char*)1, 0);
+      nth++;
     }
 
     msg.replyTid = (char)tid;

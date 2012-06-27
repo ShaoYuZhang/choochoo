@@ -7,6 +7,7 @@
 #include <IoServer.h>
 #include <IoHelper.h>
 #include <Sensor.h>
+#include <CalibrationData.h>
 
 #define REFRESH_TICK 100
 #define NUM_SENSORSET 5
@@ -19,12 +20,37 @@
 #define CLOCK_C1 '8'
 
 static char* formatInt(int n, int numDigit, char* msg) {
+  int anyOutput = 0;
   for (int i = numDigit-1; i >= 0; i--) {
-    msg[i] = (n != 0) ? '0' + n%10 : ' ';
+    if (n != 0){
+      msg[i] = '0' + n%10;
+      anyOutput = 1;
+    } else {
+      msg[i] = ' ';
+    }
 
     n /= 10;
   }
+  if (!anyOutput) {
+    msg[0] = '0';
+  }
   return msg + numDigit;
+}
+
+static char* resetColor(char* msg) {
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = '0';
+  *msg++ = 'm';
+  return msg;
+}
+
+static char* setColor(int color, char* msg) {
+  *msg++ = ESC;
+  *msg++ = '[';
+  msg = formatInt(color, 2, msg);
+  *msg++ = 'm';
+  return msg;
 }
 
 static char* moveTo(char row, char col, char* msg) {
@@ -99,35 +125,61 @@ static char* timeu(unsigned int ms, char* msg) {
 static char* updateTrain(TrainUiMsg* train, char* msg) {
   msg = saveCursor(msg);
 
-  msg = moveTo(4, 26, msg);
+  int row = 2;
+  // TRAIN NUMBER
+  msg = moveTo(row++, 26, msg);
   *msg++ = '0' + train->nth;
+  row++;
 
-  msg = moveTo(4, 26, msg);
+  // ---------------------------------
+  // PAST INFORMATION
+  if (train->lastSensorUnexpected) msg = setColor(31, msg);
+  msg = moveTo(row++, 26, msg);
   *msg++ = 'A' + train->lastSensorBox;
   msg = formatInt(train->lastSensorVal, 2, msg);
 
-  msg = moveTo(5, 26, msg);
-  msg = timeu(train->lastSensorTime, msg);
+  msg = moveTo(row++, 26, msg);
+  msg = timeu(train->lastSensorActualTime, msg);
+  if (train->lastSensorUnexpected) msg = resetColor(msg);
 
-  // TODO: if delta to sensorTime is long, make this red.
-  msg = moveTo(6, 26, msg);
-  msg = timeu(train->lastPredictionTime, msg);
+  msg = moveTo(row++, 26, msg);
+  if (train->lastSensorPredictedTime - train->lastSensorActualTime != 0) {
+    msg = setColor(31, msg);
+    msg = timeu(train->lastSensorPredictedTime, msg);
+    msg = resetColor(msg);
+  } else {
+    msg = timeu(train->lastSensorPredictedTime, msg);
+  }
+  row++;
 
-  msg = moveTo(8, 26, msg);
+  // ---------------------------------
+  // PRESENT INFORMATION
+  msg = moveTo(row++, 26, msg);
   msg = formatInt(train->speed, 2, msg);
 
-  msg = moveTo(9, 26, msg);
+  if (train->speedDir == ACCELERATE) {
+    *msg++ = '+'; *msg++ = '+';
+  } else {
+    *msg++ = '-'; *msg++ = '-';
+  }
+
+  msg = moveTo(row++, 26, msg);
   msg = formatInt(train->velocity, 3, msg);
 
-  msg = moveTo(10, 26, msg);
-  msg = formatInt(train->distanceFromLastSensor, 4, msg);
+  msg = moveTo(row++, 26, msg);
+  msg = formatInt(train->distanceFromLastSensor, 6, msg);
+  msg = moveTo(row++, 26, msg);
+  msg = formatInt(train->distanceToNextSensor, 6, msg);
+  row++;
 
-  msg = moveTo(11, 26, msg);
+  // ---------------------------------
+  // FUTURE INFORMATION
+  msg = moveTo(row++, 26, msg);
   *msg++ = 'A' + train->nextSensorBox;
   msg = formatInt(train->nextSensorVal, 2, msg);
 
-  msg = moveTo(12, 26, msg);
-  msg = timeu(train->nextSensorTime, msg);
+  msg = moveTo(row++, 26, msg);
+  msg = timeu(train->nextSensorPredictedTime, msg);
 
   return restoreCursor(msg);
 }
@@ -184,13 +236,7 @@ static char* updateDebugMessage(char* receive, char* msg, int len) {
   msg = saveCursor(msg);
 
   // move to position
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = '0' + updateRow/10; // line
-  *msg++ = '0'+ updateRow%10; // line
-  *msg++ = ';';
-  *msg++ = '1'; // Col
-  *msg++ = 'f';
+  msg = moveTo(updateRow, 1, msg);
 
   for (int i = 0; i < len; i++) {
     *msg++ = receive[i];
@@ -318,46 +364,50 @@ static char* drawTrainFrameHelper(
 }
 
 static char* drawTrainFrame(char* msg) {
-  msg = moveTo(1, 10, msg);
+  int row = 1;
+  msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '.', '+', '+', "-------------", "----------");
 
-  msg = moveTo(2, 10, msg);
+  msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', "    Train    ", "          ");
 
-  msg = moveTo(3, 10, msg);
+  msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '+', '+', '+', "-------------", "----------");
 
-  msg = moveTo(4, 10, msg);
+  msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " L Sensor    ", "          ");
 
-  msg = moveTo(5, 10, msg);
+  msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " L Sensor T  ", "          ");
 
-  msg = moveTo(6, 10, msg);
+  msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " L Predic T  ", "          ");
 
-  msg = moveTo(7, 10, msg);
+  msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', "             ", "          ");
 
-  msg = moveTo(8, 10, msg);
+  msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " Speed       ", "          ");
 
-  msg = moveTo(9, 10, msg);
+  msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " Velocity    ", "          ");
 
-  msg = moveTo(10, 10, msg);
+  msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " D From Last ", "          ");
 
-  msg = moveTo(11, 10, msg);
+  msg = moveTo(row++, 10, msg);
+  msg = drawTrainFrameHelper(msg, '|', '|', '|', " D to Next   ", "          ");
+
+  msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', "             ", "          ");
 
-  msg = moveTo(12, 10, msg);
+  msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " N Sensor    ", "          ");
 
-  msg = moveTo(13, 10, msg);
+  msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " N Sensor T  ", "          ");
 
-  msg = moveTo(13, 10, msg);
+  msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '`', '-', '`', "-------------", "----------");
   return msg;
 }

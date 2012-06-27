@@ -1,6 +1,9 @@
 #ifndef TRAIN_H_
 #define TRAIN_H_
 
+#include <UserInterface.h>
+#include <Poly.h>
+
 #define TRAIN_CONTROLLER_NAME "TRAIN_CTRL\0"
 #define NUM_TRAINS 80
 
@@ -20,6 +23,21 @@ typedef struct DriverMsg {
   int timestamp;
 } DriverMsg;
 
+typedef struct Driver {
+  int speed;
+  int speedDir;
+  int delayer;
+  int uiNagger;   // Tasks that reminds train to print
+  int ui;        // Ui Tid
+  int sensorWatcher;
+  int track; // Tid
+  int reportTime;
+  TrainUiMsg uiMsg;
+  Poly decel;
+
+  int v[15][2];
+  int d[15][2][2];
+} Driver;
 
 int startDriverControllerTask();
 
