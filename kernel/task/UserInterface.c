@@ -413,13 +413,7 @@ static char* drawTrainFrame(char* msg) {
 }
 
 static char* drawSwitches(char* msg) {
-  // Move to position
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = '1'; // line
-  *msg++ = ';';
-  *msg++ = '1'; // Col
-  *msg++ = 'f';
+  msg = moveTo(1, 1, msg);
 
   // Text
   *msg++ = 'S';
@@ -430,6 +424,7 @@ static char* drawSwitches(char* msg) {
   *msg++ = 'h';
 
   for (int i = 1; i <= 18; i++) {
+    *msg++ = '\r';
     *msg++ = '\n';
 
     // Switch info
@@ -446,6 +441,7 @@ static char* drawSwitches(char* msg) {
   }
 
   for (int i = 0; i < 4; i++) {
+    *msg++ = '\r';
     *msg++ = '\n';
     // Text
     *msg++ = 'S';
