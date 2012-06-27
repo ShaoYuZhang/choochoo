@@ -48,12 +48,11 @@ void test_track() {
     if (node.num == -1) {
       PrintDebug(uiServer, "reverse \n");
     } else {
-      PrintDebug(uiServer, "Landmark %d %d %d ", node.landmark.type, node.landmark.num1, node.landmark.num2)
+      PrintDebug(uiServer, "Landmark %d %d %d %d", node.landmark.type, node.landmark.num1, node.landmark.num2, node.dist);
       if (node.landmark.type == LANDMARK_SWITCH && node.landmark.num1 == BR) {
         PrintDebug(uiServer, "Switch %d ", node.num);
       }
     }
-    //Delay(1, timeserver);
   }
   Exit();
 }
