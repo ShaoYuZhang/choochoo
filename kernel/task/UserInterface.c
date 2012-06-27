@@ -143,7 +143,9 @@ static char* updateTrain(TrainUiMsg* train, char* msg) {
   if (train->lastSensorUnexpected) msg = resetColor(msg);
 
   msg = moveTo(row++, 26, msg);
-  if (train->lastSensorPredictedTime - train->lastSensorActualTime != 0) {
+  int delta = train->lastSensorPredictedTime - train->lastSensorActualTime;
+  delta = (delta > 0) ? delta : -delta;
+  if (delta > 20) { // Over 20ms in diff is bad.
     msg = setColor(31, msg);
     msg = timeu(train->lastSensorPredictedTime, msg);
     msg = resetColor(msg);

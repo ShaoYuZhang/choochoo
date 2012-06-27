@@ -14,7 +14,23 @@ static int com1;
 static int com2;
 
 static int getStoppingDistance(Driver* me) {
-  return me->d[me->speed][me->speedDir][MAX_VAL];
+  return me->d[(int)me->uiMsg.speed][(int)me->uiMsg.speedDir][MAX_VAL];
+}
+
+// mm/s
+static int getVelocity(Driver* me){
+  return me->v[(int)me->uiMsg.speed][(int)me->uiMsg.speedDir];
+}
+
+static void dynamicCalibration(Driver* me) {
+  if (me->uiMsg.lastSensorUnexpected) return;
+
+  int dTime = me->uiMsg.lastSensorPredictedTime - me->uiMsg.lastSensorActualTime;
+  if (dTime > 1000) return;
+  int velocity = me->calibrationDistance / (me->uiMsg.lastSensorActualTime - me->calibrationStart);
+  int originalVelocity = me->v[(int)me->uiMsg.speed][(int)me->uiMsg.speedDir];
+  me->v[(int)me->uiMsg.speed][(int)me->uiMsg.speedDir]
+      = 0.5 * originalVelocity + 0.5 * velocity;
 }
 
 static void trainSetSpeed(DriverMsg* origMsg, Driver* me) {
@@ -36,15 +52,15 @@ static void trainSetSpeed(DriverMsg* origMsg, Driver* me) {
       msg[0] = (char)speed;
       Putstr(com1, msg, 2);
     }
-    if (speed > me->speed) {
-      me->speedDir = ACCELERATE;
-    } else if (speed < me->speed) {
-      me->speedDir = DECELERATE;
+    if (speed > me->uiMsg.speed) {
+      me->uiMsg.speedDir = ACCELERATE;
+    } else if (speed < me->uiMsg.speed) {
+      me->uiMsg.speedDir = DECELERATE;
     }
-    me->speed = speed;
+    me->uiMsg.speed = speed;
   } else {
-    printff(com2, "Reverse... %d \n", me->speed);
-    origMsg->data2 = (signed char)me->speed;
+    printff(com2, "Reverse... %d \n", me->uiMsg.speed);
+    origMsg->data2 = (signed char)me->uiMsg.speed;
     // TODO, calculate from train speed.
     origMsg->data3 = 150; // YES IT IS 3s
     printff(com2, "Using delayer: %d \n", me->delayer);
@@ -55,8 +71,8 @@ static void trainSetSpeed(DriverMsg* origMsg, Driver* me) {
     msg[1] = (char)trainNum;
 
     Putstr(com1, msg, 2);
-    me->speed = 0;
-    me->speedDir = DECELERATE;
+    me->uiMsg.speed = 0;
+    me->uiMsg.speedDir = DECELERATE;
   }
 }
 
@@ -118,7 +134,7 @@ static void trainUiNagger() {
   DriverMsg msg;
   msg.type = UI_NAGGER;
   for (;;) {
-    Delay(500, timeserver); // .5 seconds
+    Delay(20, timeserver); // .2 seconds
     msg.timestamp = Time(timeserver);
     Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
   }
@@ -131,8 +147,8 @@ static void initDriver(Driver* me) {
   char trackName[] = TRACK_NAME;
   me->track = WhoIs(trackName);
 
-  me->speed = 0;
-  me->speedDir = ACCELERATE;
+  me->uiMsg.speed = 0;
+  me->uiMsg.speedDir = ACCELERATE;
 
   me->delayer = Create(1, trainDelayer);
   me->uiNagger = Create(3, trainUiNagger);
@@ -147,12 +163,10 @@ static void initDriver(Driver* me) {
 }
 
 static void sendUiReport(Driver* me, int time) {
-  me->uiMsg.speed = me->speed;
-  me->uiMsg.speedDir = me->speedDir;
-  me->uiMsg.velocity = me->v[me->speed][me->speedDir] / 100;
+  me->uiMsg.velocity = getVelocity(me) / 100;
   if (time) {
     // In mm
-    int dPosition = (time - me->reportTime) * me->uiMsg.velocity /10000;
+    int dPosition = (time - me->reportTime) * getVelocity(me) /10000;
     me->reportTime = time;
     me->uiMsg.distanceFromLastSensor += dPosition;
     me->uiMsg.distanceToNextSensor -= dPosition;
@@ -180,7 +194,7 @@ static void driver() {
 
     switch (msg.type) {
       case GET_SPEED: {
-        Reply(replyTid, (char*)&me.speed, 4);
+        Reply(replyTid, (char*)&me.uiMsg.speed, 4);
         break;
       }
       case SET_SPEED: {
@@ -212,6 +226,7 @@ static void driver() {
         me.uiMsg.lastSensorVal = msg.data3; // Val
         me.uiMsg.lastSensorActualTime = msg.timestamp;
         me.uiMsg.lastSensorPredictedTime = me.uiMsg.nextSensorPredictedTime;
+        dynamicCalibration(&me);
 
         TrackNextSensorMsg tMsg;
         TrackMsg qMsg;
@@ -221,12 +236,14 @@ static void driver() {
         qMsg.landmark1.num2 = me.uiMsg.lastSensorVal;
         Send(me.track, (char*)&qMsg, sizeof(TrackMsg),
               (char*)&tMsg, sizeof(TrackNextSensorMsg));
+        me.calibrationStart = msg.timestamp + 40; // 40ms for sending data to train
+        me.calibrationDistance = tMsg.dist;
         me.uiMsg.distanceFromLastSensor = 0;
         me.uiMsg.distanceToNextSensor = tMsg.dist;
         me.uiMsg.nextSensorBox = tMsg.sensor.num1;
         me.uiMsg.nextSensorVal = tMsg.sensor.num2;
         me.uiMsg.nextSensorPredictedTime =
-          msg.timestamp + me.uiMsg.distanceToNextSensor*100000 / me.v[me.speed][me.speedDir];
+          msg.timestamp + me.uiMsg.distanceToNextSensor*100000 / getVelocity(&me) - 50; // 50 ms delay for sensor query.
 
         sendUiReport(&me, msg.timestamp);
         break;

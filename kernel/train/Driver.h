@@ -24,14 +24,14 @@ typedef struct DriverMsg {
 } DriverMsg;
 
 typedef struct Driver {
-  int speed;
-  int speedDir;
   int delayer;
   int uiNagger;   // Tasks that reminds train to print
   int ui;        // Ui Tid
   int sensorWatcher;
   int track; // Tid
   int reportTime;
+  int calibrationStart;
+  int calibrationDistance;
   TrainUiMsg uiMsg;
   Poly decel;
 
