@@ -9,7 +9,9 @@ void putr( int tid, unsigned int reg );
 
 void putw( int tid, int n, char fc, char *bf );
 
-void printff( int tid, char *format, ... );
+void printff( int tid, char *fmt, ... );
+
+int sprintff( char *str, char *fmt, ... );
 
 char a2i( char ch, char **src, int base, int *nump );
 

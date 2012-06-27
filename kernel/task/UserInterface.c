@@ -604,7 +604,7 @@ static void userInterface() {
         break;
       }
       default: {
-        com2msg = updateDebugMessage(receiveBuffer, com2msg, len);
+        com2msg = updateDebugMessage(receiveBuffer + 1, com2msg, len - 1);
       }
     }
     Putstr(com2, com2msgStart, com2msg-com2msgStart);
