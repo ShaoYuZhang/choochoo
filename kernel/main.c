@@ -20,8 +20,6 @@ void test_track() {
   int trackManager = WhoIs(trackName);
   char uiName[] = UI_TASK_NAME;
   int uiServer = WhoIs(uiName);
-  char timename[] = TIMESERVER_NAME;
-  int timeserver = WhoIs(timename);
 
   TrackLandmark landmark1;
   TrackLandmark landmark2;
