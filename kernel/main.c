@@ -68,7 +68,7 @@ void task1() {
   startCommandDecoderTask();
 
   // Testing
-  Create(20, test_track);
+  //Create(20, test_track);
 
   Exit();
 }

@@ -27,7 +27,7 @@ typedef struct TrainUiMsg {
   int lastSensorActualTime;
   int lastSensorPredictedTime;
 
-  char speed;      // -14 -> 14
+  char speed;      // 0 - 14
   char speedDir;
   int velocity;   // mm/s
   int distanceFromLastSensor;

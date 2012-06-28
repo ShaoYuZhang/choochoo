@@ -24,13 +24,14 @@ static int getVelocity(Driver* me){
 
 static void dynamicCalibration(Driver* me) {
   if (me->uiMsg.lastSensorUnexpected) return;
+  if (me->uiMsg.speed == 0) return; // Cannot calibrate speed zero
 
   int dTime = me->uiMsg.lastSensorPredictedTime - me->uiMsg.lastSensorActualTime;
   if (dTime > 1000) return;
-  int velocity = me->calibrationDistance / (me->uiMsg.lastSensorActualTime - me->calibrationStart);
+  int velocity = me->calibrationDistance * 100 * 1000 / (me->uiMsg.lastSensorActualTime - me->calibrationStart);
   int originalVelocity = me->v[(int)me->uiMsg.speed][(int)me->uiMsg.speedDir];
   me->v[(int)me->uiMsg.speed][(int)me->uiMsg.speedDir]
-      = 0.5 * originalVelocity + 0.5 * velocity;
+      = (originalVelocity * 8 + velocity * 2) / 10;
 }
 
 static void trainSetSpeed(DriverMsg* origMsg, Driver* me) {
@@ -134,8 +135,8 @@ static void trainUiNagger() {
   DriverMsg msg;
   msg.type = UI_NAGGER;
   for (;;) {
-    Delay(20, timeserver); // .2 seconds
-    msg.timestamp = Time(timeserver);
+    Delay(10, timeserver); // .2 seconds
+    msg.timestamp = Time(timeserver) * 10;
     Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
   }
 }
@@ -149,6 +150,8 @@ static void initDriver(Driver* me) {
 
   me->uiMsg.speed = 0;
   me->uiMsg.speedDir = ACCELERATE;
+  me->uiMsg.distanceToNextSensor = 0;
+  me->uiMsg.distanceFromLastSensor = 0;
 
   me->delayer = Create(1, trainDelayer);
   me->uiNagger = Create(3, trainUiNagger);
@@ -166,7 +169,7 @@ static void sendUiReport(Driver* me, int time) {
   me->uiMsg.velocity = getVelocity(me) / 100;
   if (time) {
     // In mm
-    int dPosition = (time - me->reportTime) * getVelocity(me) /10000;
+    int dPosition = (time - me->reportTime) * getVelocity(me) /100000;
     me->reportTime = time;
     me->uiMsg.distanceFromLastSensor += dPosition;
     me->uiMsg.distanceToNextSensor -= dPosition;
@@ -213,7 +216,7 @@ static void driver() {
         break;
       }
       case UI_NAGGER: {
-        sendUiReport(&me, 0);
+        sendUiReport(&me, msg.timestamp);
         break;
       }
       case SENSOR_TRIGGER: {
@@ -225,8 +228,8 @@ static void driver() {
         me.uiMsg.lastSensorBox = msg.data2; // Box
         me.uiMsg.lastSensorVal = msg.data3; // Val
         me.uiMsg.lastSensorActualTime = msg.timestamp;
-        me.uiMsg.lastSensorPredictedTime = me.uiMsg.nextSensorPredictedTime;
         dynamicCalibration(&me);
+        me.uiMsg.lastSensorPredictedTime = me.uiMsg.nextSensorPredictedTime;
 
         TrackNextSensorMsg tMsg;
         TrackMsg qMsg;
@@ -236,10 +239,11 @@ static void driver() {
         qMsg.landmark1.num2 = me.uiMsg.lastSensorVal;
         Send(me.track, (char*)&qMsg, sizeof(TrackMsg),
               (char*)&tMsg, sizeof(TrackNextSensorMsg));
-        me.calibrationStart = msg.timestamp + 40; // 40ms for sending data to train
+        me.calibrationStart = msg.timestamp;
         me.calibrationDistance = tMsg.dist;
         me.uiMsg.distanceFromLastSensor = 0;
         me.uiMsg.distanceToNextSensor = tMsg.dist;
+        me.reportTime = msg.timestamp;
         me.uiMsg.nextSensorBox = tMsg.sensor.num1;
         me.uiMsg.nextSensorVal = tMsg.sensor.num2;
         me.uiMsg.nextSensorPredictedTime =
