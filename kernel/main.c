@@ -28,15 +28,15 @@ void test_track() {
   DriverMsg msg;
   msg.trainNum = 44;
   msg.type = SET_ROUTE;
-  msg.data2 = 8;
+  msg.data2 = 6;
 
   msg.landmark1.type = LANDMARK_END;
   msg.landmark1.num1 = EN;
   msg.landmark1.num2 = 5;
 
-  landmark2.type = LANDMARK_END;
-  landmark2.num1 = EX;
-  landmark2.num2 = 7;
+  msg.landmark2.type = LANDMARK_END;
+  msg.landmark2.num1 = EX;
+  msg.landmark2.num2 = 4;
 
   Send(trainController, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
 

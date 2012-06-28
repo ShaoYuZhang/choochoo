@@ -50,7 +50,7 @@ static void getRoute(Driver* me, DriverMsg* msg) {
     } else {
       PrintDebug(me->ui, "Landmark %d %d %d %d", node.landmark.type, node.landmark.num1, node.landmark.num2, node.dist);
       if (node.landmark.type == LANDMARK_SWITCH && node.landmark.num1 == BR) {
-        PrintDebug(me->ui, "Switch %d ", node.num);
+        PrintDebug(me->ui, "Switch State: %d ", node.num);
       }
     }
   }
@@ -265,7 +265,7 @@ static void trainNavigateNagger() {
   DriverMsg msg;
   msg.type = NAVIGATE_NAGGER;
   for (;;) {
-    Delay(9, timeserver); // .15 seconds
+    Delay(20, timeserver); // .15 seconds
     Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
   }
 }
@@ -351,10 +351,10 @@ static void driver() {
           sendUiReport(&me, 0); // Don't update time
           break;
         } else {
-          // Reverse command completed
+          // Delayer came back. Reverse command completed
           me.stopCommited = 0; // We're moving again.
-          // We've completed everything until the stop node.
-          me.routeRemaining = me.stopNode;
+          // We've completed everything up to the reverse node.
+          me.routeRemaining = me.stopNode+1;
           // Calculate the next stop node.
           updateStopNode(&me);
           updateTimeToSendStop(&me, msg.data2); // speed:
@@ -410,11 +410,17 @@ static void driver() {
           //updateTimeToSendStop(&me, me.uiMsg.speed); // speed:
           int deltaToStop = me.predictedTimeToStartStopping - Time(me.timeserver)*10;
           PrintDebug(me.ui, "Navi Nagger. %d", deltaToStop);
-          if (deltaToStop < 50) {
-            PrintDebug(me.ui, "Navi Nagger stopping %d.",
-                me.predictedTimeToStartStopping);
-            const int speed = 0;  // Set speed zero.
-            trainSetSpeed(speed, getStoppingTime(&me), 0, &me);
+          if (deltaToStop < 200) {
+            if (me.route.nodes[me.stopNode].num == REVERSE) {
+              const int speed = -1;
+              trainSetSpeed(speed, getStoppingTime(&me), 0, &me);
+            }
+            else {
+              PrintDebug(me.ui, "Navi Nagger stopping %d.",
+                  me.predictedTimeToStartStopping);
+              const int speed = 0;  // Set speed zero.
+              trainSetSpeed(speed, getStoppingTime(&me), 0, &me);
+            }
             me.stopCommited = 1;
           }
         }
