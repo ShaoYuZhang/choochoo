@@ -26,7 +26,7 @@ void test_track() {
   DriverMsg msg;
   msg.trainNum = 44;
   msg.type = SET_ROUTE;
-  msg.data2 = 6;
+  msg.data2 = 8;
 
   msg.landmark1.type = LANDMARK_END;
   msg.landmark1.num1 = EN;
@@ -67,7 +67,7 @@ void test_track() {
 
 void task1() {
   startNameServerTask();
-  startTimeServerTask();
+  int time = startTimeServerTask();
   startIoServerTask();
   startSensorServerTask();
   startUserInterfaceTask();
@@ -75,6 +75,8 @@ void task1() {
   startTrackManagerTask();
   startCommandDecoderTask();
 
+
+  Delay(700, time);
   // Testing
   Create(20, test_track);
 

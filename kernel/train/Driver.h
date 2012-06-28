@@ -48,6 +48,7 @@ typedef struct Driver {
   int calibrationDistance;
   int routeRemaining;
   int stopNode;
+  int stopCommited;
 
   int predictedTimeToStartStopping;
   TrainUiMsg uiMsg;
