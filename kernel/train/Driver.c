@@ -15,6 +15,7 @@
 
 static int com1;
 static int com2;
+static int ui;
 
 static int getStoppingDistance(Driver* me) {
   return me->d[(int)me->uiMsg.speed][(int)me->uiMsg.speedDir][MAX_VAL];
@@ -117,6 +118,7 @@ static void reRoute(Driver* me, char box, char val) {
 
 // Update what has been traveld
 static void updateRoute(Driver* me, char box, char val) {
+  if (me->routeRemaining == -1) return;
   // See if we triggered
   for (int i = me->routeRemaining; i < me->stopNode; i++) {
     if (me->route.nodes[i].landmark.type == LANDMARK_SENSOR &&
@@ -172,9 +174,10 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
   } else {
     PrintDebug(me->ui, "Reverse... %d \n", me->uiMsg.speed);
     DriverMsg delayMsg;
+    delayMsg.type = SET_SPEED;
     delayMsg.timestamp = stopTime;
     delayMsg.data2 = (signed char)me->uiMsg.speed;
-    PrintDebug(me->ui, "Using delayer: %d \n", me->delayer);
+    PrintDebug(me->ui, "Using delayer: %d for %d \n", me->delayer, stopTime);
 
     Reply(me->delayer, (char*)&delayMsg, sizeof(DriverMsg));
 
@@ -230,6 +233,7 @@ static void trainDelayer() {
   for (;;) {
     Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)&msg, sizeof(DriverMsg));
     int numTick = msg.timestamp / 10;
+    PrintDebug(ui, "Delay %d ticks\n", numTick);
     Delay(numTick, timeserver);
     msg.data3 = DELAYER;
   }
@@ -265,6 +269,7 @@ static void trainNavigateNagger() {
 static void initDriver(Driver* me) {
   char uiName[] = UI_TASK_NAME;
   me->ui = WhoIs(uiName);
+  ui = me->ui;
   char trackName[] = TRACK_NAME;
   me->trackManager = WhoIs(trackName);
   me->route.length = 0;
@@ -344,6 +349,7 @@ static void driver() {
         }
       }
       case DELAYER: {
+        PrintDebug(me.ui, "delayer come back.");
         // Worker reporting back.
         break;
       }
@@ -389,6 +395,7 @@ static void driver() {
       case NAVIGATE_NAGGER: {
         PrintDebug(me.ui, "Navi Nagger.");
         if (me.routeRemaining == -1) break;
+
         updateTimeToSendStop(&me, msg.data2); // speed:
         if (me.predictedTimeToStartStopping < 100) {
           PrintDebug(me.ui, "Navi Nagger stopping.");
