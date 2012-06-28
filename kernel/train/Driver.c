@@ -57,7 +57,6 @@ static void getRoute(Driver* me, DriverMsg* msg) {
 }
 
 static void updateTimeToSendStop(Driver* me, int speed) {
-  PrintDebug(me->ui, "Stop at Node %d \n", me->stopNode);
   const int stoppingDistance =
       me->d[speed][(int)me->uiMsg.speedDir][MAX_VAL];
   int stop = stoppingDistance;
@@ -68,6 +67,8 @@ static void updateTimeToSendStop(Driver* me, int speed) {
   //                   |__stop_dist____|
   // |__travel_dist____|
   // |delay this much..|
+  PrintDebug(me->ui, "Stop at Node %d starts %d \n",
+      me->stopNode, me->routeRemaining);
   for (int i = me->stopNode; i >= me->routeRemaining; i--) {
     PrintDebug(me->ui, "Stop %d \n", stop);
     stop -= me->route.nodes[i].dist;
@@ -80,7 +81,6 @@ static void updateTimeToSendStop(Driver* me, int speed) {
       delayTime = travelDistance * 100000 / velocity;
 
       PrintDebug(me->ui, "Got %d %d %d \n", delayTime, travelDistance, velocity);
-      //Send(me->navigateNagger, (char*)&delayTime, 4,(char*)1, 0);
       me->predictedTimeToStartStopping= Time(me->timeserver) + delayTime;
       break;
     }
@@ -89,8 +89,8 @@ static void updateTimeToSendStop(Driver* me, int speed) {
   // Gonna go pass the place.
   if (delayTime == 0) {
     PrintDebug(me->ui, "Cannot stop in time. \n");
-    delayTime = -500; // Reroute after 500ms
-    //Send(me->navigateNagger, (char*)&delayTime, 4,(char*)1, 0);
+    delayTime = 500; // Reroute after 500ms
+    me->routeRemaining = -1;
   }
 }
 
@@ -119,6 +119,7 @@ static void reRoute(Driver* me, char box, char val) {
 // Update what has been traveld
 static void updateRoute(Driver* me, char box, char val) {
   if (me->routeRemaining == -1) return;
+
   // See if we triggered
   for (int i = me->routeRemaining; i < me->stopNode; i++) {
     if (me->route.nodes[i].landmark.type == LANDMARK_SENSOR &&
@@ -326,7 +327,7 @@ static void driver() {
     msg.data3 = -1;
     msg.replyTid = -1;
     Receive(&tid, (char*)&msg, sizeof(DriverMsg));
-    if (tid != me.delayer && tid != me.navigateNagger) {
+    if (tid != me.delayer) {
       Reply(tid, (char*)1, 0);
     }
     const int replyTid = msg.replyTid;
@@ -350,7 +351,6 @@ static void driver() {
       }
       case DELAYER: {
         PrintDebug(me.ui, "delayer come back.");
-        // Worker reporting back.
         break;
       }
       case UI_NAGGER: {
@@ -393,21 +393,15 @@ static void driver() {
         break;
       }
       case NAVIGATE_NAGGER: {
-        PrintDebug(me.ui, "Navi Nagger.");
         if (me.routeRemaining == -1) break;
 
-        updateTimeToSendStop(&me, msg.data2); // speed:
+        updateTimeToSendStop(&me, me.uiMsg.speed); // speed:
+        PrintDebug(me.ui, "Navi Nagger. %d", me.predictedTimeToStartStopping);
         if (me.predictedTimeToStartStopping < 100) {
           PrintDebug(me.ui, "Navi Nagger stopping.");
           const int speed = 0;  // Set speed zero.
           trainSetSpeed(speed, getStoppingTime(&me), 0, &me);
         }
-
-       // if (msg.data2 == REROUTE) {
-       //   setRoute(&me, msg.data2); // WRONG
-       // } else {
-          // Want to stop now.
-       // }
         break;
       }
       case SET_ROUTE: {

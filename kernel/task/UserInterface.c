@@ -239,6 +239,9 @@ static char* updateDebugMessage(char* receive, char* msg, int len) {
 
   // move to position
   msg = moveTo(updateRow, 1, msg);
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = 'K';
 
   for (int i = 0; i < len; i++) {
     *msg++ = receive[i];
