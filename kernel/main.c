@@ -30,11 +30,11 @@ void test_track() {
 
   msg.landmark1.type = LANDMARK_END;
   msg.landmark1.num1 = EN;
-  msg.landmark1.num2 = 9;
+  msg.landmark1.num2 = 5;
 
   msg.landmark2.type = LANDMARK_SENSOR;
   msg.landmark2.num1 = 4;
-  msg.landmark2.num2 = 8;
+  msg.landmark2.num2 = 7;
 
   Send(trainController, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
 
@@ -76,7 +76,7 @@ void task1() {
   startCommandDecoderTask();
 
   // Testing
-  //Create(20, test_track);
+  Create(20, test_track);
 
   Exit();
 }

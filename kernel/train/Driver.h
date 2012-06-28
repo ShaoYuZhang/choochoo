@@ -17,9 +17,14 @@
 #define SET_ROUTE  6
 #define NAVIGATE_NAGGER 7
 
+typedef struct DriverInitMsg {
+  int nth;
+  int trainNum;
+} DriverInitMsg;
+
 typedef struct DriverMsg {
+  char trainNum; // DONT USE IN DRIVER.c use me->trainNum
   char type;           // As defined above
-  char trainNum;       // Train number
   signed char data2;   // Speed (-1 for reverse)
   unsigned char data3; // Delay num, or msg came from worker
   char replyTid;       // The user that first send the message.
