@@ -22,6 +22,8 @@ void test_track() {
   int trackManager = WhoIs(trackName);
   char uiName[] = UI_TASK_NAME;
   int uiServer = WhoIs(uiName);
+  char timename[] = TIMESERVER_NAME;
+  int timeserver = WhoIs(timename);
 
   DriverMsg msg;
   msg.trainNum = 44;
@@ -32,9 +34,9 @@ void test_track() {
   msg.landmark1.num1 = EN;
   msg.landmark1.num2 = 5;
 
-  msg.landmark2.type = LANDMARK_SENSOR;
-  msg.landmark2.num1 = 4;
-  msg.landmark2.num2 = 7;
+  landmark2.type = LANDMARK_END;
+  landmark2.num1 = EX;
+  landmark2.num2 = 7;
 
   Send(trainController, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
 
@@ -60,6 +62,7 @@ void test_track() {
         PrintDebug(uiServer, "Switch %d ", node.num);
       }
     }
+    Delay(100, timeserver);
   }
 #endif
   Exit();

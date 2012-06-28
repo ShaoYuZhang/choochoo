@@ -207,9 +207,25 @@ static void findRoute(track_node* track, track_node* from, track_node* to, Route
     int neighbours_dist[3];
     int neighbour_count = 0;
 
+    int reverseAllowed = 0;
     // reverse
-    neighbours[neighbour_count] = curr_node->reverse;
-    neighbours_dist[neighbour_count++] = REVERSE_DIST_OFFSET;
+    if (curr_node->type == NODE_MERGE) {
+      if (curr_node->edge[DIR_AHEAD].dist >= REVERSE_DIST_OFFSET) {
+        reverseAllowed = 1;
+      } else {
+        reverseAllowed = 0;
+      }
+    } else if (curr_node->type != NODE_BRANCH) {
+      reverseAllowed = 1;
+    } else {
+      // TODO(cao), need to change this when we have unambiguous way of representing any postion on track
+      reverseAllowed = 0;
+    }
+
+    if (reverseAllowed) {
+      neighbours[neighbour_count] = curr_node->reverse;
+      neighbours_dist[neighbour_count++] = REVERSE_DIST_OFFSET;
+    }
 
     if (curr_node->type == NODE_BRANCH) {
       neighbours[neighbour_count] = curr_node->edge[DIR_STRAIGHT].dest;
