@@ -161,14 +161,15 @@ void kernel_runloop() {
     scheduler_set_running(td);
 		int is_interrupt = asm_switch_to_usermode(sp_pointer);
 
+    unsigned int current = GET_TIMER4();
     if (idleTid == td->id) {
-      unsigned int current = GET_TIMER4();
       totalIdleTime += current - idleTimeStart;
-      if ((current - lastReportTime) > 200000) {
-        latestIdle = totalIdleTime*10000 / (current - lastReportTime);
-        lastReportTime = current;
-        totalIdleTime = 0;
-      }
+    }
+
+    if ((current - lastReportTime) > 200000) {
+      latestIdle = totalIdleTime*10000 / (current - lastReportTime);
+      lastReportTime = current;
+      totalIdleTime = 0;
     }
 
     if (is_interrupt) {
