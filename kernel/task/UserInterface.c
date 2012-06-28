@@ -32,7 +32,7 @@ static char* formatInt(int n, int numDigit, char* msg) {
     n /= 10;
   }
   if (!anyOutput) {
-    msg[0] = '0';
+    msg[numDigit-1] = '0';
   }
   return msg + numDigit;
 }
