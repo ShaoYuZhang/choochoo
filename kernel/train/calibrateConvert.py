@@ -13,8 +13,8 @@ print """#include "CalibrationData.h"\n
 void initVelocity(int* velocity) {       
   int v[15][2] = {"""
 for i in xrange(0, 13):
-  print "{{{0}, {1}}},".format(lines[i*2][avg_col], lines[i*2+1][avg_col])
-print "{{{0}, {1}}}".format(lines[14*2][avg_col], lines[14*2+1][avg_col])
+  print "{{{0}, {1}}},".format(int(lines[i*2][avg_col]), int(lines[i*2+1][avg_col]))
+print "{{{0}, {1}}}".format(int(lines[14*2][avg_col]), int(lines[14*2+1][avg_col]))
 print "};"
 print "memcpy_no_overlap_asm((char*)v, (char*)velocity, 2*15*4);"
 print "} // end initVelocity\n\n"

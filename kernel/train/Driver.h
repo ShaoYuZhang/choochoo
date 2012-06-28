@@ -1,6 +1,7 @@
 #ifndef TRAIN_H_
 #define TRAIN_H_
 
+#include <Track.h>
 #include <UserInterface.h>
 #include <Poly.h>
 
@@ -13,6 +14,8 @@
 #define UI_NAGGER  3
 #define DELAYER    4
 #define SENSOR_TRIGGER 5
+#define SET_ROUTE  6
+#define NAVIGATE_NAGGER 7
 
 typedef struct DriverMsg {
   char type;           // As defined above
@@ -21,19 +24,28 @@ typedef struct DriverMsg {
   unsigned char data3; // Delay num, or msg came from worker
   char replyTid;       // The user that first send the message.
   int timestamp;
+  TrackLandmark landmark1;
+  TrackLandmark landmark2;
 } DriverMsg;
 
+
+
+
 typedef struct Driver {
+  int trainNum;
   int delayer;
   int uiNagger;   // Tasks that reminds train to print
   int ui;        // Ui Tid
   int sensorWatcher;
-  int track; // Tid
+  int trackManager;
+  int navigateNagger;
   int reportTime;
   int calibrationStart;
   int calibrationDistance;
+  int routeRemaining;
   TrainUiMsg uiMsg;
   Poly decel;
+  Route route;
 
   int v[15][2];
   int d[15][2][2];

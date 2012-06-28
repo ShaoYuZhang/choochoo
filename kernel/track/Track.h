@@ -1,7 +1,8 @@
 #ifndef TRACK_H_
-#define TRACK_H
+#define TRACK_H_
 
 #define TRACK_NAME "TRACKK\0"
+#define REVERSE -1
 
 #define NUM_SWITCHES 0xff
 #define SWITCH_STRAIGHT 35

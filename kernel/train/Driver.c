@@ -10,6 +10,9 @@
 #include <Sensor.h>
 #include <Track.h>
 
+#define REROUTE -1
+// TODO, smaller Delay increments. and make better guess.
+
 static int com1;
 static int com2;
 
@@ -20,6 +23,71 @@ static int getStoppingDistance(Driver* me) {
 // mm/s
 static int getVelocity(Driver* me){
   return me->v[(int)me->uiMsg.speed][(int)me->uiMsg.speedDir];
+}
+
+static void getRoute(Driver* me, DriverMsg* msg) {
+  TrackMsg trackmsg;
+  trackmsg.type = ROUTE_PLANNING;
+  trackmsg.landmark1 = msg->landmark1;
+  trackmsg.landmark2 = msg->landmark2;
+
+  Send(me->trackManager, (char*)&trackmsg,
+      sizeof(TrackMsg), (char*)&(me->route), sizeof(Route));
+  me->routeRemaining = 0;
+
+  PrintDebug(me->ui, "Distance %d \n", me->route.dist);
+  PrintDebug(me->ui, "Num Node %d \n", me->route.length);
+
+  for (int i = 0; i < me->route.length; i++) {
+    RouteNode node = me->route.nodes[i];
+    if (node.num == -1) {
+      PrintDebug(me->ui, "reverse \n");
+    } else {
+      PrintDebug(me->ui, "Landmark %d %d %d %d", node.landmark.type, node.landmark.num1, node.landmark.num2, node.dist);
+      if (node.landmark.type == LANDMARK_SWITCH && node.landmark.num1 == BR) {
+        PrintDebug(me->ui, "Switch %d ", node.num);
+      }
+    }
+  }
+}
+
+static void setRoute(Driver* me) {
+  // Find the first reverse on the path, stop if possible.
+  int reverseNode = me->route.length-1;
+  PrintDebug(me->ui, "Hm %d\n", me->routeRemaining);
+  PrintDebug(me->ui, "Len %d\n", me->route.length);
+  for (int i = me->routeRemaining; i < me->route.length; i++) {
+    if (me->route.nodes[i].num == REVERSE) {
+      reverseNode = i;
+      break;
+    }
+    else if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
+        me->route.nodes[i].landmark.num1 == BR) {
+      TrackMsg setSwitch;
+      setSwitch.type = SET_SWITCH;
+      setSwitch.data = me->route.nodes[i].num;
+      Send(me->trackManager, (char*)&setSwitch, sizeof(TrackMsg), (char*)NULL, 0);
+    }
+  }
+
+  int stop = getStoppingDistance(me);
+  int delayTime = 0;
+  // Find the stopping distance for the reverseNode.
+  //for (int i = reverseNode; i >= 0; i--) {
+  //  stop -= me->route.nodes[i].dist;
+  //  if (stop < 0) {
+  //    delayTime = -stop*100 / getVelocity(me);
+  //    Send(me->navigateNagger, (char*)&delayTime, 4,(char*)1, 0);
+  //  }
+  //}
+
+  //// Gonna go pass the place.
+  //if (delayTime == 0) {
+  //  delayTime = -500; // Reroute after 500ms
+  //  Send(me->navigateNagger, (char*)&delayTime, 4,(char*)1, 0);
+  //} else {
+  //  me->routeRemaining = reverseNode;
+  //}
 }
 
 static void dynamicCalibration(Driver* me) {
@@ -35,6 +103,7 @@ static void dynamicCalibration(Driver* me) {
 
 static void trainSetSpeed(DriverMsg* origMsg, Driver* me) {
   const int trainNum = origMsg->trainNum;
+  me->trainNum = trainNum;
   const int speed = origMsg->data2;
 
   char msg[4];
@@ -47,6 +116,8 @@ static void trainSetSpeed(DriverMsg* origMsg, Driver* me) {
       msg[2] = (char)speed;
       msg[3] = (char)trainNum;
       Putstr(com1, msg, 4);
+
+      // Modify prediction
     } else {
       printff(com2, "Set speed. %d %d\n", speed, trainNum);
       msg[0] = (char)speed;
@@ -61,8 +132,6 @@ static void trainSetSpeed(DriverMsg* origMsg, Driver* me) {
   } else {
     printff(com2, "Reverse... %d \n", me->uiMsg.speed);
     origMsg->data2 = (signed char)me->uiMsg.speed;
-    // TODO, calculate from train speed.
-    origMsg->data3 = 150; // YES IT IS 3s
     printff(com2, "Using delayer: %d \n", me->delayer);
 
     Reply(me->delayer, (char*)origMsg, sizeof(DriverMsg));
@@ -122,7 +191,6 @@ static void trainDelayer() {
     numTick *= 2;
     Delay(numTick, timeserver);
     msg.data3 = DELAYER;
-    //printff(com2, "Delayer Done. %d %d\n", numTick, parent);
   }
 }
 
@@ -140,12 +208,31 @@ static void trainUiNagger() {
   }
 }
 
+static void trainNavigateNagger() {
+  char timename[] = TIMESERVER_NAME;
+  int timeserver = WhoIs(timename);
+  int parent;
+
+  int delay;
+  DriverMsg msg;
+  msg.type = NAVIGATE_NAGGER;
+  for (;;) {
+    Receive(&parent, (char*)&delay, 4);
+
+    msg.data2 = (delay < 0) ? REROUTE : delay; // Re-Navigate
+    if (delay < 0) delay = -delay;
+    Delay(delay/10, timeserver);
+    msg.timestamp = Time(timeserver);
+    Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
+  }
+}
+
 static void initDriver(Driver* me) {
   char uiName[] = UI_TASK_NAME;
   me->ui = WhoIs(uiName);
-
   char trackName[] = TRACK_NAME;
-  me->track = WhoIs(trackName);
+  me->trackManager = WhoIs(trackName);
+  me->route.length = 0;
 
   me->uiMsg.speed = 0;
   me->uiMsg.speedDir = ACCELERATE;
@@ -198,6 +285,7 @@ static void driver() {
         break;
       }
       case SET_SPEED: {
+        msg.timestamp = 300; // Delay for 3s
         trainSetSpeed(&msg, &me);
         if (msg.data3 != DELAYER) {
           //printff(com2, "Replied to %d\n", replyTid);
@@ -205,8 +293,6 @@ static void driver() {
           sendUiReport(&me, 0); // Don't update time
           break;
         }
-        // else fall through
-        //printff(com2, "Worker setted speed%d\n", me.speed);
       }
       case DELAYER: {
         // Worker reporting back.
@@ -234,7 +320,7 @@ static void driver() {
         qMsg.landmark1.type = LANDMARK_SENSOR;
         qMsg.landmark1.num1 = me.uiMsg.lastSensorBox;
         qMsg.landmark1.num2 = me.uiMsg.lastSensorVal;
-        Send(me.track, (char*)&qMsg, sizeof(TrackMsg),
+        Send(me.trackManager, (char*)&qMsg, sizeof(TrackMsg),
               (char*)&tMsg, sizeof(TrackNextSensorMsg));
         me.calibrationStart = msg.timestamp + 40; // 40ms for sending data to train
         me.calibrationDistance = tMsg.dist;
@@ -246,6 +332,23 @@ static void driver() {
           msg.timestamp + me.uiMsg.distanceToNextSensor*100000 / getVelocity(&me) - 50; // 50 ms delay for sensor query.
 
         sendUiReport(&me, msg.timestamp);
+        break;
+      }
+      //case NAVIGATE_NAGGER: {
+      //  if (msg.data2 == REROUTE) {
+      //    setRoute(&me);
+      //  } else {
+      //    // Want to stop now.
+      //    msg.data2 = 0;  // Set speed zero.
+      //    msg.timestamp = 2*getStoppingDistance(&me) / getVelocity(&me); // Time to stop
+      //    trainSetSpeed(&msg, &me);
+      //  }
+      //  break;
+      //}
+      case SET_ROUTE: {
+        getRoute(&me, &msg);
+        setRoute(&me);
+        trainSetSpeed(&msg, &me);
         break;
       }
       default: {

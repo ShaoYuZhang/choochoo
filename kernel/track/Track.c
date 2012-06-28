@@ -246,9 +246,10 @@ static void findRoute(track_node* track, track_node* from, track_node* to, Route
     tempRouteNode.landmark = landmark;
 
     if (curr_node->reverse == next_node) {
-      tempRouteNode.num = -1;
+      tempRouteNode.num = REVERSE;
       tempRouteNode.dist = REVERSE_DIST_OFFSET;
       tempRoute[--index] = tempRouteNode;
+      tempRouteNode.num = 0;
     } else if (curr_node->type == NODE_BRANCH) {
       if (curr_node->edge[DIR_STRAIGHT].dest == next_node) {
         tempRouteNode.num = SWITCH_STRAIGHT;
@@ -259,9 +260,9 @@ static void findRoute(track_node* track, track_node* from, track_node* to, Route
       }
     } else {
       tempRouteNode.dist = curr_node->edge[DIR_AHEAD].dist;
+      tempRouteNode.num = 0;
     }
 
-    tempRouteNode.num = 0;
     tempRoute[--index] = tempRouteNode;
 
     next_node = curr_node;

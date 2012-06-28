@@ -15,23 +15,30 @@
 int CALIBRATION;
 
 void test_track() {
+  char trainControllerName[] = TRAIN_CONTROLLER_NAME;
+  int trainController = WhoIs(trainControllerName);
   // Testing track
   char trackName[] = TRACK_NAME;
   int trackManager = WhoIs(trackName);
   char uiName[] = UI_TASK_NAME;
   int uiServer = WhoIs(uiName);
 
-  TrackLandmark landmark1;
-  TrackLandmark landmark2;
+  DriverMsg msg;
+  msg.trainNum = 44;
+  msg.type = SET_ROUTE;
+  msg.data2 = 6;
 
-  landmark1.type = LANDMARK_END;
-  landmark1.num1 = EN;
-  landmark1.num2 = 5;
+  msg.landmark1.type = LANDMARK_END;
+  msg.landmark1.num1 = EN;
+  msg.landmark1.num2 = 9;
 
-  landmark2.type = LANDMARK_END;
-  landmark2.num1 = EX;
-  landmark2.num2 = 3;
+  msg.landmark2.type = LANDMARK_SENSOR;
+  msg.landmark2.num1 = 4;
+  msg.landmark2.num2 = 8;
 
+  Send(trainController, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
+
+#if 0
   TrackMsg trackmsg;
   trackmsg.type = ROUTE_PLANNING;
   trackmsg.landmark1 = landmark1;
@@ -45,7 +52,7 @@ void test_track() {
 
   for (int i = 0; i < route.length; i++) {
     RouteNode node = route.nodes[i];
-    if (node.num == -1) {
+    if (node.num == REVERSE) {
       PrintDebug(uiServer, "reverse \n");
     } else {
       PrintDebug(uiServer, "Landmark %d %d %d %d", node.landmark.type, node.landmark.num1, node.landmark.num2, node.dist);
@@ -54,6 +61,7 @@ void test_track() {
       }
     }
   }
+#endif
   Exit();
 }
 
