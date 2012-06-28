@@ -233,10 +233,9 @@ static char* pad2(int n, char* msg){
 
 static int debugUpdateNum;
 static char* updateDebugMessage(char* receive, char* msg, int len) {
-  int updateRow = debugUpdateNum%60;
-
   msg = saveCursor(msg);
 
+  int updateRow = debugUpdateNum%60;
   // move to position
   msg = moveTo(updateRow, 40, msg);
   *msg++ = ESC;
