@@ -34,8 +34,6 @@ typedef struct DriverMsg {
 } DriverMsg;
 
 
-
-
 typedef struct Driver {
   int trainNum;
   int delayer;
@@ -44,10 +42,14 @@ typedef struct Driver {
   int sensorWatcher;
   int trackManager;
   int navigateNagger;
+  int timeserver;
   int reportTime;
   int calibrationStart;
   int calibrationDistance;
   int routeRemaining;
+  int stopNode;
+
+  int predictedTimeToStartStopping;
   TrainUiMsg uiMsg;
   Poly decel;
   Route route;
