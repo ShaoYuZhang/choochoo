@@ -42,10 +42,10 @@ int startUserInterfaceTask();
 
 #define PrintDebug(tid, fmt, ...) \
 { \
-  char buffer[128]; \
-  buffer[0] = DEBUG_MSG; \
-  int len = sprintff(buffer+1, fmt, ##__VA_ARGS__ ); \
-  Send(tid, buffer, len + 1, (char*)1, 0);  \
+  char DebugBuffer[128]; \
+  DebugBuffer[0] = DEBUG_MSG; \
+  int DebugLen = sprintff(DebugBuffer+1, fmt, ##__VA_ARGS__ ); \
+  Send(tid, DebugBuffer, DebugLen + 1, (char*)1, 0);  \
 }
 
 #endif // USER_INTERFACE_H_

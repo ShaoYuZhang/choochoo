@@ -7,6 +7,7 @@ typedef enum {
   NODE_MERGE,
   NODE_ENTER,
   NODE_EXIT,
+  NODE_FAKE, // for route planning
 } node_type;
 
 #define DIR_AHEAD 0
@@ -34,5 +35,6 @@ struct track_node {
   int curr_dist; // for route planning
   int in_queue; // for route planning
   track_node* route_previous; // for route planning
+  int safe_reverse_dist; // for route planning
 };
 #endif
