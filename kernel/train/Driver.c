@@ -89,7 +89,8 @@ static void updateStopNode(Driver* me, int speed) {
       TrackMsg setSwitch;
       setSwitch.type = SET_SWITCH;
       setSwitch.data = me->route.nodes[i].num;
-      // TODO , more
+      setSwitch.landmark1 = me->route.nodes[i].landmark;
+
       PrintDebug(me->ui, "set switch\n");
       Send(me->trackManager, (char*)&setSwitch, sizeof(TrackMsg), (char*)NULL, 0);
     }
@@ -212,7 +213,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     PrintDebug(me->ui, "Reverse... %d \n", me->uiMsg.speed);
     DriverMsg delayMsg;
     delayMsg.type = SET_SPEED;
-    delayMsg.timestamp = stopTime;
+    delayMsg.timestamp = stopTime + 2000;
     delayMsg.data2 = (signed char)me->uiMsg.speed;
     PrintDebug(me->ui, "Using delayer: %d for %d \n", me->delayer, stopTime);
 
@@ -440,9 +441,10 @@ static void driver() {
         if (me.routeRemaining == -1) break;
 
         if (!me.stopCommited) {
-          PrintDebug(me.ui, "Navi Nagger. %d", me.distancePassStopSensorToStop);
+            //PrintDebug(me.ui, "Navi Nagger. %d", me.distancePassStopSensorToStop);
           if (shouldStopNow(&me)) {
             if (me.route.nodes[me.stopNode].num == REVERSE) {
+              PrintDebug(me.ui, "Navi reversing.");
               const int speed = -1;
               trainSetSpeed(speed, getStoppingTime(&me), 0, &me);
             }
