@@ -87,6 +87,10 @@ static TrackLandmark getLandmark(track_node* node) {
     landmark.type = LANDMARK_END;
     landmark.num1 = EX;
     landmark.num2 = node->num;
+  } else if (node->type == NODE_FAKE) {
+    landmark.type= LANDMARK_FAKE;
+    landmark.num1 = 0;
+    landmark.num2 = 0;
   } else {
     ASSERT(FALSE, "invalid track node");
   }
@@ -108,36 +112,75 @@ static track_node* findNode(track_node* track, TrackLandmark landmark) {
   return (track_node*) NULL;
 }
 
-// TODO currently only support landmarks that are relatively close to each other, arbitrary landmark require route planning
-static int calculateDistance(track_node* currentNode, track_node* targetNode, int depth) {
-  if (depth > 7) {
+// only support landmarks that are relatively close
+static int traverse(track_node* currentNode, track_node* targetNode, int depth, int max_depth, track_edge** edges) {
+  if (currentNode == targetNode) {
+    return depth;
+  }
+  if (depth == max_depth) {
     return -1;
   }
-  if (currentNode == targetNode) {
-    return 0;
-  }
+
   if (currentNode->type == NODE_EXIT) {
     return -1;
   } else if (currentNode->type != NODE_BRANCH) {
-    track_edge edge = currentNode->edge[0];
-    int dist = calculateDistance(edge.dest, targetNode, depth + 1);
-    if (dist == -1) {
-      return -1;
+    track_edge* edge = &currentNode->edge[DIR_AHEAD];
+    int len = traverse(edge->dest, targetNode, depth + 1, max_depth, edges+1);
+    if (len != -1) {
+      *edges = edge;
+      return len;
     } else {
-      return edge.dist + dist;
+      return -1;
     }
   } else {
-    track_edge edge1 = currentNode->edge[0];
-    track_edge edge2 = currentNode->edge[1];
-    int dist1 = calculateDistance(edge1.dest, targetNode, depth + 1);
-    int dist2 = calculateDistance(edge2.dest, targetNode, depth + 1);
-    if (dist1 != -1) {
-      return edge1.dist + dist1;
-    } else if (dist2 != -1) {
-      return edge2.dist + dist2;
+    track_edge* edge1 = &currentNode->edge[DIR_STRAIGHT];
+    track_edge* edge2 = &currentNode->edge[DIR_CURVED];
+    int len1 = traverse(edge1->dest, targetNode, depth + 1, max_depth, edges+1);
+    int len2 = traverse(edge2->dest, targetNode, depth + 1, max_depth, edges+1);
+    if (len1 != -1) {
+      *edges = edge1;
+      return len1;
+    } else if (len2 != -1) {
+      *edges = edge1;
+      return len2;
     } else {
       return -1;
     }
+  }
+}
+
+static int locateNode(track_node* track, Position pos, track_edge** edge) {
+  track_node* sensor1 = findNode(track, pos.landmark1);
+  track_node* sensor2 = findNode(track, pos.landmark2);
+
+  track_edge* edges[7];
+  int len = traverse(sensor1, sensor2, 0, 7, edges);
+  if (len > 0) {
+    int dist = pos.offset;
+    for (int i = 0; i < len; i++) {
+      if (dist < edges[i]->dist) {
+        *edge = edges[i];
+        return dist;
+      }
+      else {
+        dist -= edges[i]->dist;
+      }
+    }
+  }
+  return -1;
+}
+
+static int calculateDistance(track_node* currentNode, track_node* targetNode) {
+  track_edge* edges[7];
+  int len = traverse(currentNode, targetNode, 0, 7, edges);
+  if (len == -1) {
+    return -1;
+  } else {
+    int dist = 0;
+    for (int i = 0; i < len; i++) {
+      dist += edges[i]->dist;
+    }
+    return dist;
   }
 }
 
@@ -167,23 +210,120 @@ static int findNextSensor(track_node* from, TrackLandmark* dst) {
   return -1;
 }
 
+static int edgeType(track_edge* edge) {
+  if (edge->src->type != NODE_BRANCH) {
+    return DIR_AHEAD;
+  } else if (&edge->src->edge[DIR_STRAIGHT] == edge) {
+    return DIR_STRAIGHT;
+  } else {
+    return DIR_CURVED;
+  }
+}
+
+static void fakeNode(track_edge* edge, track_node* fake1, track_node* fake2, int offset) {
+  int dirType;
+
+  dirType = edgeType(edge->reverse);
+  fake1->name = "";
+  fake1->type = NODE_FAKE;
+  fake1->reverse = fake2;
+  fake1->edge[DIR_AHEAD].reverse = &edge->dest->reverse->edge[dirType];
+  fake1->edge[DIR_AHEAD].src = fake1;
+  fake1->edge[DIR_AHEAD].dest = edge->dest;
+  fake1->edge[DIR_AHEAD].dist = edge->dist - offset;
+
+  edge->dest->reverse->edge[dirType].reverse = &fake1->edge[DIR_AHEAD];
+  edge->dest->reverse->edge[dirType].dest = fake2;
+  edge->dest->reverse->edge[dirType].dist = edge->dist -offset;
+
+  dirType = edgeType(edge);
+  fake2->name = "";
+  fake2->type = NODE_FAKE;
+  fake2->reverse = fake1;
+  fake2->edge[DIR_AHEAD].reverse = &edge->src->reverse->edge[dirType];
+  fake2->edge[DIR_AHEAD].src = fake2;
+  fake2->edge[DIR_AHEAD].dest = edge->reverse->dest;
+  fake2->edge[DIR_AHEAD].dist = offset;
+
+  edge->src->edge[dirType].reverse = &fake2->edge[DIR_AHEAD];
+  edge->src->edge[dirType].dest = fake1;
+  edge->src->edge[dirType].dist = offset;
+}
+
+static void computeSafeReverseDistHelper(track_edge* edge) {
+  int new_safe = edge->src->safe_reverse_dist - edge->dist;
+  if (new_safe > 0) {
+    edge->src->safe_reverse_dist = INT_MAX;
+    edge->dest->safe_reverse_dist = MAX(new_safe, edge->dest->safe_reverse_dist);
+    if (edge->dest->type == NODE_BRANCH) {
+      computeSafeReverseDistHelper(&edge->dest->edge[DIR_CURVED]);
+    } else if (edge->dest->type == NODE_EXIT) {
+      computeSafeReverseDistHelper(&edge->dest->edge[DIR_AHEAD]);
+    }
+  }
+}
+
+static void computeSafeReverseDist(track_node* track) {
+  for (int i = 0 ; i < TRACK_MAX + 4; i++) {
+    if (track[i].type == NODE_BRANCH) {
+      track[i].safe_reverse_dist = SAFE_REVERSE_DIST;
+      computeSafeReverseDistHelper(&track[i].edge[DIR_STRAIGHT]);
+      computeSafeReverseDistHelper(&track[i].edge[DIR_CURVED]);
+    } else if (track[i].type == NODE_MERGE) {
+      track[i].safe_reverse_dist = SAFE_REVERSE_DIST;
+      computeSafeReverseDistHelper(&track[i].edge[DIR_AHEAD]);
+    }
+  }
+  for (int i = 0 ; i < TRACK_MAX + 4; i++) {
+    if (track[i].type != NODE_NONE) {
+      track[i].safe_reverse_dist = MAX(track[i].safe_reverse_dist, (track[i].reverse)->safe_reverse_dist);
+    }
+  }
+}
+
 // Dijkstra's algorithm, currently slow, need a heap for efficiency
-static void findRoute(track_node* track, track_node* from, track_node* to, Route* result) {
-  for (int i = 0 ; i < TRACK_MAX; i++) {
+static void findRoute(track_node* track, Position from, Position to, Route* result) {
+  // fake position into graph
+  track_edge* fromEdge = (track_edge*)NULL;
+  track_edge* toEdge = (track_edge*)NULL;
+  int offsetFrom = locateNode(track, from, &fromEdge);
+  int offsetTo = locateNode(track, to, &toEdge);
+
+  if (offsetFrom == -1 || offsetTo == -1) {
+    result->dist = 0;
+    result->length = 0;
+    return;
+  }
+
+  track_node fromNodeSrc = *fromEdge->src;
+  track_node fromNodeReverseSrc = *fromEdge->reverse->src;
+  track_node toNodeSrc = *toEdge->src;
+  track_node toNodeReverseSrc = *toEdge->reverse->src;
+
+  fakeNode(fromEdge, &track[TRACK_MAX], &track[TRACK_MAX + 1], offsetFrom);
+  fakeNode(toEdge, &track[TRACK_MAX + 2], &track[TRACK_MAX + 3], offsetTo);
+
+  track_node *fromNode = &track[TRACK_MAX];
+  track_node *toNode = &track[TRACK_MAX + 2];
+  for (int i = 0 ; i < TRACK_MAX + 4; i++) {
     if (track[i].type == NODE_NONE) {
       continue;
     }
     track[i].curr_dist = INT_MAX;
     track[i].in_queue = 1;
     track[i].route_previous = (track_node*)NULL;
+    track[i].safe_reverse_dist = 0;
   }
-  from->curr_dist = 0;
+
+  computeSafeReverseDist(track);
+
+  fromNode->curr_dist = 0;
 
   // Dijkstra's
   while (1) {
     int min_dist = INT_MAX;
     track_node* curr_node = (track_node*)NULL;
-    for (int i = 0 ; i < TRACK_MAX; i++) {
+    for (int i = 0 ; i < TRACK_MAX + 4; i++) {
       if (track[i].type == NODE_NONE) {
         continue;
       }
@@ -197,7 +337,7 @@ static void findRoute(track_node* track, track_node* from, track_node* to, Route
       }
     }
 
-    if (curr_node == (track_node*)NULL || curr_node == to) {
+    if (curr_node == (track_node*)NULL || curr_node == toNode) {
       break;
     }
 
@@ -207,24 +347,10 @@ static void findRoute(track_node* track, track_node* from, track_node* to, Route
     int neighbours_dist[3];
     int neighbour_count = 0;
 
-    int reverseAllowed = 0;
     // reverse
-    if (curr_node->type == NODE_MERGE) {
-      if (curr_node->edge[DIR_AHEAD].dist >= REVERSE_DIST_OFFSET) {
-        reverseAllowed = 1;
-      } else {
-        reverseAllowed = 0;
-      }
-    } else if (curr_node->type != NODE_BRANCH) {
-      reverseAllowed = 1;
-    } else {
-      // TODO(cao), need to change this when we have unambiguous way of representing any postion on track
-      reverseAllowed = 0;
-    }
-
-    if (reverseAllowed) {
+    if (curr_node->safe_reverse_dist != INT_MAX && curr_node->reverse->in_queue) {
       neighbours[neighbour_count] = curr_node->reverse;
-      neighbours_dist[neighbour_count++] = REVERSE_DIST_OFFSET;
+      neighbours_dist[neighbour_count++] = 2 * curr_node->safe_reverse_dist;
     }
 
     if (curr_node->type == NODE_BRANCH) {
@@ -250,11 +376,11 @@ static void findRoute(track_node* track, track_node* from, track_node* to, Route
   // construct path
   RouteNode tempRoute[150];
   int index = 150;
-  result->dist = to->curr_dist;
+  result->dist = toNode->curr_dist;
 
   // construct backwards on temp
   track_node *next_node = (track_node*)NULL;
-  track_node *curr_node = to;
+  track_node *curr_node = toNode;
   while (curr_node != (track_node*)NULL) {
     RouteNode tempRouteNode;
 
@@ -263,7 +389,7 @@ static void findRoute(track_node* track, track_node* from, track_node* to, Route
 
     if (curr_node->reverse == next_node) {
       tempRouteNode.num = REVERSE;
-      tempRouteNode.dist = REVERSE_DIST_OFFSET;
+      tempRouteNode.dist = curr_node->safe_reverse_dist;
       tempRoute[--index] = tempRouteNode;
       tempRouteNode.num = 0;
     } else if (curr_node->type == NODE_BRANCH) {
@@ -290,6 +416,21 @@ static void findRoute(track_node* track, track_node* from, track_node* to, Route
     result->nodes[i-index] = tempRoute[i];
   }
   result->length = 150 - index;
+
+  // restore graph
+  *toEdge->src = toNodeSrc;
+  *toEdge->reverse->src = toNodeReverseSrc;
+
+  *fromEdge->src = fromNodeSrc;
+  *fromEdge->reverse->src = fromNodeReverseSrc;
+  {
+  char uiName[] = UI_TASK_NAME;
+  int uiServer = WhoIs(uiName);
+  PrintDebug(uiServer, "WHAT??");
+  char timeServerName[] = TIMESERVER_NAME;
+  int timeServer= WhoIs(timeServerName);
+  Delay(10,timeServer);
+  }
 }
 
 static void trackSetSwitch(int sw, int state) {
@@ -323,7 +464,7 @@ static void trackController() {
     }
   }
 
-  track_node track[TRACK_MAX];
+  track_node track[TRACK_MAX + 4]; // four fake nodes for route finding
   init_trackb(track);
   UiMsg uimsg;
   for ( ;; ) {
@@ -348,9 +489,11 @@ static void trackController() {
         break;
       }
       case QUERY_DISTANCE: {
-        track_node* from = findNode(track, msg.landmark1);
-        track_node* to = findNode(track, msg.landmark2);
-        int distance = calculateDistance(from, to, 0);
+        // TODO
+        //track_node* from = findNode(track, msg.landmark1);
+        //track_node* to = findNode(track, msg.landmark2);
+        //int distance = calculateDistance(from, to, 0);
+        int distance = 0;
         Reply(tid, (char *)&distance, sizeof(int));
         break;
       }
@@ -367,8 +510,10 @@ static void trackController() {
         break;
       }
       case ROUTE_PLANNING: {
-        track_node* from = findNode(track, msg.landmark1);
-        track_node* to = findNode(track, msg.landmark2);
+        Position from = msg.position1;
+        Position to = msg.position2;
+        //track_node* from = findNode(track, msg.landmark1);
+        //track_node* to = findNode(track, msg.landmark2);
         Route route;
         findRoute(track, from, to , &route);
 

@@ -33,8 +33,8 @@ static int getStoppingTime(Driver* me) {
 static void getRoute(Driver* me, DriverMsg* msg) {
   TrackMsg trackmsg;
   trackmsg.type = ROUTE_PLANNING;
-  trackmsg.landmark1 = msg->landmark1;
-  trackmsg.landmark2 = msg->landmark2;
+  //trackmsg.landmark1 = msg->landmark1;
+  //trackmsg.landmark2 = msg->landmark2;
 
   Send(me->trackManager, (char*)&trackmsg,
       sizeof(TrackMsg), (char*)&(me->route), sizeof(Route));
@@ -462,7 +462,7 @@ static void driver() {
       }
       case SET_ROUTE: {
         PrintDebug(me.ui, "Set route.");
-        getRoute(&me, &msg);
+        //getRoute(&me, &msg);
         updateStopNode(&me, msg.data2);
         trainSetSpeed(msg.data2, 0, 0, &me);
         me.stopCommited = 0;

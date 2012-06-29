@@ -22,56 +22,54 @@ void test_track() {
   int trackManager = WhoIs(trackName);
   char uiName[] = UI_TASK_NAME;
   int uiServer = WhoIs(uiName);
-  char timename[] = TIMESERVER_NAME;
-  int timeserver = WhoIs(timename);
 
   DriverMsg msg;
   msg.trainNum = 44;
   msg.type = SET_ROUTE;
   msg.data2 = 10;
 
-  msg.landmark1.type = LANDMARK_END;
-  msg.landmark1.num1 = EN;
-  msg.landmark1.num2 = 5;
+  Position pos1;
+  pos1.landmark1.type = LANDMARK_SENSOR;
+  pos1.landmark1.num1 = 3;
+  pos1.landmark1.num2 = 7;
+  pos1.landmark2.type = LANDMARK_SENSOR;
+  pos1.landmark2.num1 = 3;
+  pos1.landmark2.num2 = 9;
+  pos1.offset = 350;
 
-#if 1
-  msg.landmark2.type = LANDMARK_SENSOR;
-  msg.landmark2.num1 = 3;
-  msg.landmark2.num2 = 8;
-#endif
-#if 0
-  msg.landmark2.type = LANDMARK_END;
-  msg.landmark2.num1 = EX;
-  msg.landmark2.num2 = 9;
-#endif
+  Position pos2;
+  pos2.landmark1.type = LANDMARK_SENSOR;
+  pos2.landmark1.num1 = 4;
+  pos2.landmark1.num2 = 5;
+  pos2.landmark2.type = LANDMARK_SENSOR;
+  pos2.landmark2.num1 = 3;
+  pos2.landmark2.num2 = 6;
+  pos2.offset = 30;
 
-  Send(trainController, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
+  //Send(trainController, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
 
-#if 0
   TrackMsg trackmsg;
   trackmsg.type = ROUTE_PLANNING;
-  trackmsg.landmark1 = landmark1;
-  trackmsg.landmark2 = landmark2;
+  trackmsg.position1 = pos1;
+  trackmsg.position2 = pos2;
 
   Route route;
   Send(trackManager, (char*)&trackmsg, sizeof(TrackMsg), (char*)&route, sizeof(Route));
 
-  PrintDebug(uiServer, "Distance %d \n", route.dist);
-  PrintDebug(uiServer, "Num Node %d \n", route.length);
+  PrintDebug(uiServer, "Distance %d ???\n", route.dist);
+  PrintDebug(uiServer, "Num Node %d ???\n", route.length);
 
   for (int i = 0; i < route.length; i++) {
     RouteNode node = route.nodes[i];
     if (node.num == REVERSE) {
-      PrintDebug(uiServer, "reverse \n");
+      PrintDebug(uiServer, "reverse %d\n", node.dist);
     } else {
       PrintDebug(uiServer, "Landmark %d %d %d %d", node.landmark.type, node.landmark.num1, node.landmark.num2, node.dist);
       if (node.landmark.type == LANDMARK_SWITCH && node.landmark.num1 == BR) {
         PrintDebug(uiServer, "Switch %d ", node.num);
       }
     }
-    Delay(100, timeserver);
   }
-#endif
   Exit();
 }
 
@@ -85,10 +83,9 @@ void task1() {
   startTrackManagerTask();
   startCommandDecoderTask();
 
-
+  Create(20, test_track);
   Delay(700, time);
   // Testing
-  Create(20, test_track);
 
   Exit();
 }

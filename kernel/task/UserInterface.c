@@ -235,7 +235,7 @@ static int debugUpdateNum;
 static char* updateDebugMessage(char* receive, char* msg, int len) {
   msg = saveCursor(msg);
 
-  int updateRow = debugUpdateNum%60;
+  int updateRow = debugUpdateNum%60 + 1 ;
   // move to position
   msg = moveTo(updateRow, 40, msg);
   *msg++ = ESC;

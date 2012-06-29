@@ -18,6 +18,7 @@ typedef enum {
   LANDMARK_SENSOR,
   LANDMARK_SWITCH,
   LANDMARK_END,
+  LANDMARK_FAKE,
 } LandmarkType;
 
 #define MR 0
@@ -32,10 +33,17 @@ typedef struct TrackLandmark {
   char num2; //a number
 } TrackLandmark;
 
+typedef struct Position {
+  TrackLandmark landmark1;
+  TrackLandmark landmark2;
+  int offset;
+} Position; // position on track is represented by two consecutive sensors on a offset from the first
+
 typedef struct TrackMsg {
   int type;
   TrackLandmark landmark1;
-  TrackLandmark landmark2;
+  Position position1;
+  Position position2;
   char data;
 } TrackMsg;
 
@@ -46,12 +54,12 @@ typedef struct TrackNextSensorMsg {
 
 typedef struct RouteNode {
   TrackLandmark landmark;
-  int num; // num = -1 if reverse command, num = SWITCH_CURVED/SWITCH_STRAIGHT if landmark is BR switch
+  int num; // num = -1 if reverse command, num = SWITCH_CURVED/SWITCH_STRAIGHT if landmark is BR switch,
   int dist;
 } RouteNode;
 
 #define MAX_ROUTE_NODE 150
-#define REVERSE_DIST_OFFSET 320 // TODO(cao) too generous
+#define SAFE_REVERSE_DIST 160 + 60 // TODO(cao) too generous?
 
 typedef struct Route {
   int dist;
