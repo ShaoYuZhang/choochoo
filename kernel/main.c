@@ -39,11 +39,11 @@ void test_track() {
 
   Position pos2;
   pos2.landmark1.type = LANDMARK_SENSOR;
-  pos2.landmark1.num1 = 0;
-  pos2.landmark1.num2 = 7;
-  pos2.landmark2.type = LANDMARK_END;
-  pos2.landmark2.num1 = EX;
-  pos2.landmark2.num2 = 10;
+  pos2.landmark1.num1 = 1;
+  pos2.landmark1.num2 = 5;
+  pos2.landmark2.type = LANDMARK_SENSOR;
+  pos2.landmark2.num1 = 3;
+  pos2.landmark2.num2 = 3;
   pos2.offset = 0;
 
   msg.pos1 = pos1;

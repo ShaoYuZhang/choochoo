@@ -271,20 +271,31 @@ static int findNextSensor(track_node *track, Position pos, TrackLandmark* dst) {
 }
 
 static void computeSafeReverseDistHelper(track_edge* edge) {
+  if (edge->src->safe_reverse_dist == INT_MAX) {
+    return;
+  }
+
   int new_safe = edge->src->safe_reverse_dist - edge->dist;
   if (new_safe > 0) {
     edge->src->safe_reverse_dist = INT_MAX;
     edge->dest->safe_reverse_dist = MAX(new_safe, edge->dest->safe_reverse_dist);
     if (edge->dest->type == NODE_BRANCH) {
       computeSafeReverseDistHelper(&edge->dest->edge[DIR_CURVED]);
-    } else if (edge->dest->type == NODE_EXIT) {
+    } else if (edge->dest->type != NODE_EXIT) {
       computeSafeReverseDistHelper(&edge->dest->edge[DIR_AHEAD]);
+    }
+  } else {
+    if ((edge->dest->type == NODE_BRANCH || edge->dest->type == NODE_MERGE) && edge->dist < SAFE_REVERSE_DIST) {
+      edge->src->safe_reverse_dist = INT_MAX;
     }
   }
 }
 
 static void computeSafeReverseDist(track_node* track) {
   for (int i = 0 ; i < TRACK_MAX + 4; i++) {
+    if (track[i].type != NODE_NONE) {
+
+    }
     if (track[i].type == NODE_BRANCH) {
       track[i].safe_reverse_dist = SAFE_REVERSE_DIST;
       computeSafeReverseDistHelper(&track[i].edge[DIR_STRAIGHT]);
@@ -292,11 +303,6 @@ static void computeSafeReverseDist(track_node* track) {
     } else if (track[i].type == NODE_MERGE) {
       track[i].safe_reverse_dist = SAFE_REVERSE_DIST;
       computeSafeReverseDistHelper(&track[i].edge[DIR_AHEAD]);
-    }
-  }
-  for (int i = 0 ; i < TRACK_MAX + 4; i++) {
-    if (track[i].type != NODE_NONE) {
-      track[i].safe_reverse_dist = MAX(track[i].safe_reverse_dist, (track[i].reverse)->safe_reverse_dist);
     }
   }
 }
@@ -411,7 +417,7 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
       tempRouteNode.num = REVERSE;
       tempRouteNode.dist = curr_node->safe_reverse_dist;
       tempRoute[--index] = tempRouteNode;
-      tempRouteNode.num = 0;
+      tempRouteNode.num = SWITCH_CURVED;
     } else if (curr_node->type == NODE_BRANCH) {
       if (curr_node->edge[DIR_STRAIGHT].dest == next_node) {
         tempRouteNode.num = SWITCH_STRAIGHT;
