@@ -38,10 +38,10 @@ void calibrateVelocity(int accending, char startBox, char startVal, char endBox,
         Reply(tid, (char *)1, 0);
         //printff(ui, "S:%d %d %d\n", sensor.box, sensor.val, sensor.time);
         if (startTime != -1 && sensor.box == endBox && sensor.val == endVal) {
-          printff(ui, "Exiting %d mm/s:%d\n", sensor.time, distance / (sensor.time - startTime) );
+          PrintDebug(ui, "Exiting %d mm/s:%d\n", sensor.time, distance / (sensor.time - startTime) );
           break;
         } else if (sensor.box == startBox && sensor.val == startVal) {
-          printff(ui, "Got time %d \n", sensor.time);
+          PrintDebug(ui, "Got time %d \n", sensor.time);
           startTime = sensor.time;
         }
       }
@@ -66,7 +66,7 @@ void calibrateStopping(int accending, char startBox, char startVal) {
   if (accending) {
     speed = 5;
   } else {
-    speed = 14;
+    speed = 10;
   }
 
   while (1) {
@@ -149,9 +149,9 @@ void go(char train,
 #if 0
   calibrateVelocity(1, sStartBox, sStartVal, sEndBox, sEndVal, sDistance);
   calibrateVelocity(0, sStartBox, sStartVal, sEndBox, sEndVal, sDistance);
-#endif
 
   calibrateStopping(1, sStartBox, sStartVal);
+#endif
   calibrateStopping(0, sStartBox, sStartVal);
 
 #if 0
