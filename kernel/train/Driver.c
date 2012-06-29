@@ -49,7 +49,7 @@ static void getRoute(Driver* me, DriverMsg* msg) {
     if (node.num == -1) {
       PrintDebug(me->ui, "reverse \n");
     } else {
-      PrintDebug(me->ui, "Landmark %d %d %d %d", node.landmark.type, node.landmark.num1, node.landmark.num2, node.dist);
+      PrintDebug(me->ui, "%d Landmark %d %d %d %d", i, node.landmark.type, node.landmark.num1, node.landmark.num2, node.dist);
       if (node.landmark.type == LANDMARK_SWITCH && node.landmark.num1 == BR) {
         PrintDebug(me->ui, "Switch State: %d ", node.num);
       }
@@ -66,7 +66,7 @@ static int shouldStopNow(Driver* me) {
   if (canUseLastSensor) {
     int d = me->distancePassStopSensorToStop - me->uiMsg.distanceFromLastSensor;
 
-    if ((CC++ & 7) == 0) {
+    if ((CC++ & 15) == 0) {
       PrintDebug(me->ui, "Navi Nagger. %d", d);
     }
     if (d < 0) {
@@ -82,9 +82,9 @@ static int shouldStopNow(Driver* me) {
 
 static void updateStopNode(Driver* me, int speed) {
   // Find the first reverse on the path, stop if possible.
-  me->stopNode = me->route.length-1;
+  me->stopNode = me->route.length-2;
   PrintDebug(me->ui, "update stop. %d", me->stopNode);
-  for (int i = me->routeRemaining; i < me->route.length; i++) {
+  for (int i = me->routeRemaining; i < me->route.length-1; i++) {
     if (me->route.nodes[i].num == REVERSE) {
       me->stopNode = i;
       break;
@@ -110,14 +110,14 @@ static void updateStopNode(Driver* me, int speed) {
   //                   |__stop_dist____|
   // |__travel_dist____|
   // |delay this much..|
-  PrintDebug(me->ui, "Need %d mm at StopNode %d\n", stop, me->stopNode);
+  PrintDebug(me->ui, "Need %d mm at StopNode %d\n", stop, me->stopNode-1);
   for (int i = me->stopNode-1; i >= me->routeRemaining; i--) {
     stop -= me->route.nodes[i].dist;
     PrintDebug(me->ui, "Stop %d %d\n", stop, i); //5
 
     if (stop < 0) {
       int previousStop = -stop;
-      PrintDebug(me->ui, "Previousstop %d\n", previousStop);
+      PrintDebug(me->ui, "PreviousStop %d\n", previousStop);
       me->stopSensorBox = -1;
       me->stopSensorVal = -1;
 
@@ -397,6 +397,7 @@ static void driver() {
           me.routeRemaining = me.stopNode+1;
           // Calculate the next stop node.
           updateStopNode(&me, msg.data2);
+          // Update
         }
       }
       case DELAYER: {
