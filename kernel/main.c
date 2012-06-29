@@ -34,6 +34,9 @@ void test_track() {
   msg.landmark1.num1 = EN;
   msg.landmark1.num2 = 5;
 
+  //msg.landmark2.type = LANDMARK_SENSOR;
+  //msg.landmark2.num1 = 3;
+  //msg.landmark2.num2 = 7;
   msg.landmark2.type = LANDMARK_END;
   msg.landmark2.num1 = EX;
   msg.landmark2.num2 = 4;

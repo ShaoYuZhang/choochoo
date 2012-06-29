@@ -19,8 +19,10 @@ void task1() {
   int id = startTimeServerTask();
   startIoServerTask();
   startSensorServerTask();
+  startUserInterfaceTask();
   startDriverControllerTask();
   startTrackManagerTask();
+  startCommandDecoderTask();
   startCalibrationTask();
 
   Exit();

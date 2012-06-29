@@ -49,8 +49,11 @@ typedef struct Driver {
   int routeRemaining;
   int stopNode;
   int stopCommited;
+  int stopSensorBox;
+  int stopSensorVal;
+  int distancePassStopSensorToStop;
+  int useLastSensorNow;
 
-  int predictedTimeToStartStopping;
   TrainUiMsg uiMsg;
   Poly decel;
   Route route;

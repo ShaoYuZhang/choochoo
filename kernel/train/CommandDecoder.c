@@ -58,17 +58,17 @@ static void decodeCommand() {
     c = a2i(c, &temp, 10, &switch_number);
     switch_pos = *temp++;
     if (switch_pos == 's' || switch_pos == 'c') {
-      TrackMsg msg;
+      TrackMsg setSwitch;
 
       TrackLandmark sw;
       sw.type = LANDMARK_SWITCH;
       sw.num1 = 0;
       sw.num2 = (char)switch_number;
 
-      msg.type = SET_SWITCH;
-      msg.landmark1 = sw;
-      msg.data = switch_pos == 'c' ? SWITCH_CURVED : SWITCH_STRAIGHT;
-      Send(trackController, (char *)&msg, sizeof(TrackMsg), (char *)NULL, 0);
+      setSwitch.type = SET_SWITCH;
+      setSwitch.landmark1 = sw;
+      setSwitch.data = switch_pos == 'c' ? SWITCH_CURVED : SWITCH_STRAIGHT;
+      Send(trackController, (char*)&setSwitch, sizeof(TrackMsg), (char *)NULL, 0);
     }
   }
 }
