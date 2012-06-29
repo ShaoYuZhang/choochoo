@@ -16,6 +16,7 @@
 static int com1;
 static int com2;
 static int ui;
+static int CC = 0;
 
 static int getStoppingDistance(Driver* me) {
   return me->d[(int)me->uiMsg.speed][(int)me->uiMsg.speedDir][MAX_VAL];
@@ -64,6 +65,10 @@ static int shouldStopNow(Driver* me) {
 
   if (canUseLastSensor) {
     int d = me->distancePassStopSensorToStop - me->uiMsg.distanceFromLastSensor;
+
+    if ((CC++ & 7) == 0) {
+      PrintDebug(me->ui, "Navi Nagger. %d", d);
+    }
     if (d < 0) {
       // Shit, stopping too late.
       return 2;
@@ -77,7 +82,7 @@ static int shouldStopNow(Driver* me) {
 
 static void updateStopNode(Driver* me, int speed) {
   // Find the first reverse on the path, stop if possible.
-  me->stopNode = me->route.length-2; // Ignore last fake node.
+  me->stopNode = me->route.length-1;
   PrintDebug(me->ui, "update stop. %d", me->stopNode);
   for (int i = me->routeRemaining; i < me->route.length; i++) {
     if (me->route.nodes[i].num == REVERSE) {
@@ -164,7 +169,7 @@ static void updateRoute(Driver* me, char box, char val) {
         me->route.nodes[i].landmark.num1 == box &&
         me->route.nodes[i].landmark.num2 == val)
     {
-      PrintDebug(me->ui, "Triggered expected sensor!! %d\n", i);
+      PrintDebug(me->ui, "Triggered expected sensor!! %d\n", val);
       me->routeRemaining = i;
       break;
     }
@@ -299,7 +304,7 @@ static void trainNavigateNagger() {
   DriverMsg msg;
   msg.type = NAVIGATE_NAGGER;
   for (;;) {
-    Delay(10, timeserver); // .15 seconds
+    Delay(5, timeserver); // .15 seconds
     Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
   }
 }
@@ -341,7 +346,6 @@ static void initDriver(Driver* me) {
   initVelocity((int*)me->v);
 }
 
-static int CC = 0;
 static void sendUiReport(Driver* me, int time) {
   me->uiMsg.velocity = getVelocity(me) / 100;
   if (time) {
@@ -442,9 +446,6 @@ static void driver() {
         if (me.routeRemaining == -1) break;
 
         if (!me.stopCommited) {
-          if ((CC++ & 7) == 0) {
-            PrintDebug(me.ui, "Navi Nagger. %d", me.distancePassStopSensorToStop);
-          }
           if (shouldStopNow(&me)) {
             if (me.route.nodes[me.stopNode].num == REVERSE) {
               PrintDebug(me.ui, "Navi reversing.");
