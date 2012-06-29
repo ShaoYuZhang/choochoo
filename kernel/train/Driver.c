@@ -420,7 +420,7 @@ static void driver() {
 
         TrackNextSensorMsg tMsg;
         TrackMsg qMsg;
-        qMsg.type = QUERY_NEXT_SENSOR;
+        qMsg.type = QUERY_NEXT_SENSOR_FROM_SENSOR;
         qMsg.landmark1.type = LANDMARK_SENSOR;
         qMsg.landmark1.num1 = me.uiMsg.lastSensorBox;
         qMsg.landmark1.num2 = me.uiMsg.lastSensorVal;

@@ -170,46 +170,6 @@ static int locateNode(track_node* track, Position pos, track_edge** edge) {
   return -1;
 }
 
-static int calculateDistance(track_node* currentNode, track_node* targetNode) {
-  track_edge* edges[7];
-  int len = traverse(currentNode, targetNode, 0, 7, edges);
-  if (len == -1) {
-    return -1;
-  } else {
-    int dist = 0;
-    for (int i = 0; i < len; i++) {
-      dist += edges[i]->dist;
-    }
-    return dist;
-  }
-}
-
-static int findNextSensor(track_node* from, TrackLandmark* dst) {
-  track_node* currentNode = from;
-  int dist = 0;
-  while(currentNode->type != NODE_EXIT) {
-    track_edge edge;
-    if (currentNode->type == NODE_BRANCH) {
-      int switch_num = currentNode->num;
-      if (switchStatus[switch_num] ==  SWITCH_CURVED) {
-        edge = currentNode->edge[DIR_CURVED];
-      } else {
-        edge = currentNode->edge[DIR_STRAIGHT];
-      }
-    } else {
-      edge = currentNode->edge[DIR_AHEAD];
-    }
-    dist += edge.dist;
-    currentNode = edge.dest;
-
-    if (currentNode->type == NODE_SENSOR) {
-      *dst = getLandmark(currentNode);
-      return dist;
-    }
-  }
-  return -1;
-}
-
 static int edgeType(track_edge* edge) {
   if (edge->src->type != NODE_BRANCH) {
     return DIR_AHEAD;
@@ -248,6 +208,66 @@ static void fakeNode(track_edge* edge, track_node* fake1, track_node* fake2, int
   edge->src->edge[dirType].reverse = &fake2->edge[DIR_AHEAD];
   edge->src->edge[dirType].dest = fake1;
   edge->src->edge[dirType].dist = offset;
+}
+
+static int calculateDistance(track_node* currentNode, track_node* targetNode) {
+  track_edge* edges[7];
+  int len = traverse(currentNode, targetNode, 0, 7, edges);
+  if (len == -1) {
+    return -1;
+  } else {
+    int dist = 0;
+    for (int i = 0; i < len; i++) {
+      dist += edges[i]->dist;
+    }
+    return dist;
+  }
+}
+
+static int findNextSensor(track_node *track, Position pos, TrackLandmark* dst) {
+  track_edge* fromEdge = (track_edge*)NULL;
+  int offset = locateNode(track, pos, &fromEdge);
+  if (offset == -1) {
+    return -1;
+  }
+
+  track_node nodeSrc = *fromEdge->src;
+  track_node nodeReverseSrc = *fromEdge->reverse->src;
+
+  fakeNode(fromEdge, &track[TRACK_MAX], &track[TRACK_MAX + 1], offset);
+
+  track_node* currentNode = &track[TRACK_MAX];
+
+  int dist = 0;
+  while(currentNode->type != NODE_EXIT) {
+    track_edge edge;
+    if (currentNode->type == NODE_BRANCH) {
+      int switch_num = currentNode->num;
+      if (switchStatus[switch_num] ==  SWITCH_CURVED) {
+        edge = currentNode->edge[DIR_CURVED];
+      } else {
+        edge = currentNode->edge[DIR_STRAIGHT];
+      }
+    } else {
+      edge = currentNode->edge[DIR_AHEAD];
+    }
+    dist += edge.dist;
+    currentNode = edge.dest;
+
+    if (currentNode->type == NODE_SENSOR) {
+      *dst = getLandmark(currentNode);
+
+      // restore graph
+      *fromEdge->src = nodeSrc;
+      *fromEdge->reverse->src = nodeReverseSrc;
+      return dist;
+    }
+  }
+
+  // restore graph
+  *fromEdge->src = nodeSrc;
+  *fromEdge->reverse->src = nodeReverseSrc;
+  return -1;
 }
 
 static void computeSafeReverseDistHelper(track_edge* edge) {
@@ -489,10 +509,25 @@ static void trackController() {
         Reply(tid, (char *)&distance, sizeof(int));
         break;
       }
-      case QUERY_NEXT_SENSOR: {
-        track_node* from = findNode(track, msg.landmark1);
+      case QUERY_NEXT_SENSOR_FROM_SENSOR: {
+        TrackLandmark sensor =  msg.landmark1;
+        track_node* from = findNode(track, sensor);
+        TrackLandmark nextLandmark = getLandmark(from->edge[DIR_AHEAD].dest);
+        Position pos = {sensor, nextLandmark, 0};
+
         TrackLandmark nextSensor = {0, 0, 0};
-        int distance = findNextSensor(from, &nextSensor);
+        int distance = findNextSensor(track, pos, &nextSensor);
+
+        TrackNextSensorMsg sensorMsg;
+        sensorMsg.sensor = nextSensor;
+        sensorMsg.dist = distance;
+
+        Reply(tid, (char *)&sensorMsg, sizeof(TrackNextSensorMsg));
+        break;
+      }
+      case QUERY_NEXT_SENSOR_FROM_POS: {
+        TrackLandmark nextSensor = {0, 0, 0};
+        int distance = findNextSensor(track, msg.position1, &nextSensor);
 
         TrackNextSensorMsg sensorMsg;
         sensorMsg.sensor = nextSensor;
@@ -504,8 +539,6 @@ static void trackController() {
       case ROUTE_PLANNING: {
         Position from = msg.position1;
         Position to = msg.position2;
-        //track_node* from = findNode(track, msg.landmark1);
-        //track_node* to = findNode(track, msg.landmark2);
         Route route;
         findRoute(track, from, to , &route);
 
