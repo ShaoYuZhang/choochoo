@@ -93,7 +93,6 @@ static void updateStopNode(Driver* me, int speed) {
 
       PrintDebug(me->ui, "set switch\n");
       Send(me->trackManager, (char*)&setSwitch, sizeof(TrackMsg), (char*)NULL, 0);
-      Delay(me->timeserver, 30);
     }
   }
   PrintDebug(me->ui, "calc stopping distance.");

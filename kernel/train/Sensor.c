@@ -7,7 +7,6 @@
 
 static int CURR_SENSOR_BOX;
 static int CURR_HIGH_BITS;
-static int SENSOR_QUERY_FINISHED;
 static int SENSOR_VALUE[NUM_SENSOR_BOX][16];
 static int IGNORE_RESULT;
 
@@ -18,6 +17,9 @@ static int subscriberUpdateIndex;
 static Sensor sensorBuffer[10];
 static int sensorBufferHead;
 static int sensorBufferTail;
+
+static char responseBuffer[10];
+static int responseIndex;
 
 static void sensorQueryWorker() {
   char com1Name[] = IOSERVERCOM1_NAME;
@@ -61,7 +63,21 @@ static void sensorQueryTimeoutWorker() {
     SensorMsg msg;
     msg.type = QUERY_TIMEOUT_WORKER;
     Send(parent, (char *)&msg, sizeof(SensorMsg), (char *)NULL, 0);
-    Delay(8, timeServer);
+    Delay(10, timeServer);
+  }
+}
+
+static void sensorQueryResponseTimeoutWorker() {
+  char timeServerName[] = TIMESERVER_NAME;
+  int timeServer= WhoIs(timeServerName);
+
+  int parent = MyParentsTid();
+
+  for (;;) {
+    SensorMsg msg;
+    msg.type = QUERY_RESPONSE_TIMEOUT_WORKER;
+    Send(parent, (char *)&msg, sizeof(SensorMsg), (char *)NULL, 0);
+    Delay(7, timeServer);
   }
 }
 
@@ -76,6 +92,7 @@ static void sensorCourier() {
 
     int tid = work.tid;
     Sensor s = work.sensor;
+
     Send(tid, (char *)&s, sizeof(Sensor), (char *)NULL, 0);
   }
 }
@@ -112,9 +129,6 @@ static Sensor remove_from_buffer() {
 }
 
 static void sensorResponded(char response, int time) {
-    if (SENSOR_QUERY_FINISHED) {
-        return;
-    }
     if (!IGNORE_RESULT) {
       for (int i = 0; i < 8; i++) {
           int mask = 1 << i;
@@ -141,7 +155,6 @@ static void sensorResponded(char response, int time) {
     }
     if (CURR_SENSOR_BOX >= NUM_SENSOR_BOX) {
         CURR_SENSOR_BOX = 0;
-        SENSOR_QUERY_FINISHED = 1;
         IGNORE_RESULT = 0;
     }
 }
@@ -157,7 +170,7 @@ static void sensorServer() {
   int i, j;
   CURR_SENSOR_BOX = 0;
   CURR_HIGH_BITS = 0;
-  SENSOR_QUERY_FINISHED = 1;
+  responseIndex = 0;
   for (i = 0; i < NUM_SENSOR_BOX; ++i) {
     for (j = 0; j < 16; ++j) {
       SENSOR_VALUE[i][j] = 0;
@@ -172,10 +185,13 @@ static void sensorServer() {
   int queryWorker = Create(7, sensorQueryWorker);
   Create(8, sensorQueryResponseWorker);
   int queryTimeoutWorker = Create(7, sensorQueryTimeoutWorker);
+  int queryResponseTimeoutWorker = Create(7, sensorQueryResponseTimeoutWorker);
   int courier  = Create(7, sensorCourier);
 
   int queryWorkerReady = 0;
   int queryTimeout = 0;
+  int queryResponseTimeout = 0;
+  int startQueryResponseTimeout = 0;
   int courierReady = 0;
 
   char timerName[] = TIMESERVER_NAME;
@@ -194,9 +210,6 @@ static void sensorServer() {
 
   for ( ;; ) {
     if (queryTimeout && queryWorkerReady) {
-      SENSOR_QUERY_FINISHED = 0;
-      CURR_SENSOR_BOX = 0;
-      CURR_HIGH_BITS = 0;
       queryTimeout = 0;
       queryWorkerReady = 0;
       Reply(queryWorker, (char *)NULL, 0);
@@ -214,11 +227,37 @@ static void sensorServer() {
       case QUERY_RESPONSE_WORKER: {
         Reply(tid, (char *)NULL, 0);
         char response = msg.data;
-        sensorResponded(response, msg.time);
+        if (responseIndex == 0) {
+          if (queryResponseTimeout) {
+            queryResponseTimeout = 0;
+            Reply(queryResponseTimeoutWorker, (char *)NULL, 0);
+          } else {
+            startQueryResponseTimeout = 1;
+          }
+        }
+        responseBuffer[responseIndex++] = response;
+        if (responseIndex == 10) {
+          for (int i = 0; i < 10; i++) {
+            sensorResponded(responseBuffer[i], msg.time);
+          }
+          responseIndex = 0;
+        }
         break;
       }
       case QUERY_TIMEOUT_WORKER: {
         queryTimeout = 1;
+        break;
+      }
+      case QUERY_RESPONSE_TIMEOUT_WORKER: {
+        if (startQueryResponseTimeout) {
+          startQueryResponseTimeout = 0;
+          Reply(queryResponseTimeoutWorker, (char *)NULL, 0);
+        } else {
+          queryResponseTimeout = 1;
+          responseIndex = 0;
+          CURR_SENSOR_BOX = 0;
+          CURR_HIGH_BITS = 0;
+        }
         break;
       }
       case QUERY_RECENT: {

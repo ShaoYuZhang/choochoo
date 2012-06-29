@@ -10,6 +10,7 @@
 #define QUERY_TIMEOUT_WORKER 2
 #define SENSOR_COURIER 3
 #define QUERY_RECENT 4
+#define QUERY_RESPONSE_TIMEOUT_WORKER 5
 
 typedef struct SensorMsg {
   char type; // Defined above
