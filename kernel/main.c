@@ -26,28 +26,31 @@ void test_track() {
   DriverMsg msg;
   msg.trainNum = 44;
   msg.type = SET_ROUTE;
-  msg.data2 = 10;
+  msg.data2 = 6;
 
   Position pos1;
-  pos1.landmark1.type = LANDMARK_SENSOR;
-  pos1.landmark1.num1 = 3;
-  pos1.landmark1.num2 = 7;
+  pos1.landmark1.type = LANDMARK_END;
+  pos1.landmark1.num1 = EN;
+  pos1.landmark1.num2 = 5;
   pos1.landmark2.type = LANDMARK_SENSOR;
-  pos1.landmark2.num1 = 3;
-  pos1.landmark2.num2 = 9;
-  pos1.offset = 350;
+  pos1.landmark2.num1 = 0;
+  pos1.landmark2.num2 = 1;
+  pos1.offset = 400;
 
   Position pos2;
   pos2.landmark1.type = LANDMARK_SENSOR;
-  pos2.landmark1.num1 = 4;
-  pos2.landmark1.num2 = 5;
-  pos2.landmark2.type = LANDMARK_SENSOR;
-  pos2.landmark2.num1 = 3;
-  pos2.landmark2.num2 = 6;
-  pos2.offset = 30;
+  pos2.landmark1.num1 = 0;
+  pos2.landmark1.num2 = 7;
+  pos2.landmark2.type = LANDMARK_END;
+  pos2.landmark2.num1 = EX;
+  pos2.landmark2.num2 = 10;
+  pos2.offset = 0;
 
-  //Send(trainController, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
+  msg.pos1 = pos1;
+  msg.pos2 = pos2;
+  Send(trainController, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
 
+#if 0
   TrackMsg trackmsg;
   trackmsg.type = ROUTE_PLANNING;
   trackmsg.position1 = pos1;
@@ -70,6 +73,7 @@ void test_track() {
       }
     }
   }
+#endif
   Exit();
 }
 
@@ -83,8 +87,8 @@ void task1() {
   startTrackManagerTask();
   startCommandDecoderTask();
 
-  Create(20, test_track);
   Delay(700, time);
+  Create(20, test_track);
   // Testing
 
   Exit();

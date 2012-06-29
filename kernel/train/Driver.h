@@ -29,8 +29,8 @@ typedef struct DriverMsg {
   unsigned char data3; // Delay num, or msg came from worker
   char replyTid;       // The user that first send the message.
   int timestamp;
-  TrackLandmark landmark1;
-  TrackLandmark landmark2;
+  Position pos1;
+  Position pos2;
 } DriverMsg;
 
 

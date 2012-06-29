@@ -423,14 +423,6 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
 
   *fromEdge->src = fromNodeSrc;
   *fromEdge->reverse->src = fromNodeReverseSrc;
-  {
-  char uiName[] = UI_TASK_NAME;
-  int uiServer = WhoIs(uiName);
-  PrintDebug(uiServer, "WHAT??");
-  char timeServerName[] = TIMESERVER_NAME;
-  int timeServer= WhoIs(timeServerName);
-  Delay(10,timeServer);
-  }
 }
 
 static void trackSetSwitch(int sw, int state) {

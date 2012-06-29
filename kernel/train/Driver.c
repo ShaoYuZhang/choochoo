@@ -33,8 +33,8 @@ static int getStoppingTime(Driver* me) {
 static void getRoute(Driver* me, DriverMsg* msg) {
   TrackMsg trackmsg;
   trackmsg.type = ROUTE_PLANNING;
-  //trackmsg.landmark1 = msg->landmark1;
-  //trackmsg.landmark2 = msg->landmark2;
+  trackmsg.position1 = msg->pos1;
+  trackmsg.position2 = msg->pos2;
 
   Send(me->trackManager, (char*)&trackmsg,
       sizeof(TrackMsg), (char*)&(me->route), sizeof(Route));
@@ -77,7 +77,7 @@ static int shouldStopNow(Driver* me) {
 
 static void updateStopNode(Driver* me, int speed) {
   // Find the first reverse on the path, stop if possible.
-  me->stopNode = me->route.length-1;
+  me->stopNode = me->route.length-2; // Ignore last fake node.
   PrintDebug(me->ui, "update stop. %d", me->stopNode);
   for (int i = me->routeRemaining; i < me->route.length; i++) {
     if (me->route.nodes[i].num == REVERSE) {
@@ -93,6 +93,7 @@ static void updateStopNode(Driver* me, int speed) {
 
       PrintDebug(me->ui, "set switch\n");
       Send(me->trackManager, (char*)&setSwitch, sizeof(TrackMsg), (char*)NULL, 0);
+      Delay(me->timeserver, 30);
     }
   }
   PrintDebug(me->ui, "calc stopping distance.");
@@ -213,7 +214,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     PrintDebug(me->ui, "Reverse... %d \n", me->uiMsg.speed);
     DriverMsg delayMsg;
     delayMsg.type = SET_SPEED;
-    delayMsg.timestamp = stopTime + 2000;
+    delayMsg.timestamp = stopTime;
     delayMsg.data2 = (signed char)me->uiMsg.speed;
     PrintDebug(me->ui, "Using delayer: %d for %d \n", me->delayer, stopTime);
 
@@ -285,7 +286,7 @@ static void trainUiNagger() {
   DriverMsg msg;
   msg.type = UI_NAGGER;
   for (;;) {
-    Delay(2, timeserver); // .2 seconds
+    Delay(20, timeserver); // .2 seconds
     msg.timestamp = Time(timeserver) * 10;
     Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
   }
@@ -341,6 +342,7 @@ static void initDriver(Driver* me) {
   initVelocity((int*)me->v);
 }
 
+static int CC = 0;
 static void sendUiReport(Driver* me, int time) {
   me->uiMsg.velocity = getVelocity(me) / 100;
   if (time) {
@@ -441,7 +443,9 @@ static void driver() {
         if (me.routeRemaining == -1) break;
 
         if (!me.stopCommited) {
-            //PrintDebug(me.ui, "Navi Nagger. %d", me.distancePassStopSensorToStop);
+          if ((CC++ & 7) == 0) {
+            PrintDebug(me.ui, "Navi Nagger. %d", me.distancePassStopSensorToStop);
+          }
           if (shouldStopNow(&me)) {
             if (me.route.nodes[me.stopNode].num == REVERSE) {
               PrintDebug(me.ui, "Navi reversing.");
@@ -462,7 +466,7 @@ static void driver() {
       }
       case SET_ROUTE: {
         PrintDebug(me.ui, "Set route.");
-        //getRoute(&me, &msg);
+        getRoute(&me, &msg);
         updateStopNode(&me, msg.data2);
         trainSetSpeed(msg.data2, 0, 0, &me);
         me.stopCommited = 0;
