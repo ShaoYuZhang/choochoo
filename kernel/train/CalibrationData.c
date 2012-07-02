@@ -49,11 +49,11 @@ memcpy_no_overlap_asm((char*)d, (char*)distance, 2*2*15*4);
 // Num millisecond to accelerate to speed from zero.
 void initAccelerationProfile(int* accel) {
   int a[15] = {
-       -1
-      ,-1
-      ,-1
-      ,-1
-      ,-1
+       0
+      ,500
+      ,1000
+      ,1800
+      ,2500
       ,2994
       ,3286
       ,3779
@@ -62,8 +62,8 @@ void initAccelerationProfile(int* accel) {
       ,4579
       ,4795
       ,5060
-      ,-1
-      ,-1
+      ,5300
+      ,5600
   };
 
   memcpy_no_overlap_asm((char*)a, (char*)accel, 15*4);
