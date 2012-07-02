@@ -47,7 +47,7 @@ static void sendUiReport(Driver* me) {
   } else {
     me->uiMsg.velocity = getVelocity(me) / 100;
   }
-  if (!me->justReversed){
+  if (!me->justReversed) {
     me->uiMsg.lastSensorUnexpected = me->lastSensorUnexpected;
     me->uiMsg.lastSensorBox            = me->lastSensorBox;
     me->uiMsg.lastSensorVal            = me->lastSensorVal;
@@ -560,8 +560,10 @@ static void driver() {
         sendUiReport(&me);
         if (hasTempRouteMsg) {
           getRoute(&me, &tempRouteMsg);
-          updateStopNode(&me, tempRouteMsg.data2);
-          trainSetSpeed(tempRouteMsg.data2, 0, 0, &me);
+          if (me.route.length != 0) {
+            updateStopNode(&me, tempRouteMsg.data2);
+            trainSetSpeed(tempRouteMsg.data2, 0, 0, &me);
+          }
           hasTempRouteMsg = 0;
         }
         break;
@@ -599,8 +601,10 @@ static void driver() {
         me.stopCommited = 0;
         if (me.lastSensorActualTime > 0) {
           getRoute(&me, &msg);
-          updateStopNode(&me, msg.data2);
-          trainSetSpeed(msg.data2, 0, 0, &me);
+          if (me.route.length != 0) {
+            updateStopNode(&me, msg.data2);
+            trainSetSpeed(msg.data2, 0, 0, &me);
+          }
         } else {
           trainSetSpeed(5, 0, 0, &me);
           hasTempRouteMsg = 1;
