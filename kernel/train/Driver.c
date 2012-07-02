@@ -40,6 +40,53 @@ static void toPosition(Driver* me, Position* pos) {
   pos->offset = me->distanceFromLastSensor;
 }
 
+static void sendUiReport(Driver* me) {
+
+  me->uiMsg.velocity = getVelocity(me) / 100;
+  if (!me->justReversed){
+    me->uiMsg.lastSensorUnexpected = me->lastSensorUnexpected;
+    me->uiMsg.lastSensorBox            = me->lastSensorBox;
+    me->uiMsg.lastSensorVal            = me->lastSensorVal;
+    me->uiMsg.lastSensorActualTime     = me->lastSensorActualTime;
+    me->uiMsg.lastSensorPredictedTime  = me->lastSensorPredictedTime;
+  } else {
+    me->uiMsg.lastSensorUnexpected     = 0;
+    me->uiMsg.lastSensorBox            = 0;
+    me->uiMsg.lastSensorVal            = 0;
+    me->uiMsg.lastSensorActualTime     = 0;
+    me->uiMsg.lastSensorPredictedTime  = 0;
+  }
+
+  me->uiMsg.speed                    = me->speed;      // 0 - 14
+  me->uiMsg.speedDir                 = me->speedDir;
+  me->uiMsg.distanceFromLastSensor   = me->distanceFromLastSensor;
+  me->uiMsg.distanceToNextSensor     = me->distanceToNextSensor;
+
+  me->uiMsg.nextSensorBox            = me->nextSensorBox;
+  me->uiMsg.nextSensorVal            = me->nextSensorVal;
+  me->uiMsg.nextSensorPredictedTime  = me->nextSensorPredictedTime;
+
+  Send(me->ui, (char*)&(me->uiMsg), sizeof(TrainUiMsg), (char*)1, 0);
+}
+
+static void updatePredication(Driver* me) {
+  int now = Time(me->timeserver) * 10;
+  TrackNextSensorMsg tMsg;
+  TrackMsg qMsg;
+  qMsg.type = QUERY_NEXT_SENSOR_FROM_POS;
+  toPosition(me, &qMsg.position1);
+  Send(me->trackManager, (char*)&qMsg, sizeof(TrackMsg),
+        (char*)&tMsg, sizeof(TrackNextSensorMsg));
+
+  me->distanceToNextSensor = tMsg.dist;
+  me->nextSensorBox = tMsg.sensor.num1;
+  me->nextSensorVal = tMsg.sensor.num2;
+  me->nextSensorPredictedTime =
+    now + me->distanceToNextSensor*100000 / getVelocity(me) - 50; // 50 ms delay for sensor query.
+
+  sendUiReport(me);
+}
+
 static void getRoute(Driver* me, DriverMsg* msg) {
   TrackMsg trackmsg;
   trackmsg.type = ROUTE_PLANNING;
@@ -213,18 +260,29 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
       Putstr(com1, msg, 4);
 
       // Update prediction
-      //int action = me->nextSensorVal%2 ? 1 : -1;
-      //me->nextSensorVal = me->nextSensorVal + action;
-      //action = me->lastSensorVal%2 ? 1 : -1;
-      //me->lastSensorVal = me->lastSensorVal + action;
-      //int tmp = me->distanceFromLastSensor;
-      //me->distanceFromLastSensor = me->distanceToNextSensor;
-      //me->distanceToNextSensor = tmp;
-      //me->justReversed = 1;
-      //Position pos;
-      //toPosition(me, &pos);
-      // Update prediction
+      int action = me->nextSensorVal%2 ? 1 : -1;
+      me->nextSensorVal = me->nextSensorVal + action;
 
+      action = me->lastSensorVal%2 ? 1 : -1;
+      me->lastSensorVal = me->lastSensorVal + action;
+
+
+      int tmp = me->distanceFromLastSensor;
+      me->distanceFromLastSensor = me->distanceToNextSensor;
+      me->distanceToNextSensor = tmp;
+
+      tmp = me->nextSensorVal;
+      me->nextSensorVal = me->lastSensorVal;
+      me->lastSensorVal = tmp;
+
+      tmp = me->nextSensorBox;
+      me->nextSensorBox = me->lastSensorBox;
+      me->lastSensorBox = tmp;
+
+      me->justReversed = 1;
+
+      // Update prediction
+      updatePredication(me);
     } else {
       PrintDebug(me->ui, "Set speed. %d %d\n", speed, me->trainNum);
       msg[0] = (char)speed;
@@ -364,53 +422,6 @@ static void updatePosition(Driver* me, int time){
     me->distanceFromLastSensor += dPosition;
     me->distanceToNextSensor -= dPosition;
   }
-}
-
-static void sendUiReport(Driver* me) {
-
-  me->uiMsg.velocity = getVelocity(me) / 100;
-  if (!me->justReversed){
-    me->uiMsg.lastSensorUnexpected = me->lastSensorUnexpected;
-    me->uiMsg.lastSensorBox            = me->lastSensorBox;
-    me->uiMsg.lastSensorVal            = me->lastSensorVal;
-    me->uiMsg.lastSensorActualTime     = me->lastSensorActualTime;
-    me->uiMsg.lastSensorPredictedTime  = me->lastSensorPredictedTime;
-  } else {
-    me->uiMsg.lastSensorUnexpected     = 0;
-    me->uiMsg.lastSensorBox            = 0;
-    me->uiMsg.lastSensorVal            = 0;
-    me->uiMsg.lastSensorActualTime     = 0;
-    me->uiMsg.lastSensorPredictedTime  = 0;
-  }
-
-  me->uiMsg.speed                    = me->speed;      // 0 - 14
-  me->uiMsg.speedDir                 = me->speedDir;
-  me->uiMsg.distanceFromLastSensor   = me->distanceFromLastSensor;
-  me->uiMsg.distanceToNextSensor     = me->distanceToNextSensor;
-
-  me->uiMsg.nextSensorBox            = me->nextSensorBox;
-  me->uiMsg.nextSensorVal            = me->nextSensorVal;
-  me->uiMsg.nextSensorPredictedTime  = me->nextSensorPredictedTime;
-
-  Send(me->ui, (char*)&(me->uiMsg), sizeof(TrainUiMsg), (char*)1, 0);
-}
-
-static void updatePredication(Driver* me) {
-  int now = Time(me->timeserver) * 10;
-  TrackNextSensorMsg tMsg;
-  TrackMsg qMsg;
-  qMsg.type = QUERY_NEXT_SENSOR_FROM_POS;
-  toPosition(me, &qMsg.position1);
-  Send(me->trackManager, (char*)&qMsg, sizeof(TrackMsg),
-        (char*)&tMsg, sizeof(TrackNextSensorMsg));
-
-  me->distanceToNextSensor = tMsg.dist;
-  me->nextSensorBox = tMsg.sensor.num1;
-  me->nextSensorVal = tMsg.sensor.num2;
-  me->nextSensorPredictedTime =
-    now + me->distanceToNextSensor*100000 / getVelocity(me) - 50; // 50 ms delay for sensor query.
-
-  sendUiReport(me);
 }
 
 static void driver() {

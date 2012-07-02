@@ -95,4 +95,5 @@ typedef char *va_list;
 	bwprintf(1, "\n"); \
 	while(1); \
 }
+
 #endif // UTIL_H_
