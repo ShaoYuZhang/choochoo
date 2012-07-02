@@ -16,4 +16,7 @@ void initVelocity(int* velocity);
 // Units: mm
 void initStoppingDistance(int* stoppingDistance);
 
+// Num millisecond to accelerate to speed from zero.
+void initAccelerationProfile(int* accel);
+
 #endif // CALIBRATION_DATA_H_

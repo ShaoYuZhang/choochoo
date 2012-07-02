@@ -7,6 +7,10 @@
 #include <TimeServer.h>
 #include <Sensor.h>
 #include <kernel.h>
+#include <CalibrationData.h>
+
+static int v[15][2];
+static int d[15][2][2];
 
 #define AVG_COUNT 3
 static int trainController;
@@ -16,6 +20,67 @@ static int sensorServer;
 static SensorMsg sensorMsg;
 static DriverMsg setSpeed;
 static int ui;
+
+void calibrateAccel(int accending, char startBox, char startVal, char endBox, char endVal, int distance) {
+  char speed = 9;
+  while (1) {
+    setSpeed.data2 = 10;
+    setSpeed.data3 = -1;
+    PrintDebug(ui, "New Speed: %d\n", (int)speed);
+    Send(trainController, (char*)&setSpeed, sizeof(DriverMsg), (char *)NULL, 0);
+    float timeTripSensor1 = -1;
+    float timeSendCommand = -1;
+    float timeTripSensor2 = -1;
+
+    for (int avgCount = 0; avgCount < AVG_COUNT; avgCount++) {
+      while (1) {
+        Sensor sensor;
+        int tid;
+        Receive(&tid, (char *)&sensor, sizeof(Sensor));
+        //printff(ui, "S:%d %d %d\n", sensor.box, sensor.val, sensor.time);
+        if (timeTripSensor1 != -1 && sensor.box == endBox && sensor.val == endVal) {
+          timeTripSensor2 = sensor.time *10 - 50;
+
+          float v1 =
+         (float)v[(int)speed][ACCELERATE] / 100000.0;
+          float v0 = (float)v[0][ACCELERATE] / 100000.0;
+          float t1 = (-timeSendCommand +
+            2.0*(v1*timeTripSensor2 - timeTripSensor1*v0 - (float)distance/10000)
+            / (v1 - v0));
+
+          setSpeed.data2 = 10;
+          setSpeed.data3 = -1;
+          Send(trainController, (char*)&setSpeed, sizeof(DriverMsg), (char *)NULL, 0);
+
+          PrintDebug(ui, "Using %d %d %d %d %d", (int)timeTripSensor1, (int)timeSendCommand, (int)timeTripSensor2, (int)(v0*1000), (int)(v1*1000))
+
+          PrintDebug(ui, "Exiting %d T1:%d: Took:%d", sensor.time*10, (int)t1, (int)(t1-timeSendCommand));
+          break;
+        } else if (sensor.box == startBox && sensor.val == startVal) {
+          timeTripSensor1 = sensor.time*10 - 50;
+
+          setSpeed.data2 = speed;
+          setSpeed.data3 = -1;
+          PrintDebug(ui, "Got time %d \n", sensor.time);
+          Send(trainController, (char*)&setSpeed, sizeof(DriverMsg), (char *)NULL, 0);
+          timeSendCommand = Time(timeserver)*10 + 50;
+        } else if (sensor.box == 4 && sensor.val == 9) { // D10
+          Delay(78, timeserver);
+          setSpeed.data2 = 1;
+          setSpeed.data3 = -1;
+          PrintDebug(ui, "Stopping.%d \n", sensor.time*10);
+          Send(trainController, (char*)&setSpeed, sizeof(DriverMsg), (char *)NULL, 0);
+        }
+        Reply(tid, (char *)1, 0);
+      }
+    }
+
+    speed += 1;
+    if (speed == 13) {
+      break;
+    }
+  }
+}
 
 void calibrateVelocity(int accending, char startBox, char startVal, char endBox, char endVal, int distance) {
   char speed = 0;
@@ -146,13 +211,14 @@ void go(char train,
   Send(sensorServer, (char*)&sensorMsg, sizeof(SensorMsg),
       (char*)1, 0);
 
+  calibrateAccel(1, sStartBox, sStartVal, sEndBox, sEndVal, sDistance);
 #if 0
   calibrateVelocity(1, sStartBox, sStartVal, sEndBox, sEndVal, sDistance);
   calibrateVelocity(0, sStartBox, sStartVal, sEndBox, sEndVal, sDistance);
 
   calibrateStopping(1, sStartBox, sStartVal);
-#endif
   calibrateStopping(0, sStartBox, sStartVal);
+#endif
 
 #if 0
   setSwitch.data = SWITCH_CURVED;
@@ -198,6 +264,9 @@ void calibration() {
   trainController = WhoIs(trainControllerName);
   trackController = WhoIs(trackName);
   ui = WhoIs(uiName);
+
+  initStoppingDistance((int*)d);
+  initVelocity((int*)v);
 
   PrintDebug(ui, "Assume all tracks are curved. Which track?\n");
   go(44,

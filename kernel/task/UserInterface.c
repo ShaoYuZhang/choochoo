@@ -236,6 +236,11 @@ static char* updateDebugMessage(char* receive, char* msg, int len) {
   msg = saveCursor(msg);
 
   int updateRow = debugUpdateNum%50 + 1;
+  // Clear the line after just cuz
+  msg = moveTo(updateRow+1, 40, msg);
+  *msg++ = ESC;
+  *msg++ = '[';
+  *msg++ = 'K';
   // move to position
   msg = moveTo(updateRow, 40, msg);
   *msg++ = ESC;

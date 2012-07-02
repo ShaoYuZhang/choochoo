@@ -2,6 +2,7 @@
 
 #include <memory.h>
 
+
 void initVelocity(int* velocity) {
   int v[15][2] = {
 {0.0, 0.0},
@@ -44,4 +45,27 @@ void initStoppingDistance(int* distance) {
 memcpy_no_overlap_asm((char*)d, (char*)distance, 2*2*15*4);
 } // end initDistance
 
+
+// Num millisecond to accelerate to speed from zero.
+void initAccelerationProfile(int* accel) {
+  int a[15] = {
+       -1
+      ,-1
+      ,-1
+      ,-1
+      ,-1
+      ,2994
+      ,3286
+      ,3779
+      ,4074
+      ,4408
+      ,4579
+      ,4795
+      ,5060
+      ,-1
+      ,-1
+  };
+
+  memcpy_no_overlap_asm((char*)a, (char*)accel, 15*4);
+}
 
