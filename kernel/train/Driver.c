@@ -460,7 +460,6 @@ static void updatePosition(Driver* me, int time){
       } else {
         dist = eval_dist(&me->adPoly, time);
       }
-      PrintDebug(me->ui, "dist %d", dist);
       dPosition = dist - me->lastReportDist;
       me->lastReportDist = dist;
     } else {

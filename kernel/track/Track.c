@@ -239,7 +239,15 @@ static int findNextSensor(track_node *track, Position pos, TrackLandmark* dst) {
   track_node* currentNode = &track[TRACK_MAX];
 
   int dist = 0;
-  while(currentNode->type != NODE_EXIT) {
+  while(1)  {
+    if (currentNode->type == NODE_SENSOR || currentNode->type == NODE_EXIT) {
+      *dst = getLandmark(currentNode);
+
+      // restore graph
+      *fromEdge->src = nodeSrc;
+      *fromEdge->reverse->src = nodeReverseSrc;
+      return dist;
+    }
     track_edge edge;
     if (currentNode->type == NODE_BRANCH) {
       int switch_num = currentNode->num;
@@ -254,14 +262,6 @@ static int findNextSensor(track_node *track, Position pos, TrackLandmark* dst) {
     dist += edge.dist;
     currentNode = edge.dest;
 
-    if (currentNode->type == NODE_SENSOR) {
-      *dst = getLandmark(currentNode);
-
-      // restore graph
-      *fromEdge->src = nodeSrc;
-      *fromEdge->reverse->src = nodeReverseSrc;
-      return dist;
-    }
   }
 
   // restore graph
