@@ -41,8 +41,12 @@ static void toPosition(Driver* me, Position* pos) {
 }
 
 static void sendUiReport(Driver* me) {
-
-  me->uiMsg.velocity = getVelocity(me) / 100;
+  if (me->isAding) {
+    int now = Time(me->timeserver) * 10;
+    me->uiMsg.velocity = eval_velo(&me->adPoly, now) / 100;
+  } else {
+    me->uiMsg.velocity = getVelocity(me) / 100;
+  }
   if (!me->justReversed){
     me->uiMsg.lastSensorUnexpected = me->lastSensorUnexpected;
     me->uiMsg.lastSensorBox            = me->lastSensorBox;
@@ -250,6 +254,34 @@ static void dynamicCalibration(Driver* me) {
 static void trainSetSpeed(const int speed, const int stopTime, const int delayer, Driver* me) {
   char msg[4];
   msg[1] = (char)me->trainNum;
+
+  // a/d related stuff
+  int newSpeed = speed >=0 ? speed : 0;
+  int now = Time(me->timeserver) * 10;
+  if (me->speed == 0) {
+    // accelerating from 0
+    me->isAding = 1;
+    int v0 = getVelocity(me);
+    int v1 = me->v[newSpeed][ACCELERATE];
+    int t0 = now;
+    int t1 = now + me->a[newSpeed];
+    poly_init(&me->adPoly, t0, t1, v0, v1);
+    me->lastReportDist = 0;
+    me->adEndTime = t1;
+  } else if (newSpeed == 0) {
+    // decelerating to 0
+    me->isAding = 1;
+    int v0 = getVelocity(me);
+    int v1 = me->v[newSpeed][DECELERATE];
+    int t0 = now;
+    int t1 = now + getStoppingTime(me);
+    poly_init(&me->adPoly, t0, t1, v0, v1);
+    me->lastReportDist = 0;
+    me->adEndTime = t1;
+  }
+
+  PrintDebug(me->ui, "Train Setting Speed");
+
   if (speed >= 0) {
     if (delayer) {
       //PrintDebug(me->ui, "Reversing speed. cuz its worker %d\n", speed);
@@ -410,14 +442,31 @@ static void initDriver(Driver* me) {
   me->navigateNagger = Create(2, trainNavigateNagger);
   me->routeRemaining = -1;
 
+  me->isAding = 0;
+
   initStoppingDistance((int*)me->d);
   initVelocity((int*)me->v);
+  initAccelerationProfile((int*)me->a);
 }
 
 static void updatePosition(Driver* me, int time){
   if (time) {
-    // In mm
-    int dPosition = (time - me->reportTime) * getVelocity(me) / 100000;
+    int dPosition;
+    if (me->isAding) {
+      int dist;
+      if (time > me->adEndTime) {
+        me->isAding = 0;
+        dist = eval_dist(&me->adPoly, me->adEndTime);
+      } else {
+        dist = eval_dist(&me->adPoly, time);
+      }
+      PrintDebug(me->ui, "dist %d", dist);
+      dPosition = dist - me->lastReportDist;
+      me->lastReportDist = dist;
+    } else {
+      // In mm
+      dPosition = (time - me->reportTime) * getVelocity(me) / 100000;
+    }
     me->reportTime = time;
     me->distanceFromLastSensor += dPosition;
     me->distanceToNextSensor -= dPosition;

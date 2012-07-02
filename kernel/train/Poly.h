@@ -2,15 +2,15 @@
 #define Poly_h
 
 typedef struct Poly {
-	int order;
-	float a[6];
+  int t0;
+  int t1;
+  int v0;
+  int v1;
 } Poly;
 
-void velocity_poly_init(Poly* p,
-    float a0, float a1, float a2, float a3, float a4);
+void poly_init(Poly* p, int t0, int t1, int v0, int v1);
 
-void distance_poly_init(Poly* p,
-    float a0, float a1, float a2, float a3, float a4, float a5);
+int eval_dist(const Poly const* p, int t);
+int eval_velo(const Poly const* p, int t);
 
-float poly_eval(const Poly const* p, float x);
 #endif // Poly.h

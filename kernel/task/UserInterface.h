@@ -36,6 +36,8 @@ typedef struct TrainUiMsg {
   char nextSensorBox;
   char nextSensorVal;
   int nextSensorPredictedTime;
+
+  int error;
 } TrainUiMsg;
 
 int startUserInterfaceTask();

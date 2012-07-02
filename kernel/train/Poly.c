@@ -1,35 +1,36 @@
 #include "Poly.h"
 
-// make a new polynomial p(x) = sum_{n=0}^{4} a_n * x^n
-void velocity_poly_init(Poly* p, float a0, float a1, float a2, float a3, float a4) {
-	p->a[0] = a0;
-	p->a[1] = a1;
-	p->a[2] = a2;
-	p->a[3] = a3;
-	p->a[4] = a4;
-  p->order = 4;
+// time in ms, velocity in mm/10microsecond
+void poly_init(Poly* p, int t0, int t1, int v0, int v1) {
+  p->t0 = t0;
+  p->t1 = t1;
+  p->v0 = v0;
+  p->v1 = v1;
 }
 
-void distance_poly_init(Poly* p, float a0, float a1, float a2, float a3, float a4, float a5) {
-  p->a[0] = a0;
-	p->a[1] = a1;
-	p->a[2] = a2;
-	p->a[3] = a3;
-	p->a[4] = a4;
-	p->a[5] = a5;
-  p->order = 5;
+int eval_dist(const Poly const* p, int t) {
+  int uNumer = t - p->t0;
+  int uDeno =  p->t1 - p->t0;
+
+  int deltaT = p->t1 - p->t0;
+  int deltaV = p->v1 - p->v0;
+
+  float u = (float)uNumer / uDeno;
+  float part1 = -u * u * u * u * deltaT * deltaV / 100000 / 2;
+  float part2 = u * u * u * deltaT * deltaV / 100000;
+  float part3 = u * p->v0 * deltaT / 100000;
+  return (int)(part1 + part2 + part3);
 }
 
-// evaluate polynomial at x
-float poly_eval(const Poly const* p, float x) {
+int eval_velo(const Poly const* p, int t) {
+  int uNumer = t - p->t0;
+  int uDeno =  p->t1 -p ->t0;
 
-	float rv = 0;
-	float x2n = 1; // at^n
+  int deltaT = p->t1 - p->t0;
+  int deltaV = p->v1 - p->v0;
 
-	for (int n = 0; n <= p->order; n++) {
-		rv += p->a[n] * x2n;
-		x2n *= x;
-	}
-
-	return rv;
+  float u = (float)uNumer / uDeno;
+  float part1 = - u * u * u * deltaV * 2;
+  float part2 = u * u * deltaV * 3;
+  return (int)(part1 + part2 + p->v0);
 }

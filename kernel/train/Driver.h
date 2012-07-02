@@ -54,11 +54,9 @@ typedef struct Driver {
   int useLastSensorNow;
 
   TrainUiMsg uiMsg;
-  Poly decel;
   Route route;
 
   // Actual Stuf
-  Position pos;
   char lastSensorUnexpected;
   char lastSensorBox;
   char lastSensorVal;
@@ -75,8 +73,15 @@ typedef struct Driver {
   char nextSensorVal;
   int nextSensorPredictedTime;
 
+  // A/D stuff
+  int isAding;
+  int adEndTime;
+  int lastReportDist;
+  Poly adPoly;
+
   int v[15][2];
   int d[15][2][2];
+  int a[15]; // TODO should be 15 * 15 later
 } Driver;
 
 int startDriverControllerTask();
