@@ -173,17 +173,14 @@ static void updateStopNode(Driver* me, int speed) {
   // |delay this much..|
   //PrintDebug(me->ui, "Need %d mm at StopNode %d\n", stop, me->stopNode-1);
   for (int i = me->stopNode-1; i >= me->routeRemaining; i--) {
-    stop -= me->route.nodes[i].dist;
-    //PrintDebug(me->ui, "Stop %d %d\n", stop, i); //5
-
-    if (stop < 0) {
+    if (stop <= 0) {
       int previousStop = -stop;
       //PrintDebug(me->ui, "PreviousStop %d\n", previousStop);
       me->stopSensorBox = -1;
       me->stopSensorVal = -1;
 
       // Find previous sensor.
-      for (int j = i; j >= me->routeRemaining; j--) {
+      for (int j = i-1; j >= me->routeRemaining; j--) {
         if (me->route.nodes[j].landmark.type == LANDMARK_SENSOR) {
           // The Sensor to begin using distance to next sensor
           me->stopSensorBox = me->route.nodes[j].landmark.num1;
@@ -213,6 +210,10 @@ static void updateStopNode(Driver* me, int speed) {
       PrintDebug(me->ui, "Previous Distance %d \n", previousStop);
       break;
     }
+
+    // Minus afterwards so that stoppping distance can be zero.
+    stop -= me->route.nodes[i].dist;
+    //PrintDebug(me->ui, "Stop %d %d\n", stop, i); //5
   }
 }
 
