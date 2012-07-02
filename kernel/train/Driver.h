@@ -16,6 +16,7 @@
 #define SENSOR_TRIGGER 5
 #define SET_ROUTE  6
 #define NAVIGATE_NAGGER 7
+#define BROADCAST_UPDATE_PREDICATION 8
 
 typedef struct DriverInitMsg {
   int nth;

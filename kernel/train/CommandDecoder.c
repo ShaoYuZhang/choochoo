@@ -16,6 +16,7 @@ static int trainController;
 static int trackController;
 static int com2;
 static int trackSet;
+static int ui;
 
 static void decodeCommand() {
   decoderBuffer[decoderCurrBufferPos] = 0;
@@ -38,7 +39,10 @@ static void decodeCommand() {
     }
   }
 
-  if (!trackSet) return;
+  if (!trackSet) {
+    PrintDebug(ui, "Need to set track first");
+    return;
+  }
 
   if (decoderBuffer[0] == 't' && decoderBuffer[1] == 'r') {
     int train_number = 0;
@@ -84,6 +88,11 @@ static void decodeCommand() {
       setSwitch.landmark1 = sw;
       setSwitch.data = switch_pos == 'c' ? SWITCH_CURVED : SWITCH_STRAIGHT;
       Send(trackController, (char*)&setSwitch, sizeof(TrackMsg), (char *)NULL, 0);
+
+      DriverMsg trainMsg;
+      trainMsg.trainNum = 255;
+      trainMsg.type = BROADCAST_UPDATE_PREDICATION;
+      Send(trainController, (char*)&trainMsg, sizeof(trainMsg), (char *)NULL, 0);
     }
   } else if (decoderBuffer[0] == 'r' && decoderBuffer[1] == 'o') {
     // TODO, long command, need to improve robustness
@@ -144,7 +153,7 @@ static void commandDecoder() {
   char trackControllerName[] = TRACK_NAME;
   trackController = WhoIs(trackControllerName);
   char uiName[] = UI_TASK_NAME;
-  int ui = WhoIs(uiName);
+  ui = WhoIs(uiName);
   trackSet = 0;
 
   UiMsg msg;

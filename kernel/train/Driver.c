@@ -374,6 +374,24 @@ static void sendUiReport(Driver* me) {
   Send(me->ui, (char*)&(me->uiMsg), sizeof(TrainUiMsg), (char*)1, 0);
 }
 
+static void updatePredication(Driver* me) {
+  int now = Time(me->timeserver) * 10;
+  TrackNextSensorMsg tMsg;
+  TrackMsg qMsg;
+  qMsg.type = QUERY_NEXT_SENSOR_FROM_POS;
+  toPosition(me, &qMsg.position1);
+  Send(me->trackManager, (char*)&qMsg, sizeof(TrackMsg),
+        (char*)&tMsg, sizeof(TrackNextSensorMsg));
+
+  me->distanceToNextSensor = tMsg.dist;
+  me->nextSensorBox = tMsg.sensor.num1;
+  me->nextSensorVal = tMsg.sensor.num2;
+  me->nextSensorPredictedTime =
+    now + me->distanceToNextSensor*100000 / getVelocity(me) - 50; // 50 ms delay for sensor query.
+
+  sendUiReport(me);
+}
+
 static void driver() {
   Driver me;
   initDriver(&me);
@@ -508,6 +526,10 @@ static void driver() {
         }
         break;
       }
+      case BROADCAST_UPDATE_PREDICATION: {
+        updatePredication(&me);
+        break;
+      }
       default: {
         ASSERT(FALSE, "Not suppported train message type.");
       }
@@ -538,20 +560,30 @@ static void trainController() {
     msg.data3 = -1;
     Receive(&tid, (char*)&msg, sizeof(DriverMsg));
 
-    if (trainTid[(int)msg.trainNum] == -1) {
-      DriverInitMsg init;
-      init.nth = nth;
-      init.trainNum = (int)msg.trainNum;
-      // Create train task
-      trainTid[(int)msg.trainNum] = Create(4, driver);
-      Send(trainTid[(int)msg.trainNum],
-          (char*)&init, sizeof(DriverInitMsg), (char*)1, 0);
-      nth++;
-    }
+    if (msg.trainNum == 255) {
+      // Broadcast, can't receive replies
+      Reply(tid, (char*)1, 0);
+      for (int i = 0; i < 80; i++) {
+        if (trainTid[i] != -1) {
+          Send(trainTid[i], (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
+        }
+      }
+    } else {
+      if (trainTid[(int)msg.trainNum] == -1) {
+        DriverInitMsg init;
+        init.nth = nth;
+        init.trainNum = (int)msg.trainNum;
+        // Create train task
+        trainTid[(int)msg.trainNum] = Create(4, driver);
+        Send(trainTid[(int)msg.trainNum],
+            (char*)&init, sizeof(DriverInitMsg), (char*)1, 0);
+        nth++;
+      }
 
-    msg.replyTid = (char)tid;
-    // Pass the message on.
-    Send(trainTid[(int)msg.trainNum], (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
+      msg.replyTid = (char)tid;
+      // Pass the message on.
+      Send(trainTid[(int)msg.trainNum], (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
+    }
   }
 }
 
