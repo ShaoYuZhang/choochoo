@@ -292,20 +292,6 @@ static void trainDelayer() {
   }
 }
 
-static void trainUiNagger() {
-  char timename[] = TIMESERVER_NAME;
-  int timeserver = WhoIs(timename);
-  int parent = MyParentsTid();
-
-  DriverMsg msg;
-  msg.type = UI_NAGGER;
-  for (;;) {
-    Delay(20, timeserver); // .2 seconds
-    msg.timestamp = Time(timeserver) * 10;
-    Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
-  }
-}
-
 static void trainNavigateNagger() {
   char timename[] = TIMESERVER_NAME;
   int timeserver = WhoIs(timename);
@@ -315,6 +301,7 @@ static void trainNavigateNagger() {
   msg.type = NAVIGATE_NAGGER;
   for (;;) {
     Delay(5, timeserver); // .15 seconds
+    msg.timestamp = Time(timeserver) * 10;
     Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
   }
 }
@@ -323,6 +310,7 @@ static void initDriver(Driver* me) {
   char uiName[] = UI_TASK_NAME;
   me->ui = WhoIs(uiName);
   ui = me->ui;
+
   char trackName[] = TRACK_NAME;
   me->trackManager = WhoIs(trackName);
   me->route.length = 0;
@@ -337,7 +325,8 @@ static void initDriver(Driver* me) {
   Receive(&controller, (char*)&init, sizeof(DriverInitMsg));
   Reply(controller, (char*)1, 0);
   me->trainNum = init.trainNum;
-  //me->nth = init.nth;
+  me->uiMsg.nth = init.nth;
+  me->uiMsg.type = UPDATE_TRAIN;
 
   me->speed = 0;
   me->speedDir = ACCELERATE;
@@ -346,19 +335,15 @@ static void initDriver(Driver* me) {
   me->lastSensorActualTime = 0;
 
   me->delayer = Create(1, trainDelayer);
-  me->uiNagger = Create(3, trainUiNagger);
   me->sensorWatcher = Create(3, trainSensor);
   me->navigateNagger = Create(2, trainNavigateNagger);
   me->routeRemaining = -1;
-
-  //me->type = UPDATE_TRAIN;
 
   initStoppingDistance((int*)me->d);
   initVelocity((int*)me->v);
 }
 
-static void sendUiReport(Driver* me, int time) {
-  //me->velocity = getVelocity(me) / 100;
+static void updatePosition(Driver* me, int time){
   if (time) {
     // In mm
     int dPosition = (time - me->reportTime) * getVelocity(me) / 100000;
@@ -366,6 +351,25 @@ static void sendUiReport(Driver* me, int time) {
     me->distanceFromLastSensor += dPosition;
     me->distanceToNextSensor -= dPosition;
   }
+}
+
+static void sendUiReport(Driver* me) {
+
+  me->uiMsg.velocity = getVelocity(me) / 100;
+  me->uiMsg.lastSensorUnexpected = me->lastSensorUnexpected;
+  me->uiMsg.lastSensorBox            = me->lastSensorBox;
+  me->uiMsg.lastSensorVal            = me->lastSensorVal;
+  me->uiMsg.lastSensorActualTime     = me->lastSensorActualTime;
+  me->uiMsg.lastSensorPredictedTime  = me->lastSensorPredictedTime;
+
+  me->uiMsg.speed                    = me->speed;      // 0 - 14
+  me->uiMsg.speedDir                 = me->speedDir;
+  me->uiMsg.distanceFromLastSensor   = me->distanceFromLastSensor;
+  me->uiMsg.distanceToNextSensor     = me->distanceToNextSensor;
+
+  me->uiMsg.nextSensorBox            = me->nextSensorBox;
+  me->uiMsg.nextSensorVal            = me->nextSensorVal;
+  me->uiMsg.nextSensorPredictedTime  = me->nextSensorPredictedTime;
 
   Send(me->ui, (char*)&(me->uiMsg), sizeof(TrainUiMsg), (char*)1, 0);
 }
@@ -376,6 +380,7 @@ static void driver() {
 
   // used to store one set_route msg when train's current position is unknown
   int hasTempRouteMsg = 0;
+  unsigned int naggCount = 0;
   DriverMsg tempRouteMsg;
 
   for (;;) {
@@ -403,7 +408,7 @@ static void driver() {
         if (msg.data3 != DELAYER) {
           //PrintDebug(me.ui, "Replied to %d\n", replyTid);
           Reply(replyTid, (char*)1, 0);
-          sendUiReport(&me, 0); // Don't update time
+          sendUiReport(&me);
           break;
         } else if (me.route.length != 1) {
           // Delayer came back. Reverse command completed
@@ -417,10 +422,6 @@ static void driver() {
       }
       case DELAYER: {
         PrintDebug(me.ui, "delayer come back.");
-        break;
-      }
-      case UI_NAGGER: {
-        sendUiReport(&me, msg.timestamp);
         break;
       }
       case SENSOR_TRIGGER: {
@@ -455,7 +456,8 @@ static void driver() {
         me.nextSensorPredictedTime =
           msg.timestamp + me.distanceToNextSensor*100000 / getVelocity(&me) - 50; // 50 ms delay for sensor query.
 
-        sendUiReport(&me, msg.timestamp);
+        updatePosition(&me, msg.timestamp);
+        sendUiReport(&me);
         if (hasTempRouteMsg) {
           getRoute(&me, &tempRouteMsg);
           updateStopNode(&me, tempRouteMsg.data2);
@@ -465,24 +467,30 @@ static void driver() {
         break;
       }
       case NAVIGATE_NAGGER: {
-        if (me.routeRemaining == -1) break;
-
-        if (!me.stopCommited) {
-          if (shouldStopNow(&me)) {
-            if (me.route.nodes[me.stopNode].num == REVERSE) {
-              PrintDebug(me.ui, "Navi reversing.");
-              const int speed = -1;
-              trainSetSpeed(speed, getStoppingTime(&me), 0, &me);
+        updatePosition(&me, msg.timestamp);
+        if (me.routeRemaining != -1) {
+          if (!me.stopCommited) {
+            if (shouldStopNow(&me)) {
+              if (me.route.nodes[me.stopNode].num == REVERSE) {
+                PrintDebug(me.ui, "Navi reversing.");
+                const int speed = -1;
+                trainSetSpeed(speed, getStoppingTime(&me), 0, &me);
+              }
+              else {
+                PrintDebug(me.ui, "Navi Nagger stopping.");
+                const int speed = 0;  // Set speed zero.
+                trainSetSpeed(speed, getStoppingTime(&me), 0, &me);
+                me.route.length = 0; // Finished the route.
+              }
+              me.stopCommited = 1;
+              me.useLastSensorNow = 0;
             }
-            else {
-              PrintDebug(me.ui, "Navi Nagger stopping.");
-              const int speed = 0;  // Set speed zero.
-              trainSetSpeed(speed, getStoppingTime(&me), 0, &me);
-              me.route.length = 0; // Finished the route.
-            }
-            me.stopCommited = 1;
-            me.useLastSensorNow = 0;
           }
+        }
+        naggCount++;
+        naggCount = (naggCount & 3);
+        if (naggCount == 0){
+          sendUiReport(&me);
         }
         break;
       }

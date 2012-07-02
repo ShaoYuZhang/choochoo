@@ -36,7 +36,6 @@ typedef struct DriverMsg {
 typedef struct Driver {
   int trainNum;
   int delayer;
-  int uiNagger;   // Tasks that reminds train to print
   int ui;        // Ui Tid
   int sensorWatcher;
   int trackManager;
@@ -57,7 +56,7 @@ typedef struct Driver {
   Poly decel;
   Route route;
 
-  // TODO, non-ui stuff should use this instead of things instead of things in uiMsg
+  // Actual Stuf
   Position currPos;
   char lastSensorUnexpected;
   char lastSensorBox;
