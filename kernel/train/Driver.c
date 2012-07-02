@@ -213,16 +213,16 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
       Putstr(com1, msg, 4);
 
       // Update prediction
-      int action = me->nextSensorVal%2 ? 1 : -1;
-      me->nextSensorVal = me->nextSensorVal + action;
-      action = me->lastSensorVal%2 ? 1 : -1;
-      me->lastSensorVal = me->lastSensorVal + action;
-      int tmp = me->distanceFromLastSensor;
-      me->distanceFromLastSensor = me->distanceToNextSensor;
-      me->distanceToNextSensor = tmp;
-      me->justReversed = 1;
-      Position pos;
-      toPosition(me, &pos);
+      //int action = me->nextSensorVal%2 ? 1 : -1;
+      //me->nextSensorVal = me->nextSensorVal + action;
+      //action = me->lastSensorVal%2 ? 1 : -1;
+      //me->lastSensorVal = me->lastSensorVal + action;
+      //int tmp = me->distanceFromLastSensor;
+      //me->distanceFromLastSensor = me->distanceToNextSensor;
+      //me->distanceToNextSensor = tmp;
+      //me->justReversed = 1;
+      //Position pos;
+      //toPosition(me, &pos);
       // Update prediction
 
     } else {
