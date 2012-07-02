@@ -59,6 +59,20 @@ typedef struct Driver {
 
   // TODO, non-ui stuff should use this instead of things instead of things in uiMsg
   Position currPos;
+  char lastSensorUnexpected;
+  char lastSensorBox;
+  char lastSensorVal;
+  int lastSensorActualTime;
+  int lastSensorPredictedTime;
+
+  int speed;      // 0 - 14
+  int speedDir;
+  int distanceFromLastSensor;
+  int distanceToNextSensor;
+
+  char nextSensorBox;
+  char nextSensorVal;
+  int nextSensorPredictedTime;
 
   int v[15][2];
   int d[15][2][2];
