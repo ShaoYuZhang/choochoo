@@ -133,8 +133,8 @@ static char* updateTrain(TrainUiMsg* train, char* msg) {
 
   // ---------------------------------
   // PAST INFORMATION
-  if (train->lastSensorUnexpected) msg = setColor(31, msg);
   msg = moveTo(row++, 26, msg);
+  if (train->lastSensorUnexpected) msg = setColor(31, msg);
   *msg++ = 'A' + train->lastSensorBox;
   msg = formatInt(train->lastSensorVal, 2, msg);
 
