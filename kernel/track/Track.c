@@ -483,7 +483,7 @@ static void trackController() {
   }
 
   track_node track[TRACK_MAX + 4]; // four fake nodes for route finding
-  init_trackb(track);
+  //init_trackb(track); // defaults to be for calibration purpose
   UiMsg uimsg;
   for ( ;; ) {
     int tid = -1;
@@ -549,6 +549,17 @@ static void trackController() {
         findRoute(track, from, to , &route);
 
         Reply(tid, (char *)&route, 8 + sizeof(RouteNode) * route.length);
+        break;
+      }
+      case SET_TRACK: {
+        if (msg.data == 'a') {
+          init_tracka(track);
+          PrintDebug(ui, "Using Track A");
+        } else {
+          init_trackb(track);
+          PrintDebug(ui, "Using Track B");
+        }
+        Reply(tid, (char *)NULL, 0);
         break;
       }
       default: {

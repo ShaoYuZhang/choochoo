@@ -7,7 +7,7 @@
 #include <syscall.h>
 #include <IoHelper.h> // need a2i
 #include <kernel.h>
-
+#include <Track.h>
 
 static char decoderBuffer[DECODER_BUFFER_SIZE];
 static unsigned int decoderCurrBufferPos;
@@ -15,6 +15,7 @@ static unsigned int decoderCurrBufferPos;
 static int trainController;
 static int trackController;
 static int com2;
+static int trackSet;
 
 static void decodeCommand() {
   decoderBuffer[decoderCurrBufferPos] = 0;
@@ -24,6 +25,20 @@ static void decodeCommand() {
   unsigned int shortEvalulation = (decoderCurrBufferPos <= 3);
   decoderCurrBufferPos = 0;
   if (shortEvalulation) return;
+  if (decoderBuffer[0] == 'u' && decoderBuffer[1] == 's') {
+    char *temp = (char *)decoderBuffer + 3;
+    char track = *temp++;
+
+    TrackMsg msg;
+    msg.type = SET_TRACK;
+    if (track == 'a' || track == 'b') {
+      msg.data =track;
+      Send(trackController, (char *)&msg, sizeof(TrackMsg), (char *)1, 0);
+      trackSet = 1;
+    }
+  }
+
+  if (!trackSet) return;
 
   if (decoderBuffer[0] == 't' && decoderBuffer[1] == 'r') {
     int train_number = 0;
@@ -130,6 +145,7 @@ static void commandDecoder() {
   trackController = WhoIs(trackControllerName);
   char uiName[] = UI_TASK_NAME;
   int ui = WhoIs(uiName);
+  trackSet = 0;
 
   UiMsg msg;
   msg.type = PROMPT_CHAR;

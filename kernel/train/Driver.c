@@ -111,7 +111,7 @@ static void updateStopNode(Driver* me, int speed) {
       Send(me->trackManager, (char*)&setSwitch, sizeof(TrackMsg), (char*)NULL, 0);
     }
   }
-  PrintDebug(me->ui, "calc stopping distance.");
+  //PrintDebug(me->ui, "calc stopping distance.");
 
   const int stoppingDistance =
       me->d[speed][(int)me->uiMsg.speedDir][MAX_VAL];
@@ -121,14 +121,14 @@ static void updateStopNode(Driver* me, int speed) {
   //                   |__stop_dist____|
   // |__travel_dist____|
   // |delay this much..|
-  PrintDebug(me->ui, "Need %d mm at StopNode %d\n", stop, me->stopNode-1);
+  //PrintDebug(me->ui, "Need %d mm at StopNode %d\n", stop, me->stopNode-1);
   for (int i = me->stopNode-1; i >= me->routeRemaining; i--) {
     stop -= me->route.nodes[i].dist;
-    PrintDebug(me->ui, "Stop %d %d\n", stop, i); //5
+    //PrintDebug(me->ui, "Stop %d %d\n", stop, i); //5
 
     if (stop < 0) {
       int previousStop = -stop;
-      PrintDebug(me->ui, "PreviousStop %d\n", previousStop);
+      //PrintDebug(me->ui, "PreviousStop %d\n", previousStop);
       me->stopSensorBox = -1;
       me->stopSensorVal = -1;
 
@@ -174,7 +174,7 @@ static void updateRoute(Driver* me, char box, char val) {
   if (me->routeRemaining == -1) return;
 
   // See if we triggered
-  PrintDebug(me->ui, "Update round: %d to %d!! \n", me->routeRemaining, me->stopNode);
+  //PrintDebug(me->ui, "Update round: %d to %d!! \n", me->routeRemaining, me->stopNode);
   for (int i = me->routeRemaining; i < me->stopNode; i++) {
     if (me->route.nodes[i].landmark.type == LANDMARK_SENSOR &&
         me->route.nodes[i].landmark.num1 == box &&
@@ -206,7 +206,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
   msg[1] = (char)me->trainNum;
   if (speed >= 0) {
     if (delayer) {
-      PrintDebug(me->ui, "Reversing speed. cuz its worker %d\n", speed);
+      //PrintDebug(me->ui, "Reversing speed. cuz its worker %d\n", speed);
       msg[0] = 0xf;
       msg[1] = (char)me->trainNum;
       msg[2] = (char)speed;
@@ -231,7 +231,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     delayMsg.type = SET_SPEED;
     delayMsg.timestamp = stopTime;
     delayMsg.data2 = (signed char)me->uiMsg.speed;
-    PrintDebug(me->ui, "Using delayer: %d for %d \n", me->delayer, stopTime);
+    //PrintDebug(me->ui, "Using delayer: %d for %d \n", me->delayer, stopTime);
 
     Reply(me->delayer, (char*)&delayMsg, sizeof(DriverMsg));
 
@@ -287,7 +287,7 @@ static void trainDelayer() {
   for (;;) {
     Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)&msg, sizeof(DriverMsg));
     int numTick = msg.timestamp / 10;
-    PrintDebug(ui, "Delay %d ticks\n", numTick);
+    //PrintDebug(ui, "Delay %d ticks\n", numTick);
     Delay(numTick, timeserver);
     msg.data3 = DELAYER;
   }
@@ -461,6 +461,7 @@ static void driver() {
           getRoute(&me, &tempRouteMsg);
           updateStopNode(&me, tempRouteMsg.data2);
           trainSetSpeed(tempRouteMsg.data2, 0, 0, &me);
+          hasTempRouteMsg = 0;
         }
         break;
       }
