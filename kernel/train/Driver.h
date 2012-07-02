@@ -29,8 +29,7 @@ typedef struct DriverMsg {
   unsigned char data3; // Delay num, or msg came from worker
   char replyTid;       // The user that first send the message.
   int timestamp;
-  Position pos1;
-  Position pos2;
+  Position pos;
 } DriverMsg;
 
 
@@ -57,6 +56,9 @@ typedef struct Driver {
   TrainUiMsg uiMsg;
   Poly decel;
   Route route;
+
+  // TODO, non-ui stuff should use this instead of things instead of things in uiMsg
+  Position currPos;
 
   int v[15][2];
   int d[15][2][2];

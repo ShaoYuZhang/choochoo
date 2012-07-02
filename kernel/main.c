@@ -23,6 +23,7 @@ void test_track() {
   char uiName[] = UI_TASK_NAME;
   int uiServer = WhoIs(uiName);
 
+#if 0
   DriverMsg msg;
   msg.trainNum = 44;
   msg.type = SET_ROUTE;
@@ -45,6 +46,7 @@ void test_track() {
   pos2.landmark2.num1 = EX; //
   pos2.landmark2.num2 = 10;  // 4 3  7
   pos2.offset = 300;
+#endif
 
 #if 0
   Position pos2;
@@ -55,11 +57,11 @@ void test_track() {
   pos2.landmark2.num1 = 3;
   pos2.landmark2.num2 = 7;
   pos2.offset = 300;
-#endif
 
   msg.pos1 = pos1;
   msg.pos2 = pos2;
   Send(trainController, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
+#endif
 
 #if 0
   TrackMsg trackmsg;

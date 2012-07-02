@@ -70,6 +70,53 @@ static void decodeCommand() {
       setSwitch.data = switch_pos == 'c' ? SWITCH_CURVED : SWITCH_STRAIGHT;
       Send(trackController, (char*)&setSwitch, sizeof(TrackMsg), (char *)NULL, 0);
     }
+  } else if (decoderBuffer[0] == 'r' && decoderBuffer[1] == 'o') {
+    // TODO, long command, need to improve robustness
+    int train_number = 0;
+    int train_speed;
+
+    int type;
+    int num1;
+    int num2;
+
+    Position pos;
+
+    char *temp = (char *)decoderBuffer + 3;
+    char c = *temp++;
+    c = a2i(c, &temp, 10, &train_number);
+    c = *temp++;
+    c = a2i(c, &temp, 10, &train_speed);
+    c = *temp++;
+    c = a2i(c, &temp, 10, &type);
+    c = *temp++;
+    c = a2i(c, &temp, 10, &num1);
+    c = *temp++;
+    c = a2i(c, &temp, 10, &num2);
+    c = *temp++;
+
+    pos.landmark1.type = (int) type;
+    pos.landmark1.num1 = (char) num1;
+    pos.landmark1.num2 = (char) num2;
+
+    c = a2i(c, &temp, 10, &type);
+    c = *temp++;
+    c = a2i(c, &temp, 10, &num1);
+    c = *temp++;
+    c = a2i(c, &temp, 10, &num2);
+    c = *temp++;
+
+    pos.landmark2.type = (int) type;
+    pos.landmark2.num1 = (char) num1;
+    pos.landmark2.num2 = (char) num2;
+
+    c = a2i(c, &temp, 10, &pos.offset);
+
+    DriverMsg msg;
+    msg.trainNum = train_number;
+    msg.type = SET_ROUTE;
+    msg.data2 = train_speed;
+    msg.pos = pos;
+    Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
   }
 }
 

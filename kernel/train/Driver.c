@@ -34,8 +34,19 @@ static int getStoppingTime(Driver* me) {
 static void getRoute(Driver* me, DriverMsg* msg) {
   TrackMsg trackmsg;
   trackmsg.type = ROUTE_PLANNING;
-  trackmsg.position1 = msg->pos1;
-  trackmsg.position2 = msg->pos2;
+
+  // TODO use me->currPos
+  Position currPos;
+  currPos.landmark1.type = LANDMARK_SENSOR;
+  currPos.landmark1.num1 = me->uiMsg.lastSensorBox;
+  currPos.landmark1.num2 = me->uiMsg.lastSensorVal;
+  currPos.landmark2.type = LANDMARK_SENSOR;
+  currPos.landmark2.num1 = me->uiMsg.nextSensorBox;
+  currPos.landmark2.num2 = me->uiMsg.nextSensorVal;
+  currPos.offset = me->uiMsg.distanceFromLastSensor;
+
+  trackmsg.position1 = currPos;
+  trackmsg.position2 = msg->pos;
 
   Send(me->trackManager, (char*)&trackmsg,
       sizeof(TrackMsg), (char*)&(me->route), sizeof(Route));
@@ -333,6 +344,7 @@ static void initDriver(Driver* me) {
   me->uiMsg.speedDir = ACCELERATE;
   me->uiMsg.distanceToNextSensor = 0;
   me->uiMsg.distanceFromLastSensor = 0;
+  me->uiMsg.lastSensorActualTime = 0;
 
   me->delayer = Create(1, trainDelayer);
   me->uiNagger = Create(3, trainUiNagger);
@@ -362,6 +374,10 @@ static void sendUiReport(Driver* me, int time) {
 static void driver() {
   Driver me;
   initDriver(&me);
+
+  // used to store one set_route msg when train's current position is unknown
+  int hasTempRouteMsg = 0;
+  DriverMsg tempRouteMsg;
 
   for (;;) {
     int tid = -1;
@@ -441,6 +457,11 @@ static void driver() {
           msg.timestamp + me.uiMsg.distanceToNextSensor*100000 / getVelocity(&me) - 50; // 50 ms delay for sensor query.
 
         sendUiReport(&me, msg.timestamp);
+        if (hasTempRouteMsg) {
+          getRoute(&me, &tempRouteMsg);
+          updateStopNode(&me, tempRouteMsg.data2);
+          trainSetSpeed(tempRouteMsg.data2, 0, 0, &me);
+        }
         break;
       }
       case NAVIGATE_NAGGER: {
@@ -466,11 +487,17 @@ static void driver() {
         break;
       }
       case SET_ROUTE: {
-        PrintDebug(me.ui, "Set route.");
-        getRoute(&me, &msg);
-        updateStopNode(&me, msg.data2);
-        trainSetSpeed(msg.data2, 0, 0, &me);
+        Reply(replyTid, (char*)1, 0);
         me.stopCommited = 0;
+        if (me.uiMsg.lastSensorActualTime > 0) {
+          getRoute(&me, &msg);
+          updateStopNode(&me, msg.data2);
+          trainSetSpeed(msg.data2, 0, 0, &me);
+        } else {
+          trainSetSpeed(5, 0, 0, &me);
+          hasTempRouteMsg = 1;
+          tempRouteMsg = msg;
+        }
         break;
       }
       default: {
