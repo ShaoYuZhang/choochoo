@@ -212,7 +212,19 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
       msg[3] = (char)me->trainNum;
       Putstr(com1, msg, 4);
 
-      // Modify prediction
+      // Update prediction
+      int action = me->nextSensorVal%2 ? 1 : -1;
+      me->nextSensorVal = me->nextSensorVal + action;
+      action = me->lastSensorVal%2 ? 1 : -1;
+      me->lastSensorVal = me->lastSensorVal + action;
+      int tmp = me->distanceFromLastSensor;
+      me->distanceFromLastSensor = me->distanceToNextSensor;
+      me->distanceToNextSensor = tmp;
+      me->justReversed = 1;
+      Position pos;
+      toPosition(me, &pos);
+      // Update prediction
+
     } else {
       PrintDebug(me->ui, "Set speed. %d %d\n", speed, me->trainNum);
       msg[0] = (char)speed;
@@ -310,6 +322,7 @@ static void initDriver(Driver* me) {
   char uiName[] = UI_TASK_NAME;
   me->ui = WhoIs(uiName);
   ui = me->ui;
+  me->justReversed = 0;
 
   char trackName[] = TRACK_NAME;
   me->trackManager = WhoIs(trackName);
@@ -356,11 +369,19 @@ static void updatePosition(Driver* me, int time){
 static void sendUiReport(Driver* me) {
 
   me->uiMsg.velocity = getVelocity(me) / 100;
-  me->uiMsg.lastSensorUnexpected = me->lastSensorUnexpected;
-  me->uiMsg.lastSensorBox            = me->lastSensorBox;
-  me->uiMsg.lastSensorVal            = me->lastSensorVal;
-  me->uiMsg.lastSensorActualTime     = me->lastSensorActualTime;
-  me->uiMsg.lastSensorPredictedTime  = me->lastSensorPredictedTime;
+  if (!me->justReversed){
+    me->uiMsg.lastSensorUnexpected = me->lastSensorUnexpected;
+    me->uiMsg.lastSensorBox            = me->lastSensorBox;
+    me->uiMsg.lastSensorVal            = me->lastSensorVal;
+    me->uiMsg.lastSensorActualTime     = me->lastSensorActualTime;
+    me->uiMsg.lastSensorPredictedTime  = me->lastSensorPredictedTime;
+  } else {
+    me->uiMsg.lastSensorUnexpected     = 0;
+    me->uiMsg.lastSensorBox            = 0;
+    me->uiMsg.lastSensorVal            = 0;
+    me->uiMsg.lastSensorActualTime     = 0;
+    me->uiMsg.lastSensorPredictedTime  = 0;
+  }
 
   me->uiMsg.speed                    = me->speed;      // 0 - 14
   me->uiMsg.speedDir                 = me->speedDir;
@@ -443,6 +464,7 @@ static void driver() {
         break;
       }
       case SENSOR_TRIGGER: {
+        me.justReversed = 0;
         if (msg.data2 != me.nextSensorBox || msg.data3 != me.nextSensorVal) {
           me.lastSensorUnexpected = 1;
           //reRoute(&me, msg.data2, msg.data3); // TODO

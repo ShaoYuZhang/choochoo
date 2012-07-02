@@ -69,6 +69,7 @@ typedef struct Driver {
   int speedDir;
   int distanceFromLastSensor;
   int distanceToNextSensor;
+  char justReversed;
 
   char nextSensorBox;
   char nextSensorVal;
