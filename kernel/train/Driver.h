@@ -57,7 +57,7 @@ typedef struct Driver {
   Route route;
 
   // Actual Stuf
-  Position currPos;
+  Position pos;
   char lastSensorUnexpected;
   char lastSensorBox;
   char lastSensorVal;

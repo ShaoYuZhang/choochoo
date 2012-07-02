@@ -30,21 +30,21 @@ static int getStoppingTime(Driver* me) {
   return 2* getStoppingDistance(me) * 100000 / getVelocity(me);
 }
 
+static void toPosition(Driver* me, Position* pos) {
+  pos->landmark1.type = LANDMARK_SENSOR;
+  pos->landmark1.num1 = me->lastSensorBox;
+  pos->landmark1.num2 = me->lastSensorVal;
+  pos->landmark2.type = LANDMARK_SENSOR;
+  pos->landmark2.num1 = me->nextSensorBox;
+  pos->landmark2.num2 = me->nextSensorVal;
+  pos->offset = me->distanceFromLastSensor;
+}
+
 static void getRoute(Driver* me, DriverMsg* msg) {
   TrackMsg trackmsg;
   trackmsg.type = ROUTE_PLANNING;
 
-  // TODO use me->currPos
-  Position currPos;
-  currPos.landmark1.type = LANDMARK_SENSOR;
-  currPos.landmark1.num1 = me->lastSensorBox;
-  currPos.landmark1.num2 = me->lastSensorVal;
-  currPos.landmark2.type = LANDMARK_SENSOR;
-  currPos.landmark2.num1 = me->nextSensorBox;
-  currPos.landmark2.num2 = me->nextSensorVal;
-  currPos.offset = me->distanceFromLastSensor;
-
-  trackmsg.position1 = currPos;
+  toPosition(me, &trackmsg.position1);
   trackmsg.position2 = msg->pos;
 
   Send(me->trackManager, (char*)&trackmsg,
