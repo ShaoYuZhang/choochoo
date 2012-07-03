@@ -42,7 +42,7 @@ typedef struct Driver {
   int trackManager;
   int navigateNagger;
   int timeserver;
-  int reportTime;
+  int lastPosUpdateTime;
   int calibrationStart;
   int calibrationDistance;
   int routeRemaining;

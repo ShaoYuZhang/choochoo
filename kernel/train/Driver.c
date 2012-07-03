@@ -533,9 +533,9 @@ static void updatePosition(Driver* me, int time){
       me->lastReportDist = dist;
     } else {
       // In mm
-      dPosition = (time - me->reportTime) * getVelocity(me->speed, me->speedDir) / 100000;
+      dPosition = (time - me->lastPosUpdateTime) * getVelocity(me->speed, me->speedDir) / 100000;
     }
-    me->reportTime = time;
+    me->lastPosUpdateTime = time;
     me->distanceFromLastSensor += dPosition;
     me->distanceToNextSensor -= dPosition;
   }
@@ -621,15 +621,15 @@ static void driver() {
           me.distanceFromSensorAtStartAD = -me.distanceToSensorAtStartAD;
           me.distanceToSensorAtStartAD = tMsg.dist + me.distanceToSensorAtStartAD;
         }
-        int dPos = 100 * getVelocity(&me) / 100000; // 50 for trigger to query, 50 for query to receive
+        int dPos = 100 * getVelocity(me.speed, me.speedDir) / 100000;
         me.distanceFromLastSensor = dPos;
         me.distanceToNextSensor = tMsg.dist - dPos;
-        me.reportTime = msg.timestamp;
+        me.lastPosUpdateTime = msg.timestamp;
         me.nextSensorBox = tMsg.sensor.num1;
         me.nextSensorVal = tMsg.sensor.num2;
         me.nextSensorPredictedTime =
           msg.timestamp + me.distanceToNextSensor*100000 /
-          getVelocity(me.speed, me.speedDir) - 50; // 50 ms delay for sensor query.
+          getVelocity(me.speed, me.speedDir);
 
         updatePosition(&me, msg.timestamp);
         sendUiReport(&me);
