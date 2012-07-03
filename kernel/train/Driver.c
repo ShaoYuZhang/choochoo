@@ -324,24 +324,24 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
   int now = Time(me->timeserver) * 10;
   if (me->speed == 0) {
     // accelerating from 0
-    me->isAding = 1;
     int v0 = getVelocity(me->speed, me->speedDir);
     int v1 = me->v[newSpeed][ACCELERATE];
     int t0 = now;
     int t1 = now + me->a[newSpeed];
     poly_init(&me->adPoly, t0, t1, v0, v1);
+    me->isAding = 1;
     me->lastReportDist = 0;
     me->distanceFromSensorAtStartAD = me->distanceFromLastSensor;
     me->distanceToSensorAtStartAD = me->distanceToNextSensor;
     me->adEndTime = t1;
   } else if (newSpeed == 0) {
     // decelerating to 0
-    me->isAding = 1;
     int v0 = getVelocity(me->speed, me->speedDir);
     int v1 = me->v[newSpeed][DECELERATE];
     int t0 = now;
     int t1 = now + getStoppingTime(me);
     poly_init(&me->adPoly, t0, t1, v0, v1);
+    me->isAding = 1;
     me->lastReportDist = 0;
     me->distanceFromSensorAtStartAD = me->distanceFromLastSensor;
     me->distanceToSensorAtStartAD = me->distanceToNextSensor;
