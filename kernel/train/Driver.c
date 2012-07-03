@@ -23,7 +23,12 @@ static int getStoppingDistance(Driver* me) {
 
 // mm/s
 static int getVelocity(Driver* me){
-  return me->v[(int)me->speed][(int)me->speedDir];
+  if (me->isAding) {
+    int now = Time(me->timeserver) * 10;
+    return eval_velo(&me->adPoly, now);
+  } else {
+    return me->v[(int)me->speed][(int)me->speedDir];
+  }
 }
 
 static int getStoppingTime(Driver* me) {
@@ -41,12 +46,7 @@ static void toPosition(Driver* me, Position* pos) {
 }
 
 static void sendUiReport(Driver* me) {
-  if (me->isAding) {
-    int now = Time(me->timeserver) * 10;
-    me->uiMsg.velocity = eval_velo(&me->adPoly, now) / 100;
-  } else {
-    me->uiMsg.velocity = getVelocity(me) / 100;
-  }
+  me->uiMsg.velocity = getVelocity(me) / 100;
   if (!me->justReversed){
     me->uiMsg.lastSensorUnexpected = me->lastSensorUnexpected;
     me->uiMsg.lastSensorBox            = me->lastSensorBox;
