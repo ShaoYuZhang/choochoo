@@ -442,6 +442,7 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
     result->nodes[i-index] = tempRoute[i];
   }
   result->length = 150 - index;
+  result->nodes[result->length-1].dist = 0;
 
   // restore graph
   *toEdge->src = toNodeSrc;

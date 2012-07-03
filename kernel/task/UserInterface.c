@@ -234,13 +234,17 @@ static char* pad2(int n, char* msg){
 static int debugUpdateNum;
 static char* updateDebugMessage(char* receive, char* msg, int len) {
   msg = saveCursor(msg);
+  if (receive[0] == 'f' && receive[1] == 'f' && receive[2] == 'f' && receive[3] == 'f') {
+    for (int i = 2; i < 52; i++) {
+      msg = moveTo(i, 40, msg);
+      *msg++ = ESC;
+      *msg++ = '[';
+      *msg++ = 'K';
+    }
+    return msg;
+  }
 
   int updateRow = debugUpdateNum%50 + 1;
-  // Clear the line after just cuz
-  msg = moveTo(updateRow+1, 40, msg);
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = 'K';
   // move to position
   msg = moveTo(updateRow, 40, msg);
   *msg++ = ESC;

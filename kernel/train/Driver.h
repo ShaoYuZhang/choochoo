@@ -48,6 +48,7 @@ typedef struct Driver {
   int routeRemaining;
   int stopNode;
   int stopCommited;
+  int stopSensorHit;
   int stopSensorBox;
   int stopSensorVal;
   int distancePassStopSensorToStop;

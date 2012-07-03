@@ -17,6 +17,10 @@ static int com1;
 static int ui;
 static int CC = 0;
 
+static void setTestRoute(Driver* me) {
+  Route r;
+}
+
 static int getStoppingDistance(Driver* me) {
   return me->d[(int)me->speed][(int)me->speedDir][MAX_VAL];
 }
@@ -108,9 +112,30 @@ static void getRoute(Driver* me, DriverMsg* msg) {
   for (int i = 0; i < me->route.length; i++) {
     RouteNode node = me->route.nodes[i];
     if (node.num == -1) {
-      PrintDebug(me->ui, "reverse \n");
+      PrintDebug(me->ui, "%d reverse", i);
     } else {
-      PrintDebug(me->ui, "%d Landmark %d %d %d %d", i, node.landmark.type, node.landmark.num1, node.landmark.num2, node.dist);
+      char m[27] = "%d Landmark %d   %d     %d";
+
+      if (node.landmark.type == LANDMARK_SENSOR) {
+        m[12] = 'S';
+        m[13] = 'n';
+        m[16] = 'A' + node.landmark.num1;
+        m[19] = ' ';
+        m[20] = ' ';
+        m[21] = ' ';
+        PrintDebug(me->ui, m, i, node.landmark.num2, node.dist);
+      } else if (node.landmark.type == LANDMARK_END) {
+        m[12] = 'E';
+        m[13] = 'n';
+        m[14] = 'd';
+        PrintDebug(me->ui, m, i, node.landmark.num1, node.landmark.num2, node.dist);
+      } else if (node.landmark.type == LANDMARK_FAKE) {
+        m[12] = 'F';
+        m[13] = 'a';
+        m[14] = 'k';
+        PrintDebug(me->ui, m, i, node.landmark.num1, node.landmark.num2, node.dist);
+      }
+
       if (node.landmark.type == LANDMARK_SWITCH && node.landmark.num1 == BR) {
         PrintDebug(me->ui, "Switch State: %d ", node.num);
       }
@@ -119,6 +144,10 @@ static void getRoute(Driver* me, DriverMsg* msg) {
 }
 
 static int shouldStopNow(Driver* me) {
+  if ( me->lastSensorBox == me->stopSensorBox &&
+        me->lastSensorVal == me->stopSensorVal) {
+    me->stopSensorHit = 1;
+  }
   int canUseLastSensor =
       ( me->lastSensorBox == me->stopSensorBox &&
         me->lastSensorVal == me->stopSensorVal
@@ -138,12 +167,16 @@ static int shouldStopNow(Driver* me) {
       return 1;
     }
   }
+
+  if (!canUseLastSensor && me->stopSensorHit) {
+    return 2; // Missed a sensor stop now.
+  }
   return 0;
 }
 
 static void updateStopNode(Driver* me, int speed) {
   // Find the first reverse on the path, stop if possible.
-  me->stopNode = me->route.length-2;
+  me->stopNode = me->route.length-1;
   PrintDebug(me->ui, "update stop. %d", me->stopNode);
   for (int i = me->routeRemaining; i < me->route.length-1; i++) {
     if (me->route.nodes[i].num == REVERSE) {
@@ -173,6 +206,12 @@ static void updateStopNode(Driver* me, int speed) {
   // |delay this much..|
   //PrintDebug(me->ui, "Need %d mm at StopNode %d\n", stop, me->stopNode-1);
   for (int i = me->stopNode-1; i >= me->routeRemaining; i--) {
+    // Minus afterwards so that stoppping distance can be zero.
+    if (stop > 0) {
+      stop -= me->route.nodes[i].dist;
+      PrintDebug(me->ui, "Stop %d %d\n", stop, i);
+    }
+
     if (stop <= 0) {
       int previousStop = -stop;
       //PrintDebug(me->ui, "PreviousStop %d\n", previousStop);
@@ -180,7 +219,7 @@ static void updateStopNode(Driver* me, int speed) {
       me->stopSensorVal = -1;
 
       // Find previous sensor.
-      for (int j = i-1; j >= me->routeRemaining; j--) {
+      for (int j = i; j >= me->routeRemaining; j--) {
         if (me->route.nodes[j].landmark.type == LANDMARK_SENSOR) {
           // The Sensor to begin using distance to next sensor
           me->stopSensorBox = me->route.nodes[j].landmark.num1;
@@ -210,10 +249,11 @@ static void updateStopNode(Driver* me, int speed) {
       PrintDebug(me->ui, "Previous Distance %d \n", previousStop);
       break;
     }
-
-    // Minus afterwards so that stoppping distance can be zero.
-    stop -= me->route.nodes[i].dist;
-    //PrintDebug(me->ui, "Stop %d %d\n", stop, i); //5
+  }
+  if (stop > 0) {
+      PrintDebug(me->ui, "No room to stop??? %d \n", stop);
+      PrintDebug(me->ui, "StopNode-1 %d, remaining %d ", me->stopNode-1,
+          me->routeRemaining);
   }
 }
 
@@ -403,13 +443,14 @@ static void trainNavigateNagger() {
   DriverMsg msg;
   msg.type = NAVIGATE_NAGGER;
   for (;;) {
-    Delay(5, timeserver); // .15 seconds
+    Delay(2, timeserver); // .15 seconds
     msg.timestamp = Time(timeserver) * 10;
     Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
   }
 }
 
 static void initDriver(Driver* me) {
+
   char uiName[] = UI_TASK_NAME;
   me->ui = WhoIs(uiName);
   ui = me->ui;
@@ -420,6 +461,7 @@ static void initDriver(Driver* me) {
   me->route.length = 0;
   me->stopCommited = 0; // haven't enabled speed zero yet.
   me->useLastSensorNow = 0;
+  me->stopSensorHit = 0;
 
   char timename[] = TIMESERVER_NAME;
   me->timeserver = WhoIs(timename);
@@ -461,7 +503,7 @@ static void updatePosition(Driver* me, int time){
       } else {
         dist = eval_dist(&me->adPoly, time);
       }
-      PrintDebug(me->ui, "dist %d", dist);
+      //PrintDebug(me->ui, "dist %d", dist);
       dPosition = dist - me->lastReportDist;
       me->lastReportDist = dist;
     } else {
@@ -564,6 +606,9 @@ static void driver() {
           if (me.route.length != 0) {
             updateStopNode(&me, tempRouteMsg.data2);
             trainSetSpeed(tempRouteMsg.data2, 0, 0, &me);
+          } else {
+            PrintDebug(me.ui, "No route found!");
+            trainSetSpeed(0, 0, 0, &me);
           }
           hasTempRouteMsg = 0;
         }
@@ -587,6 +632,7 @@ static void driver() {
               }
               me.stopCommited = 1;
               me.useLastSensorNow = 0;
+              me.stopSensorHit = 0;
             }
           }
         }
@@ -599,12 +645,16 @@ static void driver() {
       }
       case SET_ROUTE: {
         Reply(replyTid, (char*)1, 0);
+        PrintDebug(me.ui, "Route setting!");
         me.stopCommited = 0;
         if (me.lastSensorActualTime > 0) {
           getRoute(&me, &msg);
           if (me.route.length != 0) {
             updateStopNode(&me, msg.data2);
             trainSetSpeed(msg.data2, 0, 0, &me);
+          } else {
+            PrintDebug(me.ui, "No route found!");
+            trainSetSpeed(0, 0, 0, &me);
           }
         } else {
           trainSetSpeed(5, 0, 0, &me);

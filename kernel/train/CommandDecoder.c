@@ -154,7 +154,7 @@ static void commandDecoder() {
   trackController = WhoIs(trackControllerName);
   char uiName[] = UI_TASK_NAME;
   ui = WhoIs(uiName);
-  trackSet = 0;
+  trackSet = 1; // TODO make unset
 
   UiMsg msg;
   msg.type = PROMPT_CHAR;
