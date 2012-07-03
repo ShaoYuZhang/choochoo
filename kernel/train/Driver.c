@@ -13,6 +13,7 @@
 #define REROUTE -1
 // TODO, smaller Delay increments. and make better guess.
 
+static void trainSetSpeed(const int speed, const int stopTime, const int delayer, Driver* me);
 static int com1;
 static int ui;
 static int CC = 0;
@@ -275,6 +276,7 @@ static void updateStopNode(Driver* me, int speed) {
       PrintDebug(me->ui, "No room to stop??? %d \n", stop);
       PrintDebug(me->ui, "StopNode-1 %d, remaining %d ", me->stopNode-1,
           me->routeRemaining);
+      trainSetSpeed(0, 0, 0, me);
   }
 }
 

@@ -119,7 +119,7 @@ void task1() {
   pos.offset = 100;
 
   DriverMsg drive;
-  drive.trainNum = 44; // train
+  drive.trainNum = 39; // train
   drive.type = SET_ROUTE;
   drive.data2 = 8; // speed
   drive.pos = pos;
