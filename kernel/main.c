@@ -107,7 +107,7 @@ void task1() {
   TrackMsg msg;
   msg.type = SET_TRACK;
   msg.data = 'b';
-  Send(trackController, (char *)&msg, sizeof(TrackMsg), (char *)1, 0);
+  //Send(trackController, (char *)&msg, sizeof(TrackMsg), (char *)1, 0);
 
   Position pos;
   pos.landmark1.type = LANDMARK_SENSOR;
@@ -124,7 +124,7 @@ void task1() {
   drive.data2 = 8; // speed
   drive.pos = pos;
 
-  Send(trainController, (char *)&drive, sizeof(DriverMsg), (char *)NULL, 0);
+  //Send(trainController, (char *)&drive, sizeof(DriverMsg), (char *)NULL, 0);
 
   Exit();
 }

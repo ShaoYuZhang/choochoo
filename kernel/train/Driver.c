@@ -319,34 +319,36 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
   char msg[4];
   msg[1] = (char)me->trainNum;
 
-  // a/d related stuff
-  int newSpeed = speed >=0 ? speed : 0;
-  int now = Time(me->timeserver) * 10;
-  if (me->speed == 0) {
-    // accelerating from 0
-    int v0 = getVelocity(me->speed, me->speedDir);
-    int v1 = me->v[newSpeed][ACCELERATE];
-    int t0 = now;
-    int t1 = now + me->a[newSpeed];
-    poly_init(&me->adPoly, t0, t1, v0, v1);
-    me->isAding = 1;
-    me->lastReportDist = 0;
-    me->distanceFromSensorAtStartAD = me->distanceFromLastSensor;
-    me->distanceToSensorAtStartAD = me->distanceToNextSensor;
-    me->adEndTime = t1;
-  } else if (newSpeed == 0) {
-    // decelerating to 0
-    int v0 = getVelocity(me->speed, me->speedDir);
-    int v1 = me->v[newSpeed][DECELERATE];
-    int t0 = now;
-    int t1 = now + getStoppingTime(me);
-    poly_init(&me->adPoly, t0, t1, v0, v1);
-    me->isAding = 1;
-    me->lastReportDist = 0;
-    me->distanceFromSensorAtStartAD = me->distanceFromLastSensor;
-    me->distanceToSensorAtStartAD = me->distanceToNextSensor;
-    me->adEndTime = t1;
-  }
+  //if (me->lastSensorActualTime > 0) {
+    // a/d related stuff
+    int newSpeed = speed >=0 ? speed : 0;
+    int now = Time(me->timeserver) * 10;
+    if (me->speed == 0) {
+      // accelerating from 0
+      int v0 = getVelocity(me->speed, me->speedDir);
+      int v1 = me->v[newSpeed][ACCELERATE];
+      int t0 = now + 10; // compensate for time it takes to send to train
+      int t1 = now + me->a[newSpeed];
+      poly_init(&me->adPoly, t0, t1, v0, v1);
+      me->isAding = 1;
+      me->lastReportDist = 0;
+      me->distanceFromSensorAtStartAD = me->distanceFromLastSensor + 15 * v0;
+      me->distanceToSensorAtStartAD = me->distanceToNextSensor - 15 * v0;
+      me->adEndTime = t1;
+    } else if (newSpeed == 0) {
+      // decelerating to 0
+      int v0 = getVelocity(me->speed, me->speedDir);
+      int v1 = me->v[newSpeed][DECELERATE];
+      int t0 = now + 10; // compensate for time it takes to send to train
+      int t1 = now + getStoppingTime(me);
+      poly_init(&me->adPoly, t0, t1, v0, v1);
+      me->isAding = 1;
+      me->lastReportDist = 0;
+      me->distanceFromSensorAtStartAD = me->distanceFromLastSensor + 15 * v0;
+      me->distanceToSensorAtStartAD = me->distanceToNextSensor - 15 * v0;
+      me->adEndTime = t1;
+    }
+  //}
 
   PrintDebug(me->ui, "Train Setting Speed");
 
@@ -360,10 +362,10 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
       Putstr(com1, msg, 4);
 
       // Update prediction
-      int action = me->nextSensorVal%2 ? 1 : -1;
+      int action = me->nextSensorVal%2 ? -1 : 1;
       me->nextSensorVal = me->nextSensorVal + action;
 
-      action = me->lastSensorVal%2 ? 1 : -1;
+      action = me->lastSensorVal%2 ? -1 : 1;
       me->lastSensorVal = me->lastSensorVal + action;
 
 
@@ -470,7 +472,7 @@ static void trainNavigateNagger() {
   DriverMsg msg;
   msg.type = NAVIGATE_NAGGER;
   for (;;) {
-    Delay(2, timeserver); // .15 seconds
+    Delay(5, timeserver); // .15 seconds
     msg.timestamp = Time(timeserver) * 10;
     Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
   }
@@ -533,6 +535,9 @@ static void updatePosition(Driver* me, int time){
         dist = eval_dist(&me->adPoly, time);
       }
       dPosition = dist - me->lastReportDist;
+      if (dPosition < 0) {
+        dPosition = 0;
+      }
       me->lastReportDist = dist;
     } else {
       // In mm
@@ -624,7 +629,7 @@ static void driver() {
           me.distanceFromSensorAtStartAD = -me.distanceToSensorAtStartAD;
           me.distanceToSensorAtStartAD = tMsg.dist + me.distanceToSensorAtStartAD;
         }
-        int dPos = 100 * getVelocity(me.speed, me.speedDir) / 100000;
+        int dPos = 20 * getVelocity(me.speed, me.speedDir) / 100000;
         me.distanceFromLastSensor = dPos;
         me.distanceToNextSensor = tMsg.dist - dPos;
         me.lastPosUpdateTime = msg.timestamp;
@@ -692,7 +697,7 @@ static void driver() {
             trainSetSpeed(0, 0, 0, &me);
           }
         } else {
-          trainSetSpeed(5, 0, 0, &me);
+          trainSetSpeed(msg.data2, 0, 0, &me);
           hasTempRouteMsg = 1;
           tempRouteMsg = msg;
         }
