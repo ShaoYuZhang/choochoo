@@ -100,7 +100,7 @@ void task1() {
   int trackController = startTrackManagerTask();
   startCommandDecoderTask();
 
-  Delay(500, time);
+  Delay(700, time);
   Create(20, test_track);
 
   // Testing
