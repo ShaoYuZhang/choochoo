@@ -16,9 +16,26 @@
 static int com1;
 static int ui;
 static int CC = 0;
+static Driver* moi;
 
-static void setTestRoute(Driver* me) {
-  Route r;
+static int interpolateStoppingDistance(Driver* me, int velocity) {
+  int speed = 14;
+  float percentUp = -1;
+  float percentDown = -1;
+  for (int i = 1; i < 15; i++) {
+    if (me->v[i][MAX_VAL] >= velocity && me->v[i-1][MAX_VAL] <= velocity) {
+      speed = i;
+      float diff = (float)(me->v[i][MAX_VAL] - me->v[i-1][MAX_VAL]);
+      percentUp = (float)(me->v[i][MAX_VAL] - velocity) / diff;
+      percentDown = 1.0 - percentUp;
+      break;
+    }
+  }
+
+  float stopUp = (float)me->d[speed][me->speedDir][MAX_VAL];
+  float stopDown = (float)me->d[speed-1][me->speedDir][MAX_VAL];
+
+  return stopUp * percentUp + stopDown * percentDown;
 }
 
 static int getStoppingDistance(Driver* me) {
@@ -26,12 +43,13 @@ static int getStoppingDistance(Driver* me) {
 }
 
 // mm/s
-static int getVelocity(Driver* me){
-  return me->v[(int)me->speed][(int)me->speedDir];
+static int getVelocity(int speed, int dir){
+  return moi->v[speed][dir];
 }
 
 static int getStoppingTime(Driver* me) {
-  return 2* getStoppingDistance(me) * 100000 / getVelocity(me);
+  return 2* getStoppingDistance(me) * 100000 /
+    getVelocity(me->speed, me->speedDir);
 }
 
 static void toPosition(Driver* me, Position* pos) {
@@ -49,7 +67,7 @@ static void sendUiReport(Driver* me) {
     int now = Time(me->timeserver) * 10;
     me->uiMsg.velocity = eval_velo(&me->adPoly, now) / 100;
   } else {
-    me->uiMsg.velocity = getVelocity(me) / 100;
+    me->uiMsg.velocity = getVelocity(me->speed, me->speedDir) / 100;
   }
   if (!me->justReversed) {
     me->uiMsg.lastSensorUnexpected = me->lastSensorUnexpected;
@@ -90,7 +108,8 @@ static void updatePredication(Driver* me) {
   me->nextSensorBox = tMsg.sensor.num1;
   me->nextSensorVal = tMsg.sensor.num2;
   me->nextSensorPredictedTime =
-    now + me->distanceToNextSensor*100000 / getVelocity(me) - 50; // 50 ms delay for sensor query.
+    now + me->distanceToNextSensor*100000 /
+    getVelocity(me->speed, me->speedDir) - 50; // 50 ms delay for sensor query.
 
   sendUiReport(me);
 }
@@ -114,7 +133,7 @@ static void getRoute(Driver* me, DriverMsg* msg) {
     if (node.num == -1) {
       PrintDebug(me->ui, "%d reverse", i);
     } else {
-      char m[27] = "%d Landmark %d   %d     %d";
+      char m[27] = "%d Landmark %d   %d    %d";
 
       if (node.landmark.type == LANDMARK_SENSOR) {
         m[12] = 'S';
@@ -197,7 +216,7 @@ static void updateStopNode(Driver* me, int speed) {
   //PrintDebug(me->ui, "calc stopping distance.");
 
   const int stoppingDistance =
-      me->d[speed][(int)me->speedDir][MAX_VAL];
+    interpolateStoppingDistance(me, getVelocity((int)speed, me->speedDir));
   int stop = stoppingDistance;
   // Find the stopping distance for the stopNode.
   // S------L------L---|-----L---------R------F
@@ -257,9 +276,6 @@ static void updateStopNode(Driver* me, int speed) {
   }
 }
 
-static void reRoute(Driver* me, char box, char val) {
-}
-
 // Update route traveled as sensors are hit.
 static void updateRoute(Driver* me, char box, char val) {
   if (me->routeRemaining == -1) return;
@@ -302,7 +318,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
   if (me->speed == 0) {
     // accelerating from 0
     me->isAding = 1;
-    int v0 = getVelocity(me);
+    int v0 = getVelocity(me->speed, me->speedDir);
     int v1 = me->v[newSpeed][ACCELERATE];
     int t0 = now;
     int t1 = now + me->a[newSpeed];
@@ -312,7 +328,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
   } else if (newSpeed == 0) {
     // decelerating to 0
     me->isAding = 1;
-    int v0 = getVelocity(me);
+    int v0 = getVelocity(me->speed, me->speedDir);
     int v1 = me->v[newSpeed][DECELERATE];
     int t0 = now;
     int t1 = now + getStoppingTime(me);
@@ -450,6 +466,7 @@ static void trainNavigateNagger() {
 }
 
 static void initDriver(Driver* me) {
+  moi = me;
 
   char uiName[] = UI_TASK_NAME;
   me->ui = WhoIs(uiName);
@@ -508,7 +525,7 @@ static void updatePosition(Driver* me, int time){
       me->lastReportDist = dist;
     } else {
       // In mm
-      dPosition = (time - me->reportTime) * getVelocity(me) / 100000;
+      dPosition = (time - me->reportTime) * getVelocity(me->speed, me->speedDir) / 100000;
     }
     me->reportTime = time;
     me->distanceFromLastSensor += dPosition;
@@ -597,7 +614,8 @@ static void driver() {
         me.nextSensorBox = tMsg.sensor.num1;
         me.nextSensorVal = tMsg.sensor.num2;
         me.nextSensorPredictedTime =
-          msg.timestamp + me.distanceToNextSensor*100000 / getVelocity(&me) - 50; // 50 ms delay for sensor query.
+          msg.timestamp + me.distanceToNextSensor*100000 /
+          getVelocity(me.speed, me.speedDir) - 50; // 50 ms delay for sensor query.
 
         updatePosition(&me, msg.timestamp);
         sendUiReport(&me);
