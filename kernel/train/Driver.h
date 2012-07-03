@@ -73,10 +73,14 @@ typedef struct Driver {
   char nextSensorVal;
   int nextSensorPredictedTime;
 
+  int lastSensorDistanceError;
+
   // A/D stuff
   int isAding;
-  int adEndTime;
+  int distanceFromSensorAtStartAD;
+  int distanceToSensorAtStartAD;
   int lastReportDist;
+  int adEndTime;
   Poly adPoly;
 
   int v[15][2];
