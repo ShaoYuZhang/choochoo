@@ -92,6 +92,8 @@ static void sendUiReport(Driver* me) {
   me->uiMsg.nextSensorVal            = me->nextSensorVal;
   me->uiMsg.nextSensorPredictedTime  = me->nextSensorPredictedTime;
 
+  me->uiMsg.lastSensorDistanceError  = me->lastSensorDistanceError;
+
   Send(me->ui, (char*)&(me->uiMsg), sizeof(TrainUiMsg), (char*)1, 0);
 }
 
@@ -297,11 +299,13 @@ static void updateRoute(Driver* me, char box, char val) {
 }
 
 static void dynamicCalibration(Driver* me) {
+  if (me->isAding) return; // TODO doesn't cover all cases
   if (me->lastSensorUnexpected) return;
   if (me->speed == 0) return; // Cannot calibrate speed zero
 
   int dTime = me->lastSensorPredictedTime - me->lastSensorActualTime;
   if (dTime > 1000) return;
+  if (dTime < -1000) return;
   int velocity = me->calibrationDistance * 100 * 1000 / (me->lastSensorActualTime - me->calibrationStart);
   int originalVelocity = me->v[(int)me->speed][(int)me->speedDir];
   me->v[(int)me->speed][(int)me->speedDir]
@@ -324,6 +328,8 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     int t1 = now + me->a[newSpeed];
     poly_init(&me->adPoly, t0, t1, v0, v1);
     me->lastReportDist = 0;
+    me->distanceFromSensorAtStartAD = me->distanceFromLastSensor;
+    me->distanceToSensorAtStartAD = me->distanceToNextSensor;
     me->adEndTime = t1;
   } else if (newSpeed == 0) {
     // decelerating to 0
@@ -334,6 +340,8 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     int t1 = now + getStoppingTime(me);
     poly_init(&me->adPoly, t0, t1, v0, v1);
     me->lastReportDist = 0;
+    me->distanceFromSensorAtStartAD = me->distanceFromLastSensor;
+    me->distanceToSensorAtStartAD = me->distanceToNextSensor;
     me->adEndTime = t1;
   }
 
@@ -496,6 +504,7 @@ static void initDriver(Driver* me) {
   me->distanceToNextSensor = 0;
   me->distanceFromLastSensor = 0;
   me->lastSensorActualTime = 0;
+  me->lastSensorDistanceError = 0;
 
   me->delayer = Create(1, trainDelayer);
   me->sensorWatcher = Create(3, trainSensor);
@@ -520,7 +529,6 @@ static void updatePosition(Driver* me, int time){
       } else {
         dist = eval_dist(&me->adPoly, time);
       }
-      //PrintDebug(me->ui, "dist %d", dist);
       dPosition = dist - me->lastReportDist;
       me->lastReportDist = dist;
     } else {
@@ -608,8 +616,14 @@ static void driver() {
               (char*)&tMsg, sizeof(TrackNextSensorMsg));
         me.calibrationStart = msg.timestamp;
         me.calibrationDistance = tMsg.dist;
-        me.distanceFromLastSensor = 0;
-        me.distanceToNextSensor = tMsg.dist;
+        me.lastSensorDistanceError =  -me.distanceToNextSensor;
+        if (me.isAding) {
+          me.distanceFromSensorAtStartAD = -me.distanceToSensorAtStartAD;
+          me.distanceToSensorAtStartAD = tMsg.dist + me.distanceToSensorAtStartAD;
+        }
+        int dPos = 100 * getVelocity(&me) / 100000; // 50 for trigger to query, 50 for query to receive
+        me.distanceFromLastSensor = dPos;
+        me.distanceToNextSensor = tMsg.dist - dPos;
         me.reportTime = msg.timestamp;
         me.nextSensorBox = tMsg.sensor.num1;
         me.nextSensorVal = tMsg.sensor.num2;
@@ -655,7 +669,7 @@ static void driver() {
           }
         }
         naggCount++;
-        naggCount = (naggCount & 3);
+        naggCount = (naggCount & 15);
         if (naggCount == 0){
           sendUiReport(&me);
         }

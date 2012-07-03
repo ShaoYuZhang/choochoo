@@ -20,16 +20,26 @@
 #define CLOCK_C1 '8'
 
 static char* formatInt(int n, int numDigit, char* msg) {
+  int isNegative = 0;
+  if (n < 0) {
+    isNegative = 1;
+    n = -n;
+  }
   int anyOutput = 0;
+  int highestDigit = 0;
   for (int i = numDigit-1; i >= 0; i--) {
     if (n != 0){
       msg[i] = '0' + n%10;
       anyOutput = 1;
+      highestDigit = i;
     } else {
       msg[i] = ' ';
     }
 
     n /= 10;
+  }
+  if (isNegative) {
+    msg[highestDigit - 1] = '-';
   }
   if (!anyOutput) {
     msg[numDigit-1] = '0';
@@ -142,16 +152,6 @@ static char* updateTrain(TrainUiMsg* train, char* msg) {
   msg = timeu(train->lastSensorActualTime, msg);
   if (train->lastSensorUnexpected) msg = resetColor(msg);
 
-  msg = moveTo(row++, 26, msg);
-  int delta = train->lastSensorPredictedTime - train->lastSensorActualTime;
-  delta = (delta > 0) ? delta : -delta;
-  if (delta > 20) { // Over 20ms in diff is bad.
-    msg = setColor(31, msg);
-    msg = timeu(train->lastSensorPredictedTime, msg);
-    msg = resetColor(msg);
-  } else {
-    msg = timeu(train->lastSensorPredictedTime, msg);
-  }
   row++;
 
   // ---------------------------------
@@ -180,9 +180,14 @@ static char* updateTrain(TrainUiMsg* train, char* msg) {
   *msg++ = 'A' + train->nextSensorBox;
   msg = formatInt(train->nextSensorVal, 2, msg);
 
-  msg = moveTo(row++, 26, msg);
-  msg = timeu(train->nextSensorPredictedTime, msg);
+  row++;
 
+  // ---------------------------------
+  // ERROR INFORMATION
+  msg = moveTo(row++, 26, msg);
+  msg = setColor(31, msg);
+  msg = formatInt(train->lastSensorDistanceError, 6, msg);
+  msg = resetColor(msg);
   return restoreCursor(msg);
 }
 
@@ -394,9 +399,6 @@ static char* drawTrainFrame(char* msg) {
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " L Sensor T  ", "          ");
 
   msg = moveTo(row++, 10, msg);
-  msg = drawTrainFrameHelper(msg, '|', '|', '|', " L Predic T  ", "          ");
-
-  msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', "             ", "          ");
 
   msg = moveTo(row++, 10, msg);
@@ -418,7 +420,10 @@ static char* drawTrainFrame(char* msg) {
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " N Sensor    ", "          ");
 
   msg = moveTo(row++, 10, msg);
-  msg = drawTrainFrameHelper(msg, '|', '|', '|', " N Sensor T  ", "          ");
+  msg = drawTrainFrameHelper(msg, '|', '|', '|', "             ", "          ");
+
+  msg = moveTo(row++, 10, msg);
+  msg = drawTrainFrameHelper(msg, '|', '|', '|', " Miss by..mm ", "          ");
 
   msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '`', '-', '`', "-------------", "----------");
