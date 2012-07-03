@@ -46,6 +46,12 @@ static int getStoppingDistance(Driver* me) {
 // mm/s
 static int getVelocity(int speed, int dir){
   return moi->v[speed][dir];
+  if (moi->isAding) {
+    int now = Time(moi->timeserver) * 10;
+    return eval_velo(&(moi->adPoly), now);
+  } else {
+    return moi->v[(int)moi->speed][(int)moi->speedDir];
+  }
 }
 
 static int getStoppingTime(Driver* me) {
@@ -64,13 +70,8 @@ static void toPosition(Driver* me, Position* pos) {
 }
 
 static void sendUiReport(Driver* me) {
-  if (me->isAding) {
-    int now = Time(me->timeserver) * 10;
-    me->uiMsg.velocity = eval_velo(&me->adPoly, now) / 100;
-  } else {
-    me->uiMsg.velocity = getVelocity(me->speed, me->speedDir) / 100;
-  }
-  if (!me->justReversed) {
+  me->uiMsg.velocity = getVelocity(me->speed, me->speedDir) / 100;
+  if (!me->justReversed){
     me->uiMsg.lastSensorUnexpected = me->lastSensorUnexpected;
     me->uiMsg.lastSensorBox            = me->lastSensorBox;
     me->uiMsg.lastSensorVal            = me->lastSensorVal;
@@ -219,7 +220,7 @@ static void updateStopNode(Driver* me, int speed) {
   //PrintDebug(me->ui, "calc stopping distance.");
 
   const int stoppingDistance =
-    interpolateStoppingDistance(me, getVelocity((int)speed, me->speedDir));
+    interpolateStoppingDistance(me, moi->v[speed][me->speedDir]);
   int stop = stoppingDistance;
   // Find the stopping distance for the stopNode.
   // S------L------L---|-----L---------R------F
