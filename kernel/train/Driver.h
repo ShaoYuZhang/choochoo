@@ -66,8 +66,8 @@ typedef struct Driver {
 
   int speed;      // 0 - 14
   int speedDir;
-  int distanceFromLastSensor;
-  int distanceToNextSensor;
+  float distanceFromLastSensor;
+  float distanceToNextSensor;
   char justReversed;
 
   char nextSensorBox;
@@ -78,9 +78,7 @@ typedef struct Driver {
 
   // A/D stuff
   int isAding;
-  int distanceFromSensorAtStartAD;
-  int distanceToSensorAtStartAD;
-  int lastReportDist;
+  float lastReportDist;
   int adEndTime;
   Poly adPoly;
 

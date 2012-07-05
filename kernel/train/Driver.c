@@ -66,7 +66,7 @@ static void toPosition(Driver* me, Position* pos) {
   pos->landmark2.type = LANDMARK_SENSOR;
   pos->landmark2.num1 = me->nextSensorBox;
   pos->landmark2.num2 = me->nextSensorVal;
-  pos->offset = me->distanceFromLastSensor;
+  pos->offset = (int)me->distanceFromLastSensor;
 }
 
 static void sendUiReport(Driver* me) {
@@ -87,8 +87,8 @@ static void sendUiReport(Driver* me) {
 
   me->uiMsg.speed                    = me->speed;      // 0 - 14
   me->uiMsg.speedDir                 = me->speedDir;
-  me->uiMsg.distanceFromLastSensor   = me->distanceFromLastSensor;
-  me->uiMsg.distanceToNextSensor     = me->distanceToNextSensor;
+  me->uiMsg.distanceFromLastSensor   = (int)me->distanceFromLastSensor;
+  me->uiMsg.distanceToNextSensor     = (int)me->distanceToNextSensor;
 
   me->uiMsg.nextSensorBox            = me->nextSensorBox;
   me->uiMsg.nextSensorVal            = me->nextSensorVal;
@@ -177,7 +177,7 @@ static int shouldStopNow(Driver* me) {
       ) || me->useLastSensorNow;
 
   if (canUseLastSensor) {
-    int d = me->distancePassStopSensorToStop - me->distanceFromLastSensor;
+    int d = me->distancePassStopSensorToStop - (int)me->distanceFromLastSensor;
 
     if ((CC++ & 15) == 0) {
       PrintDebug(me->ui, "Navi Nagger. %d", d);
@@ -258,7 +258,7 @@ static void updateStopNode(Driver* me, int speed) {
         //          |  |___ current position
         //          |______ distanceFromLastSensor
         me->useLastSensorNow = 1;
-        previousStop += me->distanceFromLastSensor;
+        previousStop += (int)me->distanceFromLastSensor;
       }
       // Else..
       //     |---stopSensorBox
@@ -327,26 +327,24 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
       // accelerating from 0
       int v0 = getVelocity(me->speed, me->speedDir);
       int v1 = me->v[newSpeed][ACCELERATE];
-      int t0 = now + 10; // compensate for time it takes to send to train
-      int t1 = now + me->a[newSpeed];
+      int t0 = now + 8; // compensate for time it takes to send to train
+      int t1 = now + 8 + me->a[newSpeed];
       poly_init(&me->adPoly, t0, t1, v0, v1);
       me->isAding = 1;
       me->lastReportDist = 0;
-      me->distanceFromSensorAtStartAD = me->distanceFromLastSensor + 15 * v0;
-      me->distanceToSensorAtStartAD = me->distanceToNextSensor - 15 * v0;
       me->adEndTime = t1;
     } else if (newSpeed == 0) {
       // decelerating to 0
       int v0 = getVelocity(me->speed, me->speedDir);
       int v1 = me->v[newSpeed][DECELERATE];
-      int t0 = now + 10; // compensate for time it takes to send to train
-      int t1 = now + getStoppingTime(me);
+      int t0 = now + 8; // compensate for time it takes to send to train
+      int t1 = now + 8 + getStoppingTime(me);
       poly_init(&me->adPoly, t0, t1, v0, v1);
       me->isAding = 1;
       me->lastReportDist = 0;
-      me->distanceFromSensorAtStartAD = me->distanceFromLastSensor + 15 * v0;
-      me->distanceToSensorAtStartAD = me->distanceToNextSensor - 15 * v0;
       me->adEndTime = t1;
+      PrintDebug(me->ui, "%d %d %d %d", me->lastSensorBox, me->lastSensorVal, (int)me->distanceFromLastSensor, (int)me->distanceFromLastSensor + getStoppingDistance(me));
+      PrintDebug(me->ui, "%d", (int)eval_dist(&me->adPoly, t1));
     }
   //}
 
@@ -368,18 +366,17 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
       action = me->lastSensorVal%2 ? -1 : 1;
       me->lastSensorVal = me->lastSensorVal + action;
 
-
-      int tmp = me->distanceFromLastSensor;
+      float distTemp = me->distanceFromLastSensor;
       me->distanceFromLastSensor = me->distanceToNextSensor;
-      me->distanceToNextSensor = tmp;
+      me->distanceToNextSensor = distTemp;
 
-      tmp = me->nextSensorVal;
+      int valTemp = me->nextSensorVal;
       me->nextSensorVal = me->lastSensorVal;
-      me->lastSensorVal = tmp;
+      me->lastSensorVal = valTemp;
 
-      tmp = me->nextSensorBox;
+      int boxTemp = me->nextSensorBox;
       me->nextSensorBox = me->lastSensorBox;
-      me->lastSensorBox = tmp;
+      me->lastSensorBox = boxTemp;
 
       me->justReversed = 1;
 
@@ -472,7 +469,7 @@ static void trainNavigateNagger() {
   DriverMsg msg;
   msg.type = NAVIGATE_NAGGER;
   for (;;) {
-    Delay(5, timeserver); // .15 seconds
+    Delay(2, timeserver); // .15 seconds
     msg.timestamp = Time(timeserver) * 10;
     Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
   }
@@ -525,9 +522,9 @@ static void initDriver(Driver* me) {
 
 static void updatePosition(Driver* me, int time){
   if (time) {
-    int dPosition;
-    if (me->isAding) {
-      int dist;
+    float dPosition;
+    if (me->isAding && time > me->adPoly.t0) {
+      float dist;
       if (time > me->adEndTime) {
         me->isAding = 0;
         dist = eval_dist(&me->adPoly, me->adEndTime);
@@ -541,7 +538,7 @@ static void updatePosition(Driver* me, int time){
       me->lastReportDist = dist;
     } else {
       // In mm
-      dPosition = (time - me->lastPosUpdateTime) * getVelocity(me->speed, me->speedDir) / 100000;
+      dPosition = (time - me->lastPosUpdateTime) * getVelocity(me->speed, me->speedDir) / 100000.0;
     }
     me->lastPosUpdateTime = time;
     me->distanceFromLastSensor += dPosition;
@@ -611,7 +608,7 @@ static void driver() {
         me.lastSensorBox = msg.data2; // Box
         me.lastSensorVal = msg.data3; // Val
         me.lastSensorActualTime = msg.timestamp;
-        dynamicCalibration(&me);
+        //dynamicCalibration(&me);
         me.lastSensorPredictedTime = me.nextSensorPredictedTime;
 
         TrackNextSensorMsg tMsg;
@@ -624,12 +621,8 @@ static void driver() {
               (char*)&tMsg, sizeof(TrackNextSensorMsg));
         me.calibrationStart = msg.timestamp;
         me.calibrationDistance = tMsg.dist;
-        me.lastSensorDistanceError =  -me.distanceToNextSensor;
-        if (me.isAding) {
-          me.distanceFromSensorAtStartAD = -me.distanceToSensorAtStartAD;
-          me.distanceToSensorAtStartAD = tMsg.dist + me.distanceToSensorAtStartAD;
-        }
-        int dPos = 20 * getVelocity(me.speed, me.speedDir) / 100000;
+        int dPos = 50 * getVelocity(me.speed, me.speedDir) / 100000.0;
+        me.lastSensorDistanceError =  -(int)me.distanceToNextSensor - dPos;
         me.distanceFromLastSensor = dPos;
         me.distanceToNextSensor = tMsg.dist - dPos;
         me.lastPosUpdateTime = msg.timestamp;
