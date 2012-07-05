@@ -249,7 +249,7 @@ static void updateStopNode(Driver* me, int speed) {
           me->stopSensorVal = me->route.nodes[j].landmark.num2;
           break;
         }
-        previousStop += me->route.nodes[j].dist;
+        previousStop += me->route.nodes[j-1].dist; // add distance from last node to this node
       }
       if (me->stopSensorBox == -1) {
         //              |-|---previousStop
