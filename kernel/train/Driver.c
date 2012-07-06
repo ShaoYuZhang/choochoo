@@ -114,7 +114,6 @@ static void updatePredication(Driver* me) {
   me->nextSensorPredictedTime =
     now + me->distanceToNextSensor*100000 /
     getVelocity(me->speed, me->speedDir) - 50; // 50 ms delay for sensor query.
-
   sendUiReport(me);
 }
 
@@ -323,7 +322,10 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     // a/d related stuff
     int newSpeed = speed >=0 ? speed : 0;
     int now = Time(me->timeserver) * 10;
-    if (me->speed == 0) {
+    if (me->speed == newSpeed) {
+      // do nothing
+    }
+    else if (me->speed == 0) {
       // accelerating from 0
       int v0 = getVelocity(me->speed, me->speedDir);
       int v1 = me->v[newSpeed][ACCELERATE];
@@ -343,8 +345,6 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
       me->isAding = 1;
       me->lastReportDist = 0;
       me->adEndTime = t1;
-      PrintDebug(me->ui, "%d %d %d %d", me->lastSensorBox, me->lastSensorVal, (int)me->distanceFromLastSensor, (int)me->distanceFromLastSensor + getStoppingDistance(me));
-      PrintDebug(me->ui, "%d", (int)eval_dist(&me->adPoly, t1));
     }
   //}
 
@@ -360,21 +360,21 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
       Putstr(com1, msg, 4);
 
       // Update prediction
-      int action = me->nextSensorVal%2 ? -1 : 1;
+      int action = me->nextSensorVal%2 == 1 ? 1 : -1;
       me->nextSensorVal = me->nextSensorVal + action;
 
-      action = me->lastSensorVal%2 ? -1 : 1;
+      action = me->lastSensorVal%2 == 1 ? 1 : -1;
       me->lastSensorVal = me->lastSensorVal + action;
 
       float distTemp = me->distanceFromLastSensor;
       me->distanceFromLastSensor = me->distanceToNextSensor;
       me->distanceToNextSensor = distTemp;
 
-      int valTemp = me->nextSensorVal;
+      char valTemp = me->nextSensorVal;
       me->nextSensorVal = me->lastSensorVal;
       me->lastSensorVal = valTemp;
 
-      int boxTemp = me->nextSensorBox;
+      char boxTemp = me->nextSensorBox;
       me->nextSensorBox = me->lastSensorBox;
       me->lastSensorBox = boxTemp;
 
@@ -608,7 +608,7 @@ static void driver() {
         me.lastSensorBox = msg.data2; // Box
         me.lastSensorVal = msg.data3; // Val
         me.lastSensorActualTime = msg.timestamp;
-        //dynamicCalibration(&me);
+        dynamicCalibration(&me);
         me.lastSensorPredictedTime = me.nextSensorPredictedTime;
 
         TrackNextSensorMsg tMsg;
