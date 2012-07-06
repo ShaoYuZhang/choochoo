@@ -18,6 +18,31 @@ static int com2;
 static int trackSet;
 static int ui;
 
+// letter to A-E or X or N, doesn't support switches
+static TrackLandmark formLandmarkFromInput(char letter, int number){
+  TrackLandmark landmark;
+  landmark.type = LANDMARK_FAKE;
+  landmark.num1 = 0;
+  landmark.num2 = 0;
+  if (letter >= 'a' && letter <= 'z') {
+    letter = letter - 'a' + 'A';
+  }
+  if (letter >= 'A' && letter <= 'E') {
+    landmark.type = LANDMARK_SENSOR;
+    landmark.num1 = letter - 'A';
+    landmark.num2 = number;
+  } else if (letter == 'N') {
+    landmark.type = LANDMARK_END;
+    landmark.num1 = EN;
+    landmark.num2 = number;
+  } else if (letter == 'X') {
+    landmark.type = LANDMARK_END;
+    landmark.num1 = EX;
+    landmark.num2 = number;
+  }
+  return landmark;
+}
+
 static void decodeCommand() {
   decoderBuffer[decoderCurrBufferPos] = 0;
   if (decoderCurrBufferPos == 1 && decoderBuffer[0] == 'q') {
@@ -99,9 +124,8 @@ static void decodeCommand() {
     int train_number = 0;
     int train_speed;
 
-    int type;
-    int num1;
-    int num2;
+    char letter;
+    int num;
 
     Position pos;
 
@@ -110,28 +134,19 @@ static void decodeCommand() {
     c = a2i(c, &temp, 10, &train_number);
     c = *temp++;
     c = a2i(c, &temp, 10, &train_speed);
-    c = *temp++;
-    c = a2i(c, &temp, 10, &type);
-    c = *temp++;
-    c = a2i(c, &temp, 10, &num1);
-    c = *temp++;
-    c = a2i(c, &temp, 10, &num2);
-    c = *temp++;
 
-    pos.landmark1.type = (int) type;
-    pos.landmark1.num1 = (char) num1;
-    pos.landmark1.num2 = (char) num2;
+    c = *temp++;
+    letter = c;
+    c = *temp++;
+    c = a2i(c, &temp, 10, &num);
+    pos.landmark1 = formLandmarkFromInput(letter, num);
 
-    c = a2i(c, &temp, 10, &type);
     c = *temp++;
-    c = a2i(c, &temp, 10, &num1);
+    letter = c;
     c = *temp++;
-    c = a2i(c, &temp, 10, &num2);
+    c = a2i(c, &temp, 10, &num);
+    pos.landmark2 = formLandmarkFromInput(letter, num);
     c = *temp++;
-
-    pos.landmark2.type = (int) type;
-    pos.landmark2.num1 = (char) num1;
-    pos.landmark2.num2 = (char) num2;
 
     c = a2i(c, &temp, 10, &pos.offset);
 

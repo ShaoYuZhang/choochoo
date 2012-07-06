@@ -680,6 +680,8 @@ static void driver() {
         Reply(replyTid, (char*)1, 0);
         PrintDebug(me.ui, "Route setting!");
         me.stopCommited = 0;
+        PrintDebug(me.ui, "%d %d %d", msg.pos.landmark1.type, msg.pos.landmark1.num1, msg.pos.landmark1.num2);
+
         if (me.lastSensorActualTime > 0) {
           getRoute(&me, &msg);
           if (me.route.length != 0) {
