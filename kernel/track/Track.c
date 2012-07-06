@@ -112,7 +112,8 @@ static track_node* findNode(track_node* track, TrackLandmark landmark) {
   return (track_node*) NULL;
 }
 
-// only support landmarks that are relatively close
+// non-generic,only support landmarks that are relatively close
+// also can't have sensors in between because that cause ambiguity
 static int traverse(track_node* currentNode, track_node* targetNode, int depth, int max_depth, track_edge** edges) {
   if (currentNode == targetNode) {
     return depth;
@@ -122,6 +123,8 @@ static int traverse(track_node* currentNode, track_node* targetNode, int depth, 
   }
 
   if (currentNode->type == NODE_EXIT) {
+    return -1;
+  } else if (currentNode->type == NODE_SENSOR && depth != 0) {
     return -1;
   } else if (currentNode->type != NODE_BRANCH) {
     track_edge* edge = &currentNode->edge[DIR_AHEAD];
@@ -141,7 +144,7 @@ static int traverse(track_node* currentNode, track_node* targetNode, int depth, 
       *edges = edge1;
       return len1;
     } else if (len2 != -1) {
-      *edges = edge1;
+      *edges = edge2;
       return len2;
     } else {
       return -1;
@@ -157,6 +160,11 @@ static int locateNode(track_node* track, Position pos, track_edge** edge) {
   int len = traverse(sensor1, sensor2, 0, 7, edges);
   if (len > 0) {
     int dist = pos.offset;
+    // for robusteness, when offset less than zero, assume position is on top of landmark1
+    if (dist < 0) {
+      *edge = edges[0];
+      return 0;
+    }
     for (int i = 0; i < len; i++) {
       if (dist < edges[i]->dist) {
         *edge = edges[i];
@@ -165,6 +173,11 @@ static int locateNode(track_node* track, Position pos, track_edge** edge) {
       else {
         dist -= edges[i]->dist;
       }
+    }
+    // for robusteness, when offset is more than distance between landmark1 and landmark2, assume position is on top of landmark2
+    if (dist > 0) {
+      *edge = edges[len-1];
+      return edges[len-1]->dist;
     }
   }
   return -1;
