@@ -1,9 +1,9 @@
 #include "Driver.h"
 #include <IoServer.h>
+#include <NameServer.h>
 #include <ts7200.h>
 #include <util.h>
 #include <TimeServer.h>
-#include <NameServer.h>
 #include <IoHelper.h>
 #include <syscall.h>
 #include <CalibrationData.h>
@@ -11,13 +11,8 @@
 #include <Track.h>
 
 #define REROUTE -1
-// TODO, smaller Delay increments. and make better guess.
 
 static void trainSetSpeed(const int speed, const int stopTime, const int delayer, Driver* me);
-static int com1;
-static int ui;
-static int CC = 0;
-static Driver* moi;
 
 static int interpolateStoppingDistance(Driver* me, int velocity) {
   int speed = 14;
@@ -44,19 +39,19 @@ static int getStoppingDistance(Driver* me) {
 }
 
 // mm/s
-static int getVelocity(int speed, int dir){
-  return moi->v[speed][dir];
-  if (moi->isAding) {
-    int now = Time(moi->timeserver) * 10;
-    return eval_velo(&(moi->adPoly), now);
+static int getVelocity(Driver* me, int speed, int dir){
+  return me->v[speed][dir];
+  if (me->isAding) {
+    int now = Time(me->timeserver) * 10;
+    return eval_velo(&(me->adPoly), now);
   } else {
-    return moi->v[(int)moi->speed][(int)moi->speedDir];
+    return me->v[(int)me->speed][(int)me->speedDir];
   }
 }
 
 static int getStoppingTime(Driver* me) {
   return 2* getStoppingDistance(me) * 100000 /
-    getVelocity(me->speed, me->speedDir);
+    getVelocity(me, me->speed, me->speedDir);
 }
 
 static void toPosition(Driver* me, Position* pos) {
@@ -70,7 +65,7 @@ static void toPosition(Driver* me, Position* pos) {
 }
 
 static void sendUiReport(Driver* me) {
-  me->uiMsg.velocity = getVelocity(me->speed, me->speedDir) / 100;
+  me->uiMsg.velocity = getVelocity(me, me->speed, me->speedDir) / 100;
   if (!me->justReversed){
     me->uiMsg.lastSensorUnexpected = me->lastSensorUnexpected;
     me->uiMsg.lastSensorBox            = me->lastSensorBox;
@@ -113,7 +108,7 @@ static void updatePredication(Driver* me) {
   me->nextSensorVal = tMsg.sensor.num2;
   me->nextSensorPredictedTime =
     now + me->distanceToNextSensor*100000 /
-    getVelocity(me->speed, me->speedDir) - 50; // 50 ms delay for sensor query.
+    getVelocity(me, me->speed, me->speedDir) - 50; // 50 ms delay for sensor query.
   sendUiReport(me);
 }
 
@@ -178,7 +173,7 @@ static int shouldStopNow(Driver* me) {
   if (canUseLastSensor) {
     int d = me->distancePassStopSensorToStop - (int)me->distanceFromLastSensor;
 
-    if ((CC++ & 15) == 0) {
+    if ((me->CC++ & 15) == 0) {
       PrintDebug(me->ui, "Navi Nagger. %d", d);
     }
     if (d < 0) {
@@ -219,7 +214,7 @@ static void updateStopNode(Driver* me, int speed) {
   //PrintDebug(me->ui, "calc stopping distance.");
 
   const int stoppingDistance =
-    interpolateStoppingDistance(me, moi->v[speed][me->speedDir]);
+    interpolateStoppingDistance(me, me->v[speed][me->speedDir]);
   int stop = stoppingDistance;
   // Find the stopping distance for the stopNode.
   // S------L------L---|-----L---------R------F
@@ -327,7 +322,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     }
     else if (me->speed == 0) {
       // accelerating from 0
-      int v0 = getVelocity(me->speed, me->speedDir);
+      int v0 = getVelocity(me, me->speed, me->speedDir);
       int v1 = me->v[newSpeed][ACCELERATE];
       int t0 = now + 8; // compensate for time it takes to send to train
       int t1 = now + 8 + me->a[newSpeed];
@@ -337,7 +332,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
       me->adEndTime = t1;
     } else if (newSpeed == 0) {
       // decelerating to 0
-      int v0 = getVelocity(me->speed, me->speedDir);
+      int v0 = getVelocity(me, me->speed, me->speedDir);
       int v1 = me->v[newSpeed][DECELERATE];
       int t0 = now + 8; // compensate for time it takes to send to train
       int t1 = now + 8 + getStoppingTime(me);
@@ -357,7 +352,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
       msg[1] = (char)me->trainNum;
       msg[2] = (char)speed;
       msg[3] = (char)me->trainNum;
-      Putstr(com1, msg, 4);
+      Putstr(me->com1, msg, 4);
 
       // Update prediction
       int action = me->nextSensorVal%2 == 1 ? 1 : -1;
@@ -385,7 +380,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     } else {
       PrintDebug(me->ui, "Set speed. %d %d\n", speed, me->trainNum);
       msg[0] = (char)speed;
-      Putstr(com1, msg, 2);
+      Putstr(me->com1, msg, 2);
     }
     if (speed > me->speed) {
       me->speedDir = ACCELERATE;
@@ -406,7 +401,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     msg[0] = 0;
     msg[1] = (char)me->trainNum;
 
-    Putstr(com1, msg, 2);
+    Putstr(me->com1, msg, 2);
     me->speed = 0;
     me->speedDir = DECELERATE;
   }
@@ -475,13 +470,11 @@ static void trainNavigateNagger() {
   }
 }
 
-static void initDriver(Driver* me) {
-  moi = me;
-
+static void jnitDriver(Driver* me) {
   char uiName[] = UI_TASK_NAME;
   me->ui = WhoIs(uiName);
-  ui = me->ui;
   me->justReversed = 0;
+  me->CC = 0;
 
   char trackName[] = TRACK_NAME;
   me->trackManager = WhoIs(trackName);
@@ -499,6 +492,7 @@ static void initDriver(Driver* me) {
   Reply(controller, (char*)1, 0);
   me->trainNum = init.trainNum;
   me->uiMsg.nth = init.nth;
+  me->com1 = init.com1;
   me->uiMsg.type = UPDATE_TRAIN;
 
   me->speed = 0;
@@ -538,7 +532,7 @@ static void updatePosition(Driver* me, int time){
       me->lastReportDist = dist;
     } else {
       // In mm
-      dPosition = (time - me->lastPosUpdateTime) * getVelocity(me->speed, me->speedDir) / 100000.0;
+      dPosition = (time - me->lastPosUpdateTime) * getVelocity(me, me->speed, me->speedDir) / 100000.0;
     }
     me->lastPosUpdateTime = time;
     me->distanceFromLastSensor += dPosition;
@@ -546,7 +540,7 @@ static void updatePosition(Driver* me, int time){
   }
 }
 
-static void driver() {
+void driver() {
   Driver me;
   initDriver(&me);
 
@@ -621,7 +615,7 @@ static void driver() {
               (char*)&tMsg, sizeof(TrackNextSensorMsg));
         me.calibrationStart = msg.timestamp;
         me.calibrationDistance = tMsg.dist;
-        int dPos = 50 * getVelocity(me.speed, me.speedDir) / 100000.0;
+        int dPos = 50 * getVelocity(&me, me.speed, me.speedDir) / 100000.0;
         me.lastSensorDistanceError =  -(int)me.distanceToNextSensor - dPos;
         me.distanceFromLastSensor = dPos;
         me.distanceToNextSensor = tMsg.dist - dPos;
@@ -630,7 +624,7 @@ static void driver() {
         me.nextSensorVal = tMsg.sensor.num2;
         me.nextSensorPredictedTime =
           msg.timestamp + me.distanceToNextSensor*100000 /
-          getVelocity(me.speed, me.speedDir);
+          getVelocity(&me, me.speed, me.speedDir);
 
         updatePosition(&me, msg.timestamp);
         sendUiReport(&me);
@@ -707,58 +701,4 @@ static void driver() {
       }
     }
   }
-}
-
-// An admin that pass message to train.
-// Additionally create train if it does not exist.
-static void trainController() {
-  char trainName[] = TRAIN_CONTROLLER_NAME;
-  RegisterAs(trainName);
-
-  char com1Name[] = IOSERVERCOM1_NAME;
-  com1 = WhoIs(com1Name);
-
-  int nth = 0;
-  int trainTid[80]; // Train num -> train tid
-  for (int i = 0; i < 80; i++) {
-    trainTid[i] = -1;
-  }
-
-  for (;;) {
-    int tid = -1;
-    DriverMsg msg;
-    msg.trainNum = -1;
-    msg.data2 = -1;
-    msg.data3 = -1;
-    Receive(&tid, (char*)&msg, sizeof(DriverMsg));
-
-    if (msg.trainNum == 255) {
-      // Broadcast, can't receive replies
-      Reply(tid, (char*)1, 0);
-      for (int i = 0; i < 80; i++) {
-        if (trainTid[i] != -1) {
-          Send(trainTid[i], (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
-        }
-      }
-    } else {
-      if (trainTid[(int)msg.trainNum] == -1) {
-        DriverInitMsg init;
-        init.nth = nth;
-        init.trainNum = (int)msg.trainNum;
-        // Create train task
-        trainTid[(int)msg.trainNum] = Create(4, driver);
-        Send(trainTid[(int)msg.trainNum],
-            (char*)&init, sizeof(DriverInitMsg), (char*)1, 0);
-        nth++;
-      }
-
-      msg.replyTid = (char)tid;
-      // Pass the message on.
-      Send(trainTid[(int)msg.trainNum], (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
-    }
-  }
-}
-
-int startDriverControllerTask() {
-  return Create(5, trainController);
 }
