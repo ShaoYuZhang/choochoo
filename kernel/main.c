@@ -15,6 +15,7 @@
 int CALIBRATION;
 
 void test_track() {
+#if 0
   char trainControllerName[] = TRAIN_CONTROLLER_NAME;
   int trainController = WhoIs(trainControllerName);
   // Testing track
@@ -23,7 +24,6 @@ void test_track() {
   char uiName[] = UI_TASK_NAME;
   int uiServer = WhoIs(uiName);
 
-#if 0
   DriverMsg msg;
   msg.trainNum = 44;
   msg.type = SET_ROUTE;
@@ -101,8 +101,9 @@ void task1() {
   startCommandDecoderTask();
 
   Delay(700, time);
-  Create(20, test_track);
+  //Create(20, test_track);
 
+#if 0
   // Testing
   TrackMsg msg;
   msg.type = SET_TRACK;
@@ -125,6 +126,7 @@ void task1() {
   drive.pos = pos;
 
   //Send(trainController, (char *)&drive, sizeof(DriverMsg), (char *)NULL, 0);
+#endif
 
   Exit();
 }
