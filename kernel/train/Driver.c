@@ -470,7 +470,7 @@ static void trainNavigateNagger() {
   }
 }
 
-static void jnitDriver(Driver* me) {
+static void initDriver(Driver* me) {
   char uiName[] = UI_TASK_NAME;
   me->ui = WhoIs(uiName);
   me->justReversed = 0;
@@ -642,6 +642,7 @@ void driver() {
         break;
       }
       case NAVIGATE_NAGGER: {
+        PrintDebug(me.ui, "Navi reversing. %d", msg.timestamp);
         updatePosition(&me, msg.timestamp);
         if (me.routeRemaining != -1) {
           if (!me.stopCommited) {

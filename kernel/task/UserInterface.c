@@ -63,7 +63,7 @@ static char* setColor(int color, char* msg) {
   return msg;
 }
 
-static char* moveTo(char row, char col, char* msg) {
+static char* moveTo(char row, int col, char* msg) {
   // Move to position
   *msg++ = ESC;
   *msg++ = '[';
@@ -72,6 +72,10 @@ static char* moveTo(char row, char col, char* msg) {
   }
   *msg++ = '0' + row%10; // line
   *msg++ = ';';
+  if (col > 99) {
+    *msg++ = '0' + col/100; // co
+    col /= 10;
+  }
   if (col > 9) {
     *msg++ = '0' + col/10; // co
   }
@@ -135,20 +139,21 @@ static char* timeu(unsigned int ms, char* msg) {
 static char* updateTrain(TrainUiMsg* train, char* msg) {
   msg = saveCursor(msg);
 
+  int col = 26+(int)(train->nth)*10;
   int row = 2;
   // TRAIN NUMBER
-  msg = moveTo(row++, 26, msg);
+  msg = moveTo(row++, col, msg);
   *msg++ = '0' + train->nth;
   row++;
 
   // ---------------------------------
   // PAST INFORMATION
-  msg = moveTo(row++, 26, msg);
+  msg = moveTo(row++, col, msg);
   if (train->lastSensorUnexpected) msg = setColor(31, msg);
   *msg++ = 'A' + train->lastSensorBox;
   msg = formatInt(train->lastSensorVal, 2, msg);
 
-  msg = moveTo(row++, 26, msg);
+  msg = moveTo(row++, col, msg);
   msg = timeu(train->lastSensorActualTime, msg);
   if (train->lastSensorUnexpected) msg = resetColor(msg);
 
@@ -156,7 +161,7 @@ static char* updateTrain(TrainUiMsg* train, char* msg) {
 
   // ---------------------------------
   // PRESENT INFORMATION
-  msg = moveTo(row++, 26, msg);
+  msg = moveTo(row++, col, msg);
   msg = formatInt(train->speed, 2, msg);
 
   if (train->speedDir == ACCELERATE) {
@@ -165,18 +170,18 @@ static char* updateTrain(TrainUiMsg* train, char* msg) {
     *msg++ = '-'; *msg++ = '-';
   }
 
-  msg = moveTo(row++, 26, msg);
+  msg = moveTo(row++, col, msg);
   msg = formatInt(train->velocity, 3, msg);
 
-  msg = moveTo(row++, 26, msg);
+  msg = moveTo(row++, col, msg);
   msg = formatInt(train->distanceFromLastSensor, 6, msg);
-  msg = moveTo(row++, 26, msg);
+  msg = moveTo(row++, col, msg);
   msg = formatInt(train->distanceToNextSensor, 6, msg);
   row++;
 
   // ---------------------------------
   // FUTURE INFORMATION
-  msg = moveTo(row++, 26, msg);
+  msg = moveTo(row++, col, msg);
   *msg++ = 'A' + train->nextSensorBox;
   msg = formatInt(train->nextSensorVal, 2, msg);
 
@@ -184,7 +189,7 @@ static char* updateTrain(TrainUiMsg* train, char* msg) {
 
   // ---------------------------------
   // ERROR INFORMATION
-  msg = moveTo(row++, 26, msg);
+  msg = moveTo(row++, col, msg);
   msg = setColor(31, msg);
   msg = formatInt(train->lastSensorDistanceError, 6, msg);
   msg = resetColor(msg);
@@ -217,10 +222,9 @@ static char* promptChar(char col, char c, char* msg) {
     *msg++ = 'D';
   }
   else if (c == RETURN) {
-    // Clear line
-    *msg++ = ESC;
-    *msg++ = '[';
-    *msg++ = 'K';
+    for (int i = 0; i < 48; i++){
+      *msg++ = ' ';
+    }
   }
   else {
     *msg++ = c;
@@ -236,28 +240,39 @@ static char* pad2(int n, char* msg){
   return msg;
 }
 
+static char* clearDebugMsg(char* msg){
+  for (int i = 0; i < 25; i++){
+    *msg++ = ' ';
+  }
+  return msg;
+}
+
 static int debugUpdateNum;
 static char* updateDebugMessage(char* receive, char* msg, int len) {
+  int debugCol = (debugUpdateNum/50) % 3;
+  // Actual position
+  const int debugUpdateCol = 50 + 30 * debugCol;
+  const int updateRow = debugUpdateNum%50 + 1;
+
   msg = saveCursor(msg);
   if (receive[0] == 'f' && receive[1] == 'f' && receive[2] == 'f' && receive[3] == 'f') {
     for (int i = 2; i < 52; i++) {
-      msg = moveTo(i, 40, msg);
-      *msg++ = ESC;
-      *msg++ = '[';
-      *msg++ = 'K';
+      msg = moveTo(i, debugUpdateCol, msg);
+      msg = clearDebugMsg(msg);
     }
     return msg;
   }
 
-  int updateRow = debugUpdateNum%50 + 1;
   // move to position
-  msg = moveTo(updateRow, 40, msg);
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = 'K';
+  msg = moveTo(updateRow, debugUpdateCol, msg);
 
-  for (int i = 0; i < len; i++) {
+  int i;
+  for (i = 0; i < len; i++) {
     *msg++ = receive[i];
+  }
+
+  for (; i < 30; i++) {
+    *msg++ = ' ';
   }
 
   msg = restoreCursor(msg);
@@ -322,10 +337,10 @@ static char* updateSensor(int box, int val, char* msg) {
   // move to position
   if (numUpdated == 0) {
     msg = moveTo(26, 10, msg);
-    // Clear line
-    *msg++ = ESC;
-    *msg++ = '[';
-    *msg++ = 'K';
+    for (int i = 0; i < 40; i++) {
+      *msg++ = ' ';
+    }
+    msg = moveTo(26, 10, msg);
   } else {
     msg = moveTo(26, 10 + numUpdated*5, msg);
   }
@@ -368,13 +383,15 @@ static char* drawTrainFrameHelper(
       *msg++ = text1[i];
     }
   }
-  *msg++ = center;
-  for (int i = 0; i < 9; i++){
-    if (text2 == NULL) {
-      *msg++ = ' ';
-    }
-    else {
-      *msg++ = text2[i];
+  for(int j = 0; j < 2; j++){
+    *msg++ = center;
+    for (int i = 0; i < 9; i++){
+      if (text2 == NULL) {
+        *msg++ = ' ';
+      }
+      else {
+        *msg++ = text2[i];
+      }
     }
   }
   *msg++ = rightCorner;
