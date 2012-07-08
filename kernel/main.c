@@ -100,23 +100,23 @@ void task1() {
   int trackController = startTrackManagerTask();
   startCommandDecoderTask();
 
-  Delay(700, time);
+  Delay(600, time);
   //Create(20, test_track);
 
-#if 0
+#if 1
   // Testing
   TrackMsg msg;
   msg.type = SET_TRACK;
   msg.data = 'b';
-  //Send(trackController, (char *)&msg, sizeof(TrackMsg), (char *)1, 0);
+  Send(trackController, (char *)&msg, sizeof(TrackMsg), (char *)1, 0);
 
   Position pos;
   pos.landmark1.type = LANDMARK_SENSOR;
   pos.landmark1.num1 = 0;
-  pos.landmark1.num2 = 4;
-  pos.landmark2.type = LANDMARK_SENSOR;
-  pos.landmark2.num1 = 1;
-  pos.landmark2.num2 = 16;
+  pos.landmark1.num2 = 2; //4;
+  pos.landmark2.type = LANDMARK_END; //LANDMARK_SENSOR;
+  pos.landmark2.num1 = EX; //1;
+  pos.landmark2.num2 = 5; // 16;
   pos.offset = 100;
 
   DriverMsg drive;
@@ -125,7 +125,7 @@ void task1() {
   drive.data2 = 8; // speed
   drive.pos = pos;
 
-  //Send(trainController, (char *)&drive, sizeof(DriverMsg), (char *)NULL, 0);
+  Send(trainController, (char *)&drive, sizeof(DriverMsg), (char *)NULL, 0);
 #endif
 
   Exit();

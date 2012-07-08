@@ -1,6 +1,8 @@
 #ifndef USER_INTERFACE_H_
 #define USER_INTERFACE_H_
 
+#include <Track.h>
+
 #define UI_TASK_NAME "UI_TASK_NA\0"
 #define PROMPT_CHAR  2
 #define UPDATE_SENSOR 3
@@ -38,6 +40,8 @@ typedef struct TrainUiMsg {
   int nextSensorPredictedTime;
 
   int lastSensorDistanceError;
+
+  Position destination;
 } TrainUiMsg;
 
 int startUserInterfaceTask();

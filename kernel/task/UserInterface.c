@@ -72,9 +72,10 @@ static char* moveTo(char row, int col, char* msg) {
   }
   *msg++ = '0' + row%10; // line
   *msg++ = ';';
+
   if (col > 99) {
-    *msg++ = '0' + col/100; // co
-    col /= 10;
+    *msg++ = '0' + col/100;
+    col %= 100;
   }
   if (col > 9) {
     *msg++ = '0' + col/10; // co
@@ -205,6 +206,7 @@ static char* promptChar(char col, char c, char* msg) {
   *msg++ = ';';
   if (col / 100 != 0) {
     *msg++ = '1'; // Assume dont have greater than 100.
+    col %= 100;
   }
   if (col / 10 != 0) {
     *msg++ = '0' + col/10;
@@ -222,9 +224,24 @@ static char* promptChar(char col, char c, char* msg) {
     *msg++ = 'D';
   }
   else if (c == RETURN) {
+    *msg++ = ESC;
+    *msg++ = '[';
+    *msg++ = PROMPT_R1;
+    *msg++ = PROMPT_R2;
+    *msg++ = ';';
+    *msg++ = '2';
+    *msg++ = 'f';
+
     for (int i = 0; i < 48; i++){
       *msg++ = ' ';
     }
+    *msg++ = ESC;
+    *msg++ = '[';
+    *msg++ = PROMPT_R1;
+    *msg++ = PROMPT_R2;
+    *msg++ = ';';
+    *msg++ = '2';
+    *msg++ = 'f';
   }
   else {
     *msg++ = c;
@@ -240,44 +257,25 @@ static char* pad2(int n, char* msg){
   return msg;
 }
 
-static char* clearDebugMsg(char* msg){
-  for (int i = 0; i < 25; i++){
-    *msg++ = ' ';
-  }
-  return msg;
-}
-
 static int debugUpdateNum;
 static char* updateDebugMessage(char* receive, char* msg, int len) {
+  msg = saveCursor(msg);
+
   int debugCol = (debugUpdateNum/50) % 3;
   // Actual position
   const int debugUpdateCol = 50 + 30 * debugCol;
   const int updateRow = debugUpdateNum%50 + 1;
 
-  msg = saveCursor(msg);
-  if (receive[0] == 'f' && receive[1] == 'f' && receive[2] == 'f' && receive[3] == 'f') {
-    for (int i = 2; i < 52; i++) {
-      msg = moveTo(i, debugUpdateCol, msg);
-      msg = clearDebugMsg(msg);
-    }
-    return msg;
-  }
-
-  // move to position
   msg = moveTo(updateRow, debugUpdateCol, msg);
 
-  int i;
-  for (i = 0; i < len; i++) {
-    *msg++ = receive[i];
+  // Write this line
+  for (int i = 0; i < 30; i++) {
+    *msg++ = (i < len) ? receive[i] : ' ';
   }
-
-  for (; i < 30; i++) {
-    *msg++ = ' ';
-  }
-
-  msg = restoreCursor(msg);
 
   debugUpdateNum += 1;
+
+  msg = restoreCursor(msg);
   return msg;
 }
 
@@ -512,7 +510,7 @@ static char* updateSwitch(int sw, int ss, char* msg) {
 
   *msg++ = ESC;
   *msg++ = '[';
-  if (sw >= 10) {
+  if (sw > 9) {
     *msg++ = '0' + sw/10;
   }
   *msg++ = '0' + sw%10;
@@ -653,12 +651,10 @@ static void userInterface() {
         break;
       }
       case UPDATE_SENSOR: {
-        //printff(com2, "\nUpdate sensor %d %d\n", msg->data1, msg->data2);
         com2msg = updateSensor(msg->data1 /*box*/, msg->data2 /*val*/, com2msg);
         break;
       }
       case UPDATE_SWITCH: {
-        //printff(com2, "\nUpdate switch %d %d\n", msg->data1, msg->data2);
         com2msg = updateSwitch(msg->data1 /*switch*/, msg->data2 /*state*/, com2msg);
         break;
       }

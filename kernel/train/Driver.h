@@ -6,13 +6,17 @@
 
 typedef struct Driver {
   int trainNum;
+  int CC;
+
+  // Task Id
   int delayer;
-  int ui;        // Ui Tid
-  int com1;        // Ui Tid
+  int ui;
+  int com1;
   int sensorWatcher;
   int trackManager;
   int navigateNagger;
   int timeserver;
+
   int lastPosUpdateTime;
   int calibrationStart;
   int calibrationDistance;
@@ -39,7 +43,7 @@ typedef struct Driver {
   int speedDir;
   float distanceFromLastSensor;
   float distanceToNextSensor;
-  char justReversed;
+  char invalidLastSensor;
 
   char nextSensorBox;
   char nextSensorVal;
@@ -52,7 +56,6 @@ typedef struct Driver {
   float lastReportDist;
   int adEndTime;
   Poly adPoly;
-  int CC;
 
   int v[15][2];
   int d[15][2][2];
