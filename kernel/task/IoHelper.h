@@ -16,5 +16,7 @@ int sprintff( char *str, char *fmt, ... );
 char a2i( char ch, char **src, int base, int *nump );
 
 int strgetui(char **c);
+int a2d( char ch );
+
 
 #endif // IOHELPER_H_

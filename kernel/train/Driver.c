@@ -14,6 +14,9 @@
 
 static void trainSetSpeed(const int speed, const int stopTime, const int delayer, Driver* me);
 static void printLandmark(Driver* me, TrackLandmark* l);
+static void trainDelayer();
+static void trainSensor();
+static void trainNavigateNagger();
 
 static int interpolateStoppingDistance(Driver* me, int velocity) {
   int speed = 14;
@@ -45,7 +48,7 @@ static int getStoppingDistance(Driver* me) {
 
 // mm/s
 static int getVelocity(Driver* me, int speed, int dir){
-//  return me->v[speed][dir];
+  return me->v[speed][dir];
   if (me->isAding) {
     int now = Time(me->timeserver) * 10;
     return eval_velo(&(me->adPoly), now);
@@ -60,10 +63,10 @@ static int getStoppingTime(Driver* me) {
 }
 
 static void toPosition(Driver* me, Position* pos) {
-  pos->landmark1.type = LANDMARK_SENSOR;
+  pos->landmark1.type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
   pos->landmark1.num1 = me->lastSensorBox;
   pos->landmark1.num2 = me->lastSensorVal;
-  pos->landmark2.type = LANDMARK_SENSOR;
+  pos->landmark2.type = me->nextSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
   pos->landmark2.num1 = me->nextSensorBox;
   pos->landmark2.num2 = me->nextSensorVal;
   pos->offset = (int)me->distanceFromLastSensor;
@@ -71,28 +74,32 @@ static void toPosition(Driver* me, Position* pos) {
 
 static void sendUiReport(Driver* me) {
   me->uiMsg.velocity = getVelocity(me, me->speed, me->speedDir) / 100;
-  if (!me->invalidLastSensor){
-    me->uiMsg.lastSensorUnexpected = me->lastSensorUnexpected;
+  //if (!me->invalidLastSensor){
+    me->uiMsg.lastSensorUnexpected     = me->lastSensorUnexpected;
     me->uiMsg.lastSensorBox            = me->lastSensorBox;
     me->uiMsg.lastSensorVal            = me->lastSensorVal;
     me->uiMsg.lastSensorActualTime     = me->lastSensorActualTime;
     me->uiMsg.lastSensorPredictedTime  = me->lastSensorPredictedTime;
-  } else {
-    me->uiMsg.lastSensorUnexpected     = 0;
-    me->uiMsg.lastSensorBox            = 0;
-    me->uiMsg.lastSensorVal            = 0;
-    me->uiMsg.lastSensorActualTime     = 0;
-    me->uiMsg.lastSensorPredictedTime  = 0;
-  }
+    me->uiMsg.lastSensorIsTerminal     = me->lastSensorIsTerminal;
+  //} else {
+  //  me->uiMsg.lastSensorUnexpected     = 0;
+  //  me->uiMsg.lastSensorBox            = 0;
+  //  me->uiMsg.lastSensorVal            = 0;
+  //  me->uiMsg.lastSensorActualTime     = 0;
+  //  me->uiMsg.lastSensorPredictedTime  = 0;
+  //  me->uiMsg.lastSensorIsTerminal     = 0;
+  //}
 
   me->uiMsg.speed                    = me->speed;      // 0 - 14
   me->uiMsg.speedDir                 = me->speedDir;
   me->uiMsg.distanceFromLastSensor   = (int)me->distanceFromLastSensor;
   me->uiMsg.distanceToNextSensor     = (int)me->distanceToNextSensor;
+  TrainDebug(me, "%d %d", me->uiMsg.distanceFromLastSensor, me->uiMsg.distanceToNextSensor);
 
   me->uiMsg.nextSensorBox            = me->nextSensorBox;
   me->uiMsg.nextSensorVal            = me->nextSensorVal;
   me->uiMsg.nextSensorPredictedTime  = me->nextSensorPredictedTime;
+  me->uiMsg.nextSensorIsTerminal     = me->nextSensorIsTerminal;
 
   me->uiMsg.lastSensorDistanceError  = me->lastSensorDistanceError;
 
@@ -109,11 +116,24 @@ static void updatePredication(Driver* me) {
         (char*)&tMsg, sizeof(TrackNextSensorMsg));
 
   me->distanceToNextSensor = tMsg.dist;
-  me->nextSensorBox = tMsg.sensor.num1;
-  me->nextSensorVal = tMsg.sensor.num2;
-  me->nextSensorPredictedTime =
-    now + me->distanceToNextSensor*100000 /
-    getVelocity(me, me->speed, me->speedDir) - 50; // 50 ms delay for sensor query.
+  if (tMsg.sensor.type != LANDMARK_SENSOR &&
+      tMsg.sensor.type != LANDMARK_END) {
+    TrainDebug(me, "QUERY_NEXT_SENSOR_FROM_SENSOR ..bad");
+  }
+  me->nextSensorIsTerminal = (tMsg.sensor.type == LANDMARK_END);
+
+  if (tMsg.sensor.num2 != 0) {
+    me->nextSensorBox = tMsg.sensor.num1;
+    me->nextSensorVal = tMsg.sensor.num2;
+    me->nextSensorPredictedTime =
+      now + me->distanceToNextSensor*100000 /
+      getVelocity(me, me->speed, me->speedDir) - 50; // 50 ms delay for sensor query.
+  } else {
+    TrainDebug(me, "No prediction.. has position");
+    printLandmark(me, &qMsg.position1.landmark1);
+    printLandmark(me, &qMsg.position1.landmark2);
+    TrainDebug(me, "Offset %d", qMsg.position1.offset);
+  }
   sendUiReport(me);
 }
 
@@ -135,6 +155,7 @@ static void getRoute(Driver* me, DriverMsg* msg) {
   TrainDebug(me, "Distance %d", me->route.dist);
   TrainDebug(me, "Num Node %d", me->route.length);
 
+  TrainDebug(me, "<Route>");
   for (int i = 0; i < me->route.length; i++) {
     RouteNode node = me->route.nodes[i];
     if (node.num == -1) {
@@ -158,6 +179,7 @@ static void getRoute(Driver* me, DriverMsg* msg) {
       }
     }
   }
+  TrainDebug(me, "</Route>");
 }
 
 static int shouldStopNow(Driver* me) {
@@ -173,7 +195,8 @@ static int shouldStopNow(Driver* me) {
   if (canUseLastSensor) {
     int d = me->distancePassStopSensorToStop - (int)me->distanceFromLastSensor;
 
-    if ((me->CC++ & 15) == 0) {
+    me->CC &= 15;
+    if (me->CC++ == 0) {
       TrainDebug(me, "Navi Nagger. %d", d);
     }
     if (d < 0) {
@@ -195,10 +218,10 @@ static void updateStopNode(Driver* me, int speed) {
   // Find the first reverse on the path, stop if possible.
   me->stopNode = me->route.length-1;
   const int stoppingDistance =
-    interpolateStoppingDistance(me, me->v[speed][me->speedDir]);
+    interpolateStoppingDistance(me,
+        me->v[speed][me->speedDir]);
+        //getVelocity(me, speed, me->speedDir));
   int stop = stoppingDistance;
-  TrainDebug(me, "Update stop. %d %dmm %d %d",
-      me->stopNode, stoppingDistance, speed, me->speedDir);
   for (int i = me->routeRemaining; i < me->route.length-1; i++) {
     if (me->route.nodes[i].num == REVERSE) {
       me->stopNode = i;
@@ -215,6 +238,8 @@ static void updateStopNode(Driver* me, int speed) {
       Send(me->trackManager, (char*)&setSwitch, sizeof(TrackMsg), (char*)NULL, 0);
     }
   }
+  TrainDebug(me, "UpdateStop. Node:%d %dmm Spd:%d Dir:%d",
+      me->stopNode, stoppingDistance, speed, me->speedDir);
 
   // Find the stopping distance for the stopNode.
   // S------L------L---|-----L---------R------F
@@ -261,9 +286,9 @@ static void updateStopNode(Driver* me, int speed) {
       //       |__|
       //          |______ previous stop
       me->distancePassStopSensorToStop = previousStop;
-      TrainDebug(me, "Stop Sensor %d %d",
-          me->stopSensorBox, me->stopSensorVal);
-      TrainDebug(me, "Previous Distance %d", previousStop);
+      TrainDebug(me, "Stop Sensor %c%d",
+          'A'+me->stopSensorBox, me->stopSensorVal);
+      TrainDebug(me, "Stop %dmm after sensor", previousStop);
       break;
     }
   }
@@ -273,14 +298,20 @@ static void updateStopNode(Driver* me, int speed) {
           me->routeRemaining);
       trainSetSpeed(0, 0, 0, me);
   }
+
+  TrainDebug(me, "Finish update stop %d %d %d", me->stopNode,
+  (me->stopNode == (me->route.length-1)), (me->route.nodes[me->stopNode].num == REVERSE));
+  int stopAfterReverse =
+      ((me->stopNode == (me->route.length-2)) &&
+       (me->route.nodes[me->stopNode].num == REVERSE));
+  me->speedAfterReverse = stopAfterReverse ? 0 : -1;
 }
 
 // Update route traveled as sensors are hit.
 static void updateRoute(Driver* me, char box, char val) {
   if (me->routeRemaining == -1) return;
 
-  // See if we triggered
-  //TrainDebug(me, "Update round: %d to %d!!", me->routeRemaining, me->stopNode);
+  // See if we triggered a sensor on the route.
   for (int i = me->routeRemaining; i < me->stopNode; i++) {
     if (me->route.nodes[i].landmark.type == LANDMARK_SENSOR &&
         me->route.nodes[i].landmark.num1 == box &&
@@ -343,23 +374,33 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     }
   //}
 
-  TrainDebug(me, "Train Setting Speed");
+  TrainDebug(me, "Train Setting Speed %d", speed);
 
   if (speed >= 0) {
     if (delayer) {
-      //TrainDebug(me, "Reversing speed. cuz its worker %d", speed);
+      TrainDebug(me, "Reversing speed.------- %d", speed);
       msg[0] = 0xf;
       msg[1] = (char)me->trainNum;
       msg[2] = (char)speed;
       msg[3] = (char)me->trainNum;
       Putstr(me->com1, msg, 4);
 
+      TrainDebug(me, "Next Sensor: %d %d", me->nextSensorIsTerminal, me->lastSensorIsTerminal);
       // Update prediction
-      int action = me->nextSensorVal%2 == 1 ? 1 : -1;
-      me->nextSensorVal = me->nextSensorVal + action;
+      if (me->nextSensorIsTerminal) {
+        me->nextSensorBox = me->nextSensorBox == EX ? EN : EX;
 
-      action = me->lastSensorVal%2 == 1 ? 1 : -1;
-      me->lastSensorVal = me->lastSensorVal + action;
+        TrainDebug(me, "LAst Sensor: %d ", me->lastSensorVal);
+      } else {
+        int action = me->nextSensorVal%2 == 1 ? 1 : -1;
+        me->nextSensorVal = me->nextSensorVal + action;
+      }
+      if (me->lastSensorIsTerminal) {
+        me->lastSensorBox = me->lastSensorBox == EX ? EN : EX;
+      } else {
+        int action = me->lastSensorVal%2 == 1 ? 1 : -1;
+        me->lastSensorVal = me->lastSensorVal + action;
+      }
 
       float distTemp = me->distanceFromLastSensor;
       me->distanceFromLastSensor = me->distanceToNextSensor;
@@ -372,6 +413,12 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
       char boxTemp = me->nextSensorBox;
       me->nextSensorBox = me->lastSensorBox;
       me->lastSensorBox = boxTemp;
+
+      if (me->nextSensorIsTerminal || me->lastSensorIsTerminal){
+        char isTemp = me->nextSensorIsTerminal;
+        me->nextSensorIsTerminal = me->lastSensorIsTerminal;
+        me->lastSensorIsTerminal = isTemp;
+      }
 
       // Just reversed so last sensor isn't valid
       me->invalidLastSensor = 1;
@@ -394,8 +441,12 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     DriverMsg delayMsg;
     delayMsg.type = SET_SPEED;
     delayMsg.timestamp = stopTime;
-    delayMsg.data2 = (signed char)me->speed;
-    //TrainDebug(me, "Using delayer: %d for %d", me->delayer, stopTime);
+    if (me->speedAfterReverse == -1) {
+      delayMsg.data2 = (signed char)me->speed;
+    } else {
+      delayMsg.data2 = (signed char)me->speedAfterReverse;
+    }
+    TrainDebug(me, "Using delayer: %d for %d", me->delayer, stopTime);
 
     Reply(me->delayer, (char*)&delayMsg, sizeof(DriverMsg));
 
@@ -408,73 +459,12 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
   }
 }
 
-// It is SensorQuery's responsibility to return whether SensorServer's
-// response is relevant to this Train.
-//
-// If the message from server is not for this train. It is dropped.
-static void trainSensor() {
-  int parent = MyParentsTid();
-  char sensorName[] = SENSOR_NAME;
-  int sensorServer = WhoIs(sensorName);
-
-  DriverMsg msg;
-  msg.type = SENSOR_TRIGGER;
-
-  SensorMsg sensorMsg;
-  sensorMsg.type = QUERY_RECENT;
-  Send(sensorServer, (char*)&sensorMsg, sizeof(SensorMsg),
-      (char*)1, 0);
-  for (;;) {
-    Sensor sensor;
-    int tid;
-    Receive(&tid, (char *)&sensor, sizeof(Sensor));
-    Reply(tid, (char *)1, 0);
-
-    msg.data2 = sensor.box;
-    msg.data3 = sensor.val;
-    msg.timestamp = sensor.time * 10; // MS per tick
-
-    // TODO:zhang confirm with prediction for multi-train setup.
-    //  so that irrelevant triggers can be dropped.
-    Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
-  }
-}
-
-// Responsider for delag msg server about positive train speed
-static void trainDelayer() {
-  char timename[] = TIMESERVER_NAME;
-  int timeserver = WhoIs(timename);
-  int parent = MyParentsTid();
-
-  DriverMsg msg;
-  msg.type = DELAYER;
-  for (;;) {
-    Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)&msg, sizeof(DriverMsg));
-    int numTick = msg.timestamp / 10;
-    Delay(numTick, timeserver);
-    msg.data3 = DELAYER;
-  }
-}
-
-static void trainNavigateNagger() {
-  char timename[] = TIMESERVER_NAME;
-  int timeserver = WhoIs(timename);
-  int parent = MyParentsTid();
-
-  DriverMsg msg;
-  msg.type = NAVIGATE_NAGGER;
-  for (;;) {
-    Delay(2, timeserver); // .15 seconds
-    msg.timestamp = Time(timeserver) * 10;
-    Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
-  }
-}
-
 static void initDriver(Driver* me) {
   char uiName[] = UI_TASK_NAME;
   me->ui = WhoIs(uiName);
   me->invalidLastSensor = 0;
   me->CC = 0;
+  me->speedAfterReverse = -1;
 
   char trackName[] = TRACK_NAME;
   me->trackManager = WhoIs(trackName);
@@ -482,6 +472,8 @@ static void initDriver(Driver* me) {
   me->stopCommited = 0; // haven't enabled speed zero yet.
   me->useLastSensorNow = 0;
   me->stopSensorHit = 0;
+  me->nextSensorIsTerminal = 0;
+  me->lastSensorIsTerminal = 0;
 
   char timename[] = TIMESERVER_NAME;
   me->timeserver = WhoIs(timename);
@@ -530,6 +522,7 @@ static void updatePosition(Driver* me, int time){
         dPosition = 0;
       }
       me->lastReportDist = dist;
+
     } else {
       // In mm
       dPosition = (time - me->lastPosUpdateTime) * getVelocity(me, me->speed, me->speedDir) / 100000.0;
@@ -537,6 +530,18 @@ static void updatePosition(Driver* me, int time){
     me->lastPosUpdateTime = time;
     me->distanceFromLastSensor += dPosition;
     me->distanceToNextSensor -= dPosition;
+
+    //haha &= 15;
+    //if (haha++ == 0 && 0) {
+    //  if (me->isAding && time > me->adPoly.t0) {
+    //    TrainDebug(me, "AD UpdatePos: %d %d",
+    //        (int)me->distanceToNextSensor, (int)me->distanceToNextSensor);
+    //  }
+    //  else {
+    //    TrainDebug(me, "VE UpdatePos: %d %d",
+    //        (int)me->distanceToNextSensor, (int)me->distanceToNextSensor);
+    //  }
+    //}
   }
 }
 
@@ -583,7 +588,8 @@ void driver() {
           me.routeRemaining = me.stopNode+1;
           // Calculate the next stop node.
           updateStopNode(&me, msg.data2);
-          // Update
+          // if the reverse is last node, nothing to do
+          // if it isn't.. it should speed up again.
         }
       }
       case DELAYER: {
@@ -592,6 +598,7 @@ void driver() {
       }
       case SENSOR_TRIGGER: {
         me.invalidLastSensor = 0;
+        me.lastSensorIsTerminal = 0;
         if (msg.data2 != me.nextSensorBox || msg.data3 != me.nextSensorVal) {
           me.lastSensorUnexpected = 1;
           //reRoute(&me, msg.data2, msg.data3); // TODO
@@ -620,6 +627,11 @@ void driver() {
         me.distanceFromLastSensor = dPos;
         me.distanceToNextSensor = tMsg.dist - dPos;
         me.lastPosUpdateTime = msg.timestamp;
+        if (tMsg.sensor.type != LANDMARK_SENSOR &&
+            tMsg.sensor.type != LANDMARK_END) {
+          TrainDebug(&me, "QUERY_NEXT_SENSOR_FROM_SENSOR ..bad");
+        }
+        me.nextSensorIsTerminal = (tMsg.sensor.type == LANDMARK_END);
         me.nextSensorBox = tMsg.sensor.num1;
         me.nextSensorVal = tMsg.sensor.num2;
         me.nextSensorPredictedTime =
@@ -631,8 +643,15 @@ void driver() {
         if (hasTempRouteMsg) {
           getRoute(&me, &tempRouteMsg);
           if (me.route.length != 0) {
-            updateStopNode(&me, tempRouteMsg.data2);
-            trainSetSpeed(tempRouteMsg.data2, 0, 0, &me);
+
+            if (me.route.nodes[me.routeRemaining].num == REVERSE) {
+              me.stopNode = me.routeRemaining;
+              me.speedAfterReverse = tempRouteMsg.data2;
+              trainSetSpeed(-1, getStoppingTime(&me), 0, &me);
+            } else {
+              updateStopNode(&me, tempRouteMsg.data2);
+              trainSetSpeed(tempRouteMsg.data2, 0, 0, &me);
+            }
           } else {
             TrainDebug(&me, "No route found!");
             trainSetSpeed(0, 0, 0, &me);
@@ -670,13 +689,18 @@ void driver() {
         Reply(replyTid, (char*)1, 0);
         TrainDebug(&me, "Route setting!");
         me.stopCommited = 0;
-        TrainDebug(&me, "%d %d %d", msg.pos.landmark1.type, msg.pos.landmark1.num1, msg.pos.landmark1.num2);
 
         if (me.lastSensorActualTime > 0) {
           getRoute(&me, &msg);
           if (me.route.length != 0) {
-            updateStopNode(&me, msg.data2);
-            trainSetSpeed(msg.data2, 0, 0, &me);
+            if (me.route.nodes[me.routeRemaining].num == REVERSE) {
+              me.stopNode = me.routeRemaining;
+              me.speedAfterReverse = tempRouteMsg.data2;
+              trainSetSpeed(-1, getStoppingTime(&me), 0, &me);
+            } else {
+              updateStopNode(&me, tempRouteMsg.data2);
+              trainSetSpeed(tempRouteMsg.data2, 0, 0, &me);
+            }
           } else {
             TrainDebug(&me, "No route found!");
             trainSetSpeed(0, 0, 0, &me);
@@ -700,4 +724,3 @@ void driver() {
 }
 
 #include <DriverHelper.c>
-

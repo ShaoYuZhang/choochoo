@@ -1,5 +1,6 @@
 #include <CommandDecoder.h>
 #include <Driver.h>
+#include <IoHelper.h>
 #include <Track.h>
 #include <IoServer.h>
 #include <NameServer.h>
@@ -194,10 +195,14 @@ static void commandDecoder() {
         msg.data2 = decoderCurrBufferPos+1;
         Send(ui, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
       } else if (decoderCurrBufferPos < DECODER_BUFFER_SIZE) {
-        decoderBuffer[decoderCurrBufferPos] = c;
-        ++decoderCurrBufferPos;
-        msg.data2 = decoderCurrBufferPos;
-        Send(ui, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
+        if (( c >= '0' && c <= '9' ) ||
+            ( c >= 'a' && c <= 'z' ) ||
+            ( c >= 'A' && c <= 'Z' ) || c == ' ') {
+          decoderBuffer[decoderCurrBufferPos] = c;
+          ++decoderCurrBufferPos;
+          msg.data2 = decoderCurrBufferPos;
+          Send(ui, (char*)&msg, sizeof(UiMsg), (char*)1, 0);
+        }
       }
     }
   }

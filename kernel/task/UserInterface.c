@@ -156,14 +156,44 @@ static char* updateTrain(TrainUiMsg* train, char* msg) {
 
   // ---------------------------------
   // PAST INFORMATION
-  msg = moveTo(row++, col, msg);
-  if (train->lastSensorUnexpected) msg = setColor(31, msg);
-  *msg++ = 'A' + train->lastSensorBox;
-  msg = formatInt(train->lastSensorVal, 2, msg);
+  if (train->lastSensorVal != 0){
+    msg = moveTo(row++, col, msg);
+    if (train->lastSensorUnexpected) msg = setColor(31, msg);
+    if (train->lastSensorIsTerminal) {
+      *msg++ = 'E';
+      if (train->lastSensorBox == EX){
+        *msg++ = 'X';
+      } else if (train->lastSensorBox == EN){
+        *msg++ = 'N';
+      } else {
+        *msg++ = 'W';
+        *msg++ = 'W';
+        *msg++ = 'W'; // =)
+      }
+    } else {
+      *msg++ = 'A' + train->lastSensorBox;
+    }
+    msg = formatInt(train->lastSensorVal, 2, msg);
+    *msg++ = ' ';
+    *msg++ = ' ';
 
-  msg = moveTo(row++, col, msg);
-  msg = timeu(train->lastSensorActualTime, msg);
-  if (train->lastSensorUnexpected) msg = resetColor(msg);
+    msg = moveTo(row++, col, msg);
+    msg = timeu(train->lastSensorActualTime, msg);
+    if (train->lastSensorUnexpected) msg = resetColor(msg);
+  } else {
+    msg = moveTo(row++, col, msg);
+    *msg++ = ' ';
+    *msg++ = ' ';
+    *msg++ = ' ';
+    msg = moveTo(row++, col, msg);
+    *msg++ = ' ';
+    *msg++ = ' ';
+    *msg++ = ' ';
+    *msg++ = ' ';
+    *msg++ = ' ';
+    *msg++ = ' ';
+    *msg++ = ' ';
+  }
 
   row++;
 
@@ -190,8 +220,23 @@ static char* updateTrain(TrainUiMsg* train, char* msg) {
   // ---------------------------------
   // FUTURE INFORMATION
   msg = moveTo(row++, col, msg);
-  *msg++ = 'A' + train->nextSensorBox;
+  if (train->nextSensorIsTerminal) {
+    *msg++ = 'E';
+    if (train->nextSensorBox == EX){
+      *msg++ = 'X';
+    } else if (train->nextSensorBox == EN){
+      *msg++ = 'N';
+    } else {
+      *msg++ = 'W';
+      *msg++ = 'W';
+      *msg++ = 'W'; // =)
+    }
+  } else {
+    *msg++ = 'A' + train->nextSensorBox;
+  }
   msg = formatInt(train->nextSensorVal, 2, msg);
+  *msg++ = ' ';
+  *msg++ = ' ';
 
   row++;
 

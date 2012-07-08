@@ -27,6 +27,7 @@ typedef struct TrainUiMsg {
   char lastSensorUnexpected;
   char lastSensorBox;
   char lastSensorVal;
+  char lastSensorIsTerminal;
   int lastSensorActualTime;
   int lastSensorPredictedTime;
 
@@ -36,6 +37,7 @@ typedef struct TrainUiMsg {
   int distanceFromLastSensor;
   int distanceToNextSensor;
 
+  char nextSensorIsTerminal;
   char nextSensorBox;
   char nextSensorVal;
   int nextSensorPredictedTime;

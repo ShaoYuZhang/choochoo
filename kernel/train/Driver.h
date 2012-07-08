@@ -32,7 +32,10 @@ typedef struct Driver {
   TrainUiMsg uiMsg;
   Route route;
 
+  int speedAfterReverse;
+
   // Actual Stuf
+  char lastSensorIsTerminal;
   char lastSensorUnexpected;
   char lastSensorBox;
   char lastSensorVal;
@@ -45,6 +48,7 @@ typedef struct Driver {
   float distanceToNextSensor;
   char invalidLastSensor;
 
+  char nextSensorIsTerminal;
   char nextSensorBox;
   char nextSensorVal;
   int nextSensorPredictedTime;
