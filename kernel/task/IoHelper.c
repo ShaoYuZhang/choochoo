@@ -64,10 +64,22 @@ char a2i( char ch, char **src, int base, int *nump ) {
 	return ch;
 }
 
+int strgetui(char **c) {
+  int num = 0;
+  int digit;
+  for (;;) {
+    digit = a2d(**c);
+    if (digit < 0 || digit > 10) break;
+    num = num * 10 + digit;
+    (*c)++;
+  }
+  return num;
+}
+
 void ui2a( unsigned int num, unsigned int base, char *bf ) {
-	int n = 0;
-	int dgt;
-	unsigned int d = 1;
+  int n = 0;
+  int dgt;
+  unsigned int d = 1;
 
 	while( (num / d) >= base ) d *= base;
 	while( d != 0 ) {

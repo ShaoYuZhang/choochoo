@@ -11,6 +11,7 @@
 #define UPDATE_TIME   6
 #define UPDATE_IDLE   7
 #define DEBUG_MSG     8
+#define DEBUG_TRAIN_MSG 9
 
 typedef struct UiMsg {
   char type;   //
@@ -53,5 +54,16 @@ int startUserInterfaceTask();
   int DebugLen = sprintff(DebugBuffer+1, fmt, ##__VA_ARGS__ ); \
   Send(tid, DebugBuffer, DebugLen + 1, (char*)1, 0);  \
 }
+
+#define TrainDebug(me, fmt, ...) \
+{ \
+  Driver* moi = me; \
+  char DebugBuffer[128]; \
+  DebugBuffer[0] = DEBUG_TRAIN_MSG; \
+  DebugBuffer[1] = moi->uiMsg.nth;  \
+  int DebugLen = sprintff(DebugBuffer+2, fmt, ##__VA_ARGS__ ); \
+  Send(moi->ui, DebugBuffer, DebugLen + 2, (char*)1, 0);  \
+}
+
 
 #endif // USER_INTERFACE_H_

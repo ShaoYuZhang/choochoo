@@ -8,6 +8,8 @@ static void trainController() {
   char trainName[] = TRAIN_CONTROLLER_NAME;
   RegisterAs(trainName);
 
+  char uiName[] = UI_TASK_NAME;
+  int ui = WhoIs(uiName);
   char com1Name[] = IOSERVERCOM1_NAME;
   int com1 = WhoIs(com1Name);
 
@@ -34,21 +36,26 @@ static void trainController() {
         }
       }
     } else {
-      if (trainTid[(int)msg.trainNum] == -1) {
-        DriverInitMsg init;
-        init.nth = nth;
-        init.trainNum = (int)msg.trainNum;
-        init.com1 = com1;
-        // Create train task
-        trainTid[(int)msg.trainNum] = Create(4, driver);
-        Send(trainTid[(int)msg.trainNum],
-            (char*)&init, sizeof(DriverInitMsg), (char*)1, 0);
-        nth++;
-      }
+      if (msg.trainNum >= 35 && msg.trainNum <= 44) {
+        if (trainTid[(int)msg.trainNum] == -1) {
+          DriverInitMsg init;
+          init.nth = nth;
+          init.trainNum = (int)msg.trainNum;
+          init.com1 = com1;
+          // Create train task
+          trainTid[(int)msg.trainNum] = Create(4, driver);
+          Send(trainTid[(int)msg.trainNum],
+              (char*)&init, sizeof(DriverInitMsg), (char*)1, 0);
+          nth++;
+        }
 
-      msg.replyTid = (char)tid;
-      // Pass the message on.
-      Send(trainTid[(int)msg.trainNum], (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
+        msg.replyTid = (char)tid;
+        // Pass the message on.
+        Send(trainTid[(int)msg.trainNum], (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
+      }
+      else {
+        PrintDebug(ui, "Bad train num %d", msg.trainNum);
+      }
     }
   }
 }

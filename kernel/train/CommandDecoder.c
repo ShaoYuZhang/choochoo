@@ -15,11 +15,10 @@ static unsigned int decoderCurrBufferPos;
 static int trainController;
 static int trackController;
 static int com2;
-static int trackSet;
 static int ui;
 
 // letter to A-E or X or N, doesn't support switches
-static TrackLandmark formLandmarkFromInput(char letter, int number){
+static TrackLandmark formLandmarkFromInput(char letter, int number) {
   TrackLandmark landmark;
   landmark.type = LANDMARK_FAKE;
   landmark.num1 = 0;
@@ -27,6 +26,7 @@ static TrackLandmark formLandmarkFromInput(char letter, int number){
   if (letter >= 'a' && letter <= 'z') {
     letter = letter - 'a' + 'A';
   }
+
   if (letter >= 'A' && letter <= 'E') {
     landmark.type = LANDMARK_SENSOR;
     landmark.num1 = letter - 'A';
@@ -39,6 +39,8 @@ static TrackLandmark formLandmarkFromInput(char letter, int number){
     landmark.type = LANDMARK_END;
     landmark.num1 = EX;
     landmark.num2 = number;
+  } else {
+    PrintDebug(ui, "No such landmark.");
   }
   return landmark;
 }
@@ -60,13 +62,7 @@ static void decodeCommand() {
     if (track == 'a' || track == 'b') {
       msg.data =track;
       Send(trackController, (char *)&msg, sizeof(TrackMsg), (char *)1, 0);
-      trackSet = 1;
     }
-  }
-
-  if (!trackSet) {
-    PrintDebug(ui, "Need to set track first");
-    return;
   }
 
   if (decoderBuffer[0] == 't' && decoderBuffer[1] == 'r') {
@@ -120,42 +116,55 @@ static void decodeCommand() {
       Send(trainController, (char*)&trainMsg, sizeof(trainMsg), (char *)NULL, 0);
     }
   } else if (decoderBuffer[0] == 'r' && decoderBuffer[1] == 'o') {
-    // TODO, long command, need to improve robustness
-    int train_number = 0;
-    int train_speed;
+    char *temp = (char *)decoderBuffer + 3;
+
+    int train_number = strgetui(&temp);
+    temp++;
+    int train_speed = 9;
+    if (*temp >= '0' && *temp <= '9'){
+      train_speed = strgetui(&temp);
+      temp++;
+    }
 
     char letter;
     int num;
 
     Position pos;
 
-    char *temp = (char *)decoderBuffer + 3;
-    char c = *temp++;
-    c = a2i(c, &temp, 10, &train_number);
-    c = *temp++;
-    c = a2i(c, &temp, 10, &train_speed);
-
-    c = *temp++;
-    letter = c;
-    c = *temp++;
-    c = a2i(c, &temp, 10, &num);
+    letter = *temp++;
+    num = strgetui(&temp);
+    temp++;
     pos.landmark1 = formLandmarkFromInput(letter, num);
 
-    c = *temp++;
-    letter = c;
-    c = *temp++;
-    c = a2i(c, &temp, 10, &num);
+    letter = *temp++;
+    num = strgetui(&temp);
+    temp++;
     pos.landmark2 = formLandmarkFromInput(letter, num);
-    c = *temp++;
 
-    c = a2i(c, &temp, 10, &pos.offset);
+    pos.offset = 0;
+    if (*temp >= '0' && *temp <= '9'){
+      pos.offset = strgetui(&temp);
+    }
 
     DriverMsg msg;
     msg.trainNum = train_number;
-    msg.type = SET_ROUTE;
+    msg.type  = SET_ROUTE;
     msg.data2 = train_speed;
     msg.pos = pos;
-    Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
+    PrintDebug(ui, "CD: Route %d %d %d %d %d %d %d %d %d",
+        train_number, train_speed,
+        pos.landmark1.type, pos.landmark1.num1, pos.landmark1.num2,
+        pos.landmark2.type, pos.landmark2.num1, pos.landmark2.num2,
+        pos.offset);
+
+    if (pos.landmark1.type == LANDMARK_FAKE ||
+        pos.landmark2.type == LANDMARK_FAKE) {
+      PrintDebug(ui, "Parse Fail: %s", decoderBuffer);
+    } else {
+      Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
+    }
+  } else {
+    PrintDebug(ui, "Bad: %s", decoderBuffer);
   }
 }
 
@@ -169,7 +178,6 @@ static void commandDecoder() {
   trackController = WhoIs(trackControllerName);
   char uiName[] = UI_TASK_NAME;
   ui = WhoIs(uiName);
-  trackSet = 1; // TODO make unset
 
   UiMsg msg;
   msg.type = PROMPT_CHAR;

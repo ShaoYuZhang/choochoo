@@ -100,16 +100,16 @@ void task1() {
   int trackController = startTrackManagerTask();
   startCommandDecoderTask();
 
-  Delay(600, time);
   //Create(20, test_track);
 
-#if 1
   // Testing
   TrackMsg msg;
   msg.type = SET_TRACK;
   msg.data = 'b';
   Send(trackController, (char *)&msg, sizeof(TrackMsg), (char *)1, 0);
+  Delay(600, time);
 
+#if 0
   Position pos;
   pos.landmark1.type = LANDMARK_SENSOR;
   pos.landmark1.num1 = 0;

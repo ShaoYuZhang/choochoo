@@ -87,17 +87,17 @@ static char* moveTo(char row, int col, char* msg) {
 
 static char* saveCursor(char* msg) {
   // SaveCursor
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = 's';
+  //*msg++ = ESC;
+  //*msg++ = '[';
+  //*msg++ = 's';
 
   return msg;
 }
 
 static char* restoreCursor(char* msg) {
-  *msg++ = ESC;
-  *msg++ = '[';
-  *msg++ = 'u';
+  //*msg++ = ESC;
+  //*msg++ = '[';
+  //*msg++ = 'u';
   return msg;
 }
 
@@ -140,12 +140,19 @@ static char* timeu(unsigned int ms, char* msg) {
 static char* updateTrain(TrainUiMsg* train, char* msg) {
   msg = saveCursor(msg);
 
+  msg = setColor(33+train->nth*3, msg);
   int col = 26+(int)(train->nth)*10;
   int row = 2;
   // TRAIN NUMBER
   msg = moveTo(row++, col, msg);
+  *msg++ = 'N';
+  *msg++ = 'u';
+  *msg++ = 'm';
+  *msg++ = ':';
+  *msg++ = ' ';
   *msg++ = '0' + train->nth;
   row++;
+  msg = resetColor(msg);
 
   // ---------------------------------
   // PAST INFORMATION
@@ -269,7 +276,7 @@ static char* updateDebugMessage(char* receive, char* msg, int len) {
   msg = moveTo(updateRow, debugUpdateCol, msg);
 
   // Write this line
-  for (int i = 0; i < 30; i++) {
+  for (int i = 0; i < MAX(30, len); i++) {
     *msg++ = (i < len) ? receive[i] : ' ';
   }
 
@@ -664,6 +671,12 @@ static void userInterface() {
       }
       case UPDATE_TRAIN: {
         com2msg = updateTrain((TrainUiMsg*)receiveBuffer, com2msg);
+        break;
+      }
+      case DEBUG_TRAIN_MSG: {
+        com2msg = setColor(33+receiveBuffer[1]*3, com2msg);
+        com2msg = updateDebugMessage(receiveBuffer + 2, com2msg, len - 2);
+        com2msg = resetColor(com2msg);
         break;
       }
       default: {
