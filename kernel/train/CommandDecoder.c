@@ -71,6 +71,9 @@ static void decodeCommand() {
 
     char letter = *temp++;
     int num = strgetui(&temp);
+    if (letter >= 'a' && letter <= 'e') {
+      letter = letter - 'a' + 'A';
+    }
     if (letter >= 'A' && letter <= 'E' && num >= 1 && num <= 16) {
       SensorMsg msg;
       msg.type = FAKE_TRIGGER;

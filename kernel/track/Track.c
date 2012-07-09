@@ -485,8 +485,8 @@ static int findNextSensor(track_node *track, Position pos, TrackLandmark* dst) {
       *dst = getLandmark(currentNode);
 
       // restore graph
-      *fromEdge->src = nodeSrc;
-      *fromEdge->reverse->src = nodeReverseSrc;
+      *nodeSrcPointer = nodeSrc;
+      *nodeReverseSrcPointer = nodeReverseSrc;
       return dist;
     }
     track_edge edge;
