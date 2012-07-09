@@ -9,12 +9,16 @@
 #include <IoHelper.h> // need a2i
 #include <kernel.h>
 #include <Track.h>
+#include <Sensor.h>
+#include <TimeServer.h>
 
 static char decoderBuffer[DECODER_BUFFER_SIZE];
 static unsigned int decoderCurrBufferPos;
 
 static int trainController;
 static int trackController;
+static int sensorServer;
+static int timeServer;
 static int com2;
 static int ui;
 
@@ -54,7 +58,30 @@ static void decodeCommand() {
   unsigned int shortEvalulation = (decoderCurrBufferPos <= 3);
   decoderCurrBufferPos = 0;
   if (shortEvalulation) return;
-  if (decoderBuffer[0] == 'u' && decoderBuffer[1] == 's') {
+  if (decoderBuffer[0] == 'i' && decoderBuffer[1] == 'n' && decoderBuffer[2] == 'i' && decoderBuffer[3] == 't') {
+    char *temp = (char *)decoderBuffer + 5;
+    int train_number = strgetui(&temp);
+
+    DriverMsg msg;
+    msg.type = FIND_POSITION;
+    msg.trainNum = train_number;
+    Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
+  } else if (decoderBuffer[0] == 't' && decoderBuffer[1] == 's') {
+    char *temp = (char *)decoderBuffer + 3;
+
+    char letter = *temp++;
+    int num = strgetui(&temp);
+    if (letter >= 'A' && letter <= 'E' && num >= 1 && num <= 16) {
+      SensorMsg msg;
+      msg.type = FAKE_TRIGGER;
+      msg.box = letter - 'A';
+      msg.data = (char)num;
+      msg.time = Time(timeServer);
+      Send(sensorServer, (char *)&msg, sizeof(SensorMsg), (char *)NULL, 0);
+    } else {
+      PrintDebug(ui, "Invalid Fake Sensor Value");
+    }
+  }  else if (decoderBuffer[0] == 'u' && decoderBuffer[1] == 's') {
     char *temp = (char *)decoderBuffer + 3;
     char track = *temp++;
 
@@ -65,13 +92,11 @@ static void decodeCommand() {
       Send(trackController, (char *)&msg, sizeof(TrackMsg), (char *)1, 0);
     }
   } else if (decoderBuffer[0] == 't' && decoderBuffer[1] == 'r') {
-    int train_number = 0;
-    int train_speed;
     char *temp = (char *)decoderBuffer + 3;
-    char c = *temp++;
-    c = a2i(c, &temp, 10, &train_number);
-    c = *temp++;
-    c = a2i(c, &temp, 10, &train_speed);
+    int train_number = strgetui(&temp);
+    temp++;
+    int train_speed = strgetui(&temp);
+    temp++;
 
     DriverMsg msg;
     msg.type = SET_SPEED;
@@ -79,10 +104,8 @@ static void decodeCommand() {
     msg.data2 = train_speed;
     Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
   } else if (decoderBuffer[0] == 'r' && decoderBuffer[1] == 'v') {
-    int train_number = 0;
     char *temp = (char *)decoderBuffer + 3;
-    char c = *temp++;
-    c = a2i(c, &temp, 10, &train_number);
+    int train_number = strgetui(&temp);
 
     DriverMsg msg;
     msg.type = SET_SPEED;
@@ -90,12 +113,11 @@ static void decodeCommand() {
     msg.data2 = -1;
     Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
   } else if (decoderBuffer[0] == 's' && decoderBuffer[1] == 'w') {
-    int switch_number = 0;
-    char switch_pos;
     char *temp = (char *)decoderBuffer + 3;
-    char c = *temp++;
-    c = a2i(c, &temp, 10, &switch_number);
-    switch_pos = *temp++;
+    int switch_number = strgetui(&temp);
+    temp++;
+
+    char switch_pos = *temp++;
     if (switch_pos == 's' || switch_pos == 'c') {
       TrackMsg setSwitch;
 
@@ -177,6 +199,10 @@ static void commandDecoder() {
   trackController = WhoIs(trackControllerName);
   char uiName[] = UI_TASK_NAME;
   ui = WhoIs(uiName);
+  char sensorServerName[] = SENSOR_NAME;
+  sensorServer = WhoIs(sensorServerName);
+  char timeServerName[] = TIMESERVER_NAME;
+  timeServer = WhoIs(timeServerName);
 
   UiMsg msg;
   msg.type = PROMPT_CHAR;

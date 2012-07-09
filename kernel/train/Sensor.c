@@ -269,6 +269,15 @@ static void sensorServer() {
         courierReady = 1;
         break;
       }
+      case FAKE_TRIGGER: {
+        Reply(tid, (char *)NULL, 0);
+        Sensor s;
+        s.box = msg.box;
+        s.val = msg.data;
+        s.time = msg.time;
+        add_to_buffer(s);
+        break;
+      }
       default: {
         ASSERT(FALSE, "invalid sensor msg type.");
       }
