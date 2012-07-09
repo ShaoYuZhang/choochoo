@@ -94,7 +94,6 @@ static void sendUiReport(Driver* me) {
   me->uiMsg.speedDir                 = me->speedDir;
   me->uiMsg.distanceFromLastSensor   = (int)me->distanceFromLastSensor;
   me->uiMsg.distanceToNextSensor     = (int)me->distanceToNextSensor;
-  TrainDebug(me, "%d %d", me->uiMsg.distanceFromLastSensor, me->uiMsg.distanceToNextSensor);
 
   me->uiMsg.nextSensorBox            = me->nextSensorBox;
   me->uiMsg.nextSensorVal            = me->nextSensorVal;
@@ -145,6 +144,7 @@ static void getRoute(Driver* me, DriverMsg* msg) {
   toPosition(me, &trackmsg.position1);
   printLandmark(me, &trackmsg.position1.landmark1);
   printLandmark(me, &trackmsg.position1.landmark2);
+  TrainDebug(me, "Offset %d", trackmsg.position1.offset);
 
   trackmsg.position2 = msg->pos;
 
@@ -152,7 +152,7 @@ static void getRoute(Driver* me, DriverMsg* msg) {
       sizeof(TrackMsg), (char*)&(me->route), sizeof(Route));
   me->routeRemaining = 0;
 
-  TrainDebug(me, "Distance %d", me->route.dist);
+  TrainDebug(me, "Route Distance %d", me->route.dist);
   TrainDebug(me, "Num Node %d", me->route.length);
 
   TrainDebug(me, "<Route>");
@@ -643,14 +643,13 @@ void driver() {
         if (hasTempRouteMsg) {
           getRoute(&me, &tempRouteMsg);
           if (me.route.length != 0) {
-
-            if (me.route.nodes[me.routeRemaining].num == REVERSE) {
-              me.stopNode = me.routeRemaining;
+            if (me.route.nodes[0].dist == 0 && me.route.nodes[1].num == REVERSE) {
+              me.stopNode = 1;
               me.speedAfterReverse = tempRouteMsg.data2;
               trainSetSpeed(-1, getStoppingTime(&me), 0, &me);
             } else {
-              updateStopNode(&me, tempRouteMsg.data2);
               trainSetSpeed(tempRouteMsg.data2, 0, 0, &me);
+              updateStopNode(&me, tempRouteMsg.data2);
             }
           } else {
             TrainDebug(&me, "No route found!");
@@ -693,13 +692,13 @@ void driver() {
         if (me.lastSensorActualTime > 0) {
           getRoute(&me, &msg);
           if (me.route.length != 0) {
-            if (me.route.nodes[me.routeRemaining].num == REVERSE) {
-              me.stopNode = me.routeRemaining;
+            if (me.route.nodes[0].dist == 0 && me.route.nodes[1].num == REVERSE) {
+              me.stopNode = 1;
               me.speedAfterReverse = tempRouteMsg.data2;
               trainSetSpeed(-1, getStoppingTime(&me), 0, &me);
             } else {
-              updateStopNode(&me, tempRouteMsg.data2);
               trainSetSpeed(tempRouteMsg.data2, 0, 0, &me);
+              updateStopNode(&me, tempRouteMsg.data2);
             }
           } else {
             TrainDebug(&me, "No route found!");

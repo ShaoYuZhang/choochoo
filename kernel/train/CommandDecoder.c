@@ -64,9 +64,7 @@ static void decodeCommand() {
       msg.data =track;
       Send(trackController, (char *)&msg, sizeof(TrackMsg), (char *)1, 0);
     }
-  }
-
-  if (decoderBuffer[0] == 't' && decoderBuffer[1] == 'r') {
+  } else if (decoderBuffer[0] == 't' && decoderBuffer[1] == 'r') {
     int train_number = 0;
     int train_speed;
     char *temp = (char *)decoderBuffer + 3;
