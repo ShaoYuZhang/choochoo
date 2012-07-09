@@ -417,29 +417,32 @@ static int edgeType(track_edge* edge) {
 }
 
 static void fakeNode(track_edge* edge, track_node* fake1, track_node* fake2, int offset) {
+  track_edge* edgeReverse = edge->reverse;
   int dirType;
+  int dirTypeReverse;
 
-  dirType = edgeType(edge->reverse);
-  fake1->name = "";
+  dirTypeReverse = edgeType(edgeReverse);
+  dirType = edgeType(edge);
+
+  fake1->name = "Fake";
   fake1->type = NODE_FAKE;
   fake1->reverse = fake2;
-  fake1->edge[DIR_AHEAD].reverse = &edge->dest->reverse->edge[dirType];
+  fake1->edge[DIR_AHEAD].reverse = &edge->dest->reverse->edge[dirTypeReverse];
   fake1->edge[DIR_AHEAD].src = fake1;
   fake1->edge[DIR_AHEAD].dest = edge->dest;
   fake1->edge[DIR_AHEAD].dist = edge->dist - offset;
 
-  edge->dest->reverse->edge[dirType].reverse = &fake1->edge[DIR_AHEAD];
-  edge->dest->reverse->edge[dirType].dest = fake2;
-  edge->dest->reverse->edge[dirType].dist = edge->dist -offset;
-
-  dirType = edgeType(edge);
-  fake2->name = "";
+  fake2->name = "Reverse Fake";
   fake2->type = NODE_FAKE;
   fake2->reverse = fake1;
   fake2->edge[DIR_AHEAD].reverse = &edge->src->reverse->edge[dirType];
   fake2->edge[DIR_AHEAD].src = fake2;
-  fake2->edge[DIR_AHEAD].dest = edge->reverse->dest;
+  fake2->edge[DIR_AHEAD].dest = edgeReverse->dest;
   fake2->edge[DIR_AHEAD].dist = offset;
+
+  edge->dest->reverse->edge[dirTypeReverse].reverse = &fake1->edge[DIR_AHEAD];
+  edge->dest->reverse->edge[dirTypeReverse].dest = fake2;
+  edge->dest->reverse->edge[dirTypeReverse].dist = edge->dist -offset;
 
   edge->src->edge[dirType].reverse = &fake2->edge[DIR_AHEAD];
   edge->src->edge[dirType].dest = fake1;
@@ -467,7 +470,9 @@ static int findNextSensor(track_node *track, Position pos, TrackLandmark* dst) {
     return -1;
   }
 
+  track_node* nodeSrcPointer = fromEdge->src;
   track_node nodeSrc = *fromEdge->src;
+  track_node* nodeReverseSrcPointer = fromEdge->reverse->src;
   track_node nodeReverseSrc = *fromEdge->reverse->src;
 
   fakeNode(fromEdge, &track[TRACK_MAX], &track[TRACK_MAX + 1], offset);
@@ -501,8 +506,8 @@ static int findNextSensor(track_node *track, Position pos, TrackLandmark* dst) {
   }
 
   // restore graph
-  *fromEdge->src = nodeSrc;
-  *fromEdge->reverse->src = nodeReverseSrc;
+  *nodeSrcPointer = nodeSrc;
+  *nodeReverseSrcPointer = nodeReverseSrc;
   return -1;
 }
 
@@ -547,22 +552,35 @@ static void computeSafeReverseDist(track_node* track) {
 static void findRoute(track_node* track, Position from, Position to, Route* result) {
   // fake position into graph
   track_edge* fromEdge = (track_edge*)NULL;
-  track_edge* toEdge = (track_edge*)NULL;
   int offsetFrom = locateNode(track, from, &fromEdge);
-  int offsetTo = locateNode(track, to, &toEdge);
 
-  if (offsetFrom == -1 || offsetTo == -1) {
+  if (offsetFrom == -1) {
     result->dist = 0;
     result->length = 0;
     return;
   }
 
+  track_node* fromNodeSrcPointer = fromEdge->src;
   track_node fromNodeSrc = *fromEdge->src;
+  track_node* fromNodeReverseSrcPointer = fromEdge->reverse->src;
   track_node fromNodeReverseSrc = *fromEdge->reverse->src;
-  track_node toNodeSrc = *toEdge->src;
-  track_node toNodeReverseSrc = *toEdge->reverse->src;
 
   fakeNode(fromEdge, &track[TRACK_MAX], &track[TRACK_MAX + 1], offsetFrom);
+
+  track_edge* toEdge = (track_edge*)NULL;
+  int offsetTo = locateNode(track, to, &toEdge);
+
+  if (offsetTo == -1) {
+    result->dist = 0;
+    result->length = 0;
+    return;
+  }
+
+  track_node* toNodeSrcPointer = toEdge->src;
+  track_node toNodeSrc = *toEdge->src;
+  track_node* toNodeReverseSrcPointer = toEdge->reverse->src;
+  track_node toNodeReverseSrc = *toEdge->reverse->src;
+
   fakeNode(toEdge, &track[TRACK_MAX + 2], &track[TRACK_MAX + 3], offsetTo);
 
   track_node *fromNode = &track[TRACK_MAX];
@@ -580,6 +598,11 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
   computeSafeReverseDist(track);
 
   fromNode->curr_dist = 0;
+  char uiName[] = UI_TASK_NAME;
+  int ui = -1;
+  if (!CALIBRATION) {
+    ui = WhoIs(uiName);
+  }
 
   // Dijkstra's
   while (1) {
@@ -681,11 +704,11 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
   result->nodes[result->length-1].dist = 0;
 
   // restore graph
-  *toEdge->src = toNodeSrc;
-  *toEdge->reverse->src = toNodeReverseSrc;
+  *toNodeSrcPointer = toNodeSrc;
+  *toNodeReverseSrcPointer = toNodeReverseSrc;
 
-  *fromEdge->src = fromNodeSrc;
-  *fromEdge->reverse->src = fromNodeReverseSrc;
+  *fromNodeSrcPointer = fromNodeSrc;
+  *fromNodeReverseSrcPointer = fromNodeReverseSrc;
 }
 
 static void trackSetSwitch(int sw, int state) {

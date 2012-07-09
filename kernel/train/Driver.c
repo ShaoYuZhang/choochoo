@@ -94,7 +94,6 @@ static void sendUiReport(Driver* me) {
   me->uiMsg.speedDir                 = me->speedDir;
   me->uiMsg.distanceFromLastSensor   = (int)me->distanceFromLastSensor;
   me->uiMsg.distanceToNextSensor     = (int)me->distanceToNextSensor;
-  TrainDebug(me, "%d %d", me->uiMsg.distanceFromLastSensor, me->uiMsg.distanceToNextSensor);
 
   me->uiMsg.nextSensorBox            = me->nextSensorBox;
   me->uiMsg.nextSensorVal            = me->nextSensorVal;
@@ -145,6 +144,7 @@ static void getRoute(Driver* me, DriverMsg* msg) {
   toPosition(me, &trackmsg.position1);
   printLandmark(me, &trackmsg.position1.landmark1);
   printLandmark(me, &trackmsg.position1.landmark2);
+  TrainDebug(me, "Offset %d", trackmsg.position1.offset);
 
   trackmsg.position2 = msg->pos;
 
@@ -152,7 +152,7 @@ static void getRoute(Driver* me, DriverMsg* msg) {
       sizeof(TrackMsg), (char*)&(me->route), sizeof(Route));
   me->routeRemaining = 0;
 
-  TrainDebug(me, "Distance %d", me->route.dist);
+  TrainDebug(me, "Route Distance %d", me->route.dist);
   TrainDebug(me, "Num Node %d", me->route.length);
 
   TrainDebug(me, "<Route>");
@@ -183,6 +183,9 @@ static void getRoute(Driver* me, DriverMsg* msg) {
 }
 
 static int shouldStopNow(Driver* me) {
+  if (me->stopNow) {
+    return 2; // no room to stop, must stop now
+  }
   if ( me->lastSensorBox == me->stopSensorBox &&
         me->lastSensorVal == me->stopSensorVal) {
     me->stopSensorHit = 1;
@@ -296,7 +299,8 @@ static void updateStopNode(Driver* me, int speed) {
       TrainDebug(me, "No room to stop??? %d", stop);
       TrainDebug(me, "StopNode-1 %d, remaining %d ", me->stopNode-1,
           me->routeRemaining);
-      trainSetSpeed(0, 0, 0, me);
+      //trainSetSpeed(0, 0, 0, me);
+      me->stopNow = 1;
   }
 
   TrainDebug(me, "Finish update stop %d %d %d", me->stopNode,
@@ -471,6 +475,8 @@ static void initDriver(Driver* me) {
   me->route.length = 0;
   me->stopCommited = 0; // haven't enabled speed zero yet.
   me->useLastSensorNow = 0;
+  me->stopNow = 0;
+  me->positionFinding = 0;
   me->stopSensorHit = 0;
   me->nextSensorIsTerminal = 0;
   me->lastSensorIsTerminal = 0;
@@ -549,10 +555,7 @@ void driver() {
   Driver me;
   initDriver(&me);
 
-  // used to store one set_route msg when train's current position is unknown
-  int hasTempRouteMsg = 0;
   unsigned int naggCount = 0;
-  DriverMsg tempRouteMsg;
 
   for (;;) {
     int tid = -1;
@@ -640,23 +643,9 @@ void driver() {
 
         updatePosition(&me, msg.timestamp);
         sendUiReport(&me);
-        if (hasTempRouteMsg) {
-          getRoute(&me, &tempRouteMsg);
-          if (me.route.length != 0) {
-
-            if (me.route.nodes[me.routeRemaining].num == REVERSE) {
-              me.stopNode = me.routeRemaining;
-              me.speedAfterReverse = tempRouteMsg.data2;
-              trainSetSpeed(-1, getStoppingTime(&me), 0, &me);
-            } else {
-              updateStopNode(&me, tempRouteMsg.data2);
-              trainSetSpeed(tempRouteMsg.data2, 0, 0, &me);
-            }
-          } else {
-            TrainDebug(&me, "No route found!");
-            trainSetSpeed(0, 0, 0, &me);
-          }
-          hasTempRouteMsg = 0;
+        if (me.positionFinding) {
+          trainSetSpeed(5, 0, 0, &me);
+          me.positionFinding = 0;
         }
         break;
       }
@@ -678,6 +667,7 @@ void driver() {
               }
               me.stopCommited = 1;
               me.useLastSensorNow = 0;
+              me.stopNow = 0;
               me.stopSensorHit = 0;
             }
           }
@@ -693,27 +683,29 @@ void driver() {
         if (me.lastSensorActualTime > 0) {
           getRoute(&me, &msg);
           if (me.route.length != 0) {
-            if (me.route.nodes[me.routeRemaining].num == REVERSE) {
-              me.stopNode = me.routeRemaining;
-              me.speedAfterReverse = tempRouteMsg.data2;
+            if (me.route.nodes[0].dist == 0 && me.route.nodes[1].num == REVERSE) {
+              me.stopNode = 1;
+              me.speedAfterReverse = msg.data2;
               trainSetSpeed(-1, getStoppingTime(&me), 0, &me);
             } else {
-              updateStopNode(&me, tempRouteMsg.data2);
-              trainSetSpeed(tempRouteMsg.data2, 0, 0, &me);
+              trainSetSpeed(msg.data2, 0, 0, &me);
+              updateStopNode(&me, msg.data2);
             }
           } else {
             TrainDebug(&me, "No route found!");
             trainSetSpeed(0, 0, 0, &me);
           }
-        } else {
-          trainSetSpeed(5, 0, 0, &me);
-          hasTempRouteMsg = 1;
-          tempRouteMsg = msg;
         }
         break;
       }
       case BROADCAST_UPDATE_PREDICATION: {
         updatePredication(&me);
+        break;
+      }
+      case FIND_POSITION: {
+        Reply(replyTid, (char*)1, 0);
+        trainSetSpeed(5, 0, 0, &me);
+        me.positionFinding = 1;
         break;
       }
       default: {
