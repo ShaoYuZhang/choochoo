@@ -11,6 +11,7 @@
 extern int CALIBRATION;
 static int switchStatus[NUM_SWITCHES];
 static int com1;
+static int ui;
 
 static int get_node_type(TrackLandmark landmark) {
   int type;
@@ -95,6 +96,228 @@ static TrackLandmark getLandmark(track_node* node) {
     ASSERT(FALSE, "invalid track node");
   }
   return landmark;
+}
+
+static void releaseEdges(track_node* node, int trainNum, int stoppingDistance) {
+  int status = RESERVE_SUCESS;
+
+  if (node->type == NODE_SENSOR || node->type == NODE_ENTER) {
+    // Release the next edge.
+    track_edge* e1 = &(node->edge[DIR_AHEAD]);
+    track_edge* e2 = e1->reverse;
+
+    if (e1->reserved_train_num == trainNum) {
+      e1->reserved_train_num = UNRESERVED;
+      e2->reserved_train_num = UNRESERVED;
+      stoppingDistance -= e1->dist;
+     // PrintDebug(ui, "Release sensor edge %s by: %d %d di:%d", node->name,
+     //     e1->reserved_train_num, e2->reserved_train_num, stoppingDistance);
+      if (stoppingDistance > 0 || e1->dest->type == NODE_BRANCH || e1->dest->type == NODE_MERGE) {
+        releaseEdges(e1->dest, trainNum, stoppingDistance);
+      }
+    }
+  }
+  else if (node->type == NODE_BRANCH) {
+    // Release left and right
+    track_edge* e1 = &(node->edge[DIR_STRAIGHT]);
+    track_edge* e2 = &(node->edge[DIR_CURVED]);
+    track_edge* e3 = e1->reverse;
+    track_edge* e4 = e2->reverse;
+
+    if (e1->reserved_train_num == trainNum &&
+        e2->reserved_train_num == trainNum &&
+        e3->reserved_train_num == trainNum &&
+        e4->reserved_train_num == trainNum) {
+      //PrintDebug(ui, "Release Branch switch edge %s", node->name);
+      e1->reserved_train_num = UNRESERVED;
+      e2->reserved_train_num = UNRESERVED;
+      e3->reserved_train_num = UNRESERVED;
+      e4->reserved_train_num = UNRESERVED;
+
+      // Destination is already reserved.. recurse if dest is switch
+      int tmpStopping = stoppingDistance - e1->dist;
+      if (e1->dest->type == NODE_MERGE || e1->dest->type == NODE_BRANCH ||
+          tmpStopping > 0) {
+        releaseEdges(e1->dest, trainNum, tmpStopping);
+      }
+      tmpStopping = stoppingDistance - e2->dist;
+      if (e2->dest->type == NODE_MERGE || e2->dest->type == NODE_BRANCH ||
+          tmpStopping > 0) {
+        releaseEdges(e2->dest, trainNum, tmpStopping);
+      }
+    }
+  } else if (node->type == NODE_MERGE) {
+    //PrintDebug(ui, "MergE__edge %s", node->name);
+    track_edge* e1 = &(node->edge[DIR_AHEAD]);
+    track_edge* e2 = e1->reverse;
+    // Release BR of MR edge.
+    track_edge* e3 = &(e2->dest->edge[DIR_STRAIGHT]);
+    track_edge* e4 = &(e2->dest->edge[DIR_CURVED]);
+    track_edge* e5 = e3->reverse;
+    track_edge* e6 = e4->reverse;
+
+    if (e1->reserved_train_num == trainNum) {
+      e1->reserved_train_num = UNRESERVED;
+      e2->reserved_train_num = UNRESERVED;
+      e3->reserved_train_num = UNRESERVED;
+      e4->reserved_train_num = UNRESERVED;
+      e5->reserved_train_num = UNRESERVED;
+      e6->reserved_train_num = UNRESERVED;
+      // Release center switch.
+      if (e3->dest->num > 100 &&
+          e3->dest->edge[DIR_CURVED].reserved_train_num == trainNum) {
+        e3->dest->edge[DIR_CURVED].reserved_train_num = UNRESERVED;
+        e3->dest->edge[DIR_CURVED].reverse->reserved_train_num = UNRESERVED;
+        e3->dest->edge[DIR_STRAIGHT].reserved_train_num = UNRESERVED;
+        e3->dest->edge[DIR_STRAIGHT].reverse->reserved_train_num = UNRESERVED;
+      }
+
+      int tmpStopping = stoppingDistance - e1->dist;
+      if (e1->dest->type ==  NODE_BRANCH || e1->dest->type ==  NODE_MERGE
+          || tmpStopping > 0){
+        releaseEdges(e1->dest, trainNum, stoppingDistance - e2->dist);
+      }
+    }
+  }
+}
+
+static int canReserver(track_edge* edge, int trainNum){
+  return edge->reserved_train_num == UNRESERVED ||
+    edge->reserved_train_num == trainNum;
+}
+static int reserveEdges(track_node* node, int trainNum, int stoppingDistance) {
+  int status = RESERVE_SUCESS;
+  if (node->type == NODE_SENSOR || node->type == NODE_BRANCH ||
+      node->type == NODE_MERGE) {
+    if (node->edge[DIR_AHEAD].reserved_train_num == trainNum &&
+        stoppingDistance < 0) {
+      return RESERVE_SUCESS;
+    }
+  }
+
+  if (node->type == NODE_SENSOR || node->type == NODE_ENTER) {
+    // Reserve the next edge.
+    track_edge* e1 = &(node->edge[DIR_AHEAD]);
+    track_edge* e2 = e1->reverse;
+
+    if (canReserver(e1, trainNum) && canReserver(e2, trainNum)) {
+      e1->reserved_train_num = trainNum;
+      e2->reserved_train_num = trainNum;
+      stoppingDistance -= e1->dist;
+      //PrintDebug(ui, "Reserve sensor edge %s by: %d %d di:%d %d", node->name,
+      //    e1->reserved_train_num, e2->reserved_train_num, stoppingDistance, e1->dist);
+      if (stoppingDistance > 0 || e1->dest->type == NODE_BRANCH || e1->dest->type == NODE_MERGE) {
+        status = reserveEdges(e1->dest, trainNum, stoppingDistance);
+      }
+      if (status == RESERVE_FAIL) {
+        e1->reserved_train_num = UNRESERVED;
+        e2->reserved_train_num = UNRESERVED;
+      }
+    } else {
+      //PrintDebug(ui, "%d Reserved sensor edge %s",
+      //    e1->reserved_train_num, node->name);
+      return RESERVE_FAIL;
+    }
+  } else if (node->type == NODE_BRANCH) {
+    // Reserve left and right
+    track_edge* e1 = &(node->edge[DIR_STRAIGHT]);
+    track_edge* e2 = &(node->edge[DIR_CURVED]);
+    track_edge* e3 = e1->reverse;
+    track_edge* e4 = e2->reverse;
+
+    if (canReserver(e1, trainNum) && canReserver(e2, trainNum) &&
+        canReserver(e3, trainNum) && canReserver(e4, trainNum)) {
+      //PrintDebug(ui, "Reserve branch switch edge %s", node->name);
+      e1->reserved_train_num = trainNum;
+      e2->reserved_train_num = trainNum;
+      e3->reserved_train_num = trainNum;
+      e4->reserved_train_num = trainNum;
+
+      // Destination is already reserved.. recurse if dest is switch
+      int tmpStopping = stoppingDistance - e1->dist;
+      if (e1->dest->type == NODE_MERGE || e1->dest->type == NODE_BRANCH ||
+          tmpStopping > 0) {
+        status = reserveEdges(e1->dest, trainNum, tmpStopping);
+      }
+      tmpStopping = stoppingDistance - e2->dist;
+      if (status != RESERVE_FAIL &&
+          (e2->dest->type == NODE_MERGE || e2->dest->type == NODE_BRANCH ||
+          tmpStopping > 0)) {
+        status = reserveEdges(e2->dest, trainNum, tmpStopping);
+      }
+      if (status == RESERVE_FAIL) {
+        e1->reserved_train_num = UNRESERVED;
+        e2->reserved_train_num = UNRESERVED;
+        e3->reserved_train_num = UNRESERVED;
+        e4->reserved_train_num = UNRESERVED;
+      }
+    } else {
+      //PrintDebug(ui, "%d Reserved switch edge Fail %s",
+      //    e1->reserved_train_num, node->name);
+      return RESERVE_FAIL;
+    }
+  } else if (node->type == NODE_MERGE) {
+    track_edge* e1 = &(node->edge[DIR_AHEAD]);
+    track_edge* e2 = e1->reverse;
+
+    // Reserve BR of MR edge (so no one crashes in).
+    track_edge* e3 = &(e2->dest->edge[DIR_STRAIGHT]);
+    track_edge* e4 = &(e2->dest->edge[DIR_CURVED]);
+    track_edge* e5 = e3->reverse;
+    track_edge* e6 = e4->reverse;
+
+    if (canReserver(e1, trainNum) && canReserver(e2, trainNum) &&
+        canReserver(e3, trainNum) && canReserver(e4, trainNum) &&
+        canReserver(e5, trainNum) && canReserver(e6, trainNum)) {
+      //PrintDebug(ui, "%d Merge.. %s %s %s %s %s %s %s %s %s %s %s %s",
+      //    trainNum, e1->src->name, e1->dest->name, e2->src->name, e2->dest->name, e3->src->name,
+      //    e3->dest->name, e4->src->name, e4->dest->name, e5->src->name, e5->dest->name,
+      //    e6->src->name, e6->dest->name);
+      // Center stuff, dont support EX1, EX2
+      if (e3->dest->num > 100 &&
+          canReserver(&(e3->dest->edge[DIR_CURVED]), trainNum)) {
+        e3->dest->edge[DIR_CURVED].reserved_train_num = trainNum;
+        e3->dest->edge[DIR_STRAIGHT].reserved_train_num = trainNum;
+        e3->dest->edge[DIR_CURVED].reverse->reserved_train_num = trainNum;
+        e3->dest->edge[DIR_STRAIGHT].reverse->reserved_train_num = trainNum;
+      }
+
+      e1->reserved_train_num = trainNum;
+      e2->reserved_train_num = trainNum;
+      e3->reserved_train_num = trainNum;
+      e4->reserved_train_num = trainNum;
+      e5->reserved_train_num = trainNum;
+      e6->reserved_train_num = trainNum;
+
+      int tmpStopping = stoppingDistance - e1->dist;
+      if (e1->dest->type ==  NODE_BRANCH || e1->dest->type == NODE_MERGE
+          || tmpStopping > 0) {
+        status = reserveEdges(e1->dest, trainNum, tmpStopping);
+      }
+      if (status == RESERVE_FAIL) {
+        e1->reserved_train_num = UNRESERVED;
+        e2->reserved_train_num = UNRESERVED;
+        e3->reserved_train_num = UNRESERVED;
+        e4->reserved_train_num = UNRESERVED;
+        e5->reserved_train_num = UNRESERVED;
+        e6->reserved_train_num = UNRESERVED;
+        if (e3->dest->num > 100) {
+          e3->dest->edge[DIR_CURVED].reserved_train_num = UNRESERVED;
+          e3->dest->edge[DIR_STRAIGHT].reserved_train_num = UNRESERVED;
+          e3->dest->edge[DIR_CURVED].reverse->reserved_train_num = UNRESERVED;
+          e3->dest->edge[DIR_STRAIGHT].reverse->reserved_train_num = UNRESERVED;
+        }
+      }
+    } else {
+      //PrintDebug(ui, "%d Reserved switch edge %s FAIL",
+      //    e1->reserved_train_num, node->name);
+      return RESERVE_FAIL;
+    }
+  } else {
+    //PrintDebug(ui, "Canot reserve edge type: %d %d", node->type, node->name);
+    return RESERVE_FAIL;
+  }
+  return status;
 }
 
 // TODO slow, should worry about it?
@@ -403,7 +626,7 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
       neighbours_dist[neighbour_count++] = curr_node->edge[DIR_AHEAD].dist;
     }
 
-    for (int i = 0; i < neighbour_count; i ++) {
+    for (int i = 0; i < neighbour_count; i++) {
       int temp_dist = neighbours_dist[i] + curr_node->curr_dist;
       if (temp_dist < neighbours[i]->curr_dist) {
         neighbours[i]->curr_dist = temp_dist;
@@ -482,7 +705,6 @@ static void trackController() {
   com1 = WhoIs(com1Name);
 
   char uiName[] = UI_TASK_NAME;
-  int ui = -1;
   if (!CALIBRATION) {
     ui = WhoIs(uiName);
   }
@@ -497,15 +719,27 @@ static void trackController() {
   }
 
   track_node track[TRACK_MAX + 4]; // four fake nodes for route finding
-  //init_trackb(track); // defaults to be for calibration purpose
   UiMsg uimsg;
   for ( ;; ) {
     int tid = -1;
     TrackMsg msg;
     Receive(&tid, (char*)&msg, sizeof(TrackMsg));
     switch (msg.type) {
-      case GET_SWITCH: {
-        Reply(tid, (char*)(switchStatus + msg.data), 4);
+      case RESERVE_EDGE: {
+        track_node* start = findNode(track, msg.landmark1);
+        int trainNum = (int)msg.data;
+        char reserveReply = reserveEdges(start, trainNum, msg.stoppingDistance);
+        if (reserveReply != RESERVE_SUCESS) {
+          PrintDebug(ui, "Train:%d denied reservation %s.", trainNum, start->name);
+        }
+        Reply(tid, &reserveReply, 1);
+        break;
+      }
+      case RELEASE_EDGE: {
+        Reply(tid, (char*)1, 0);
+        track_node* start = findNode(track, msg.landmark1);
+        int trainNum = (int)msg.data;
+        releaseEdges(start, trainNum, msg.stoppingDistance);
         break;
       }
       case SET_SWITCH: {
@@ -520,15 +754,15 @@ static void trackController() {
         }
         break;
       }
-      case QUERY_DISTANCE: {
-        // TODO
-        //track_node* from = findNode(track, msg.landmark1);
-        //track_node* to = findNode(track, msg.landmark2);
-        //int distance = calculateDistance(from, to, 0);
-        int distance = 0;
-        Reply(tid, (char *)&distance, sizeof(int));
-        break;
-      }
+      //case QUERY_DISTANCE: {
+      //  // TODO
+      //  //track_node* from = findNode(track, msg.landmark1);
+      //  //track_node* to = findNode(track, msg.landmark2);
+      //  //int distance = calculateDistance(from, to, 0);
+      //  int distance = 0;
+      //  Reply(tid, (char *)&distance, sizeof(int));
+      //  break;
+      //}
       case QUERY_NEXT_SENSOR_FROM_SENSOR: {
         TrackLandmark sensor =  msg.landmark1;
         track_node* from = findNode(track, sensor);
@@ -574,6 +808,10 @@ static void trackController() {
           PrintDebug(ui, "Using Track B");
         }
         Reply(tid, (char *)NULL, 0);
+        break;
+      }
+      case GET_SWITCH: {
+        Reply(tid, (char*)(switchStatus + msg.data), 4);
         break;
       }
       default: {

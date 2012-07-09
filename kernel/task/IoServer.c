@@ -287,10 +287,10 @@ void flush() {
 
   while (!buffer_empty(&com1Out)) {
     char c = remove_from_buffer(&com1Out);
-    bwputc(COM2, 'F');
-    bwputc(COM2, 'F');
-    bwputc(COM2, 'F');
-    bwputc(COM2, 'F');
+    //bwputc(COM2, 'F');
+    //bwputc(COM2, 'F');
+    //bwputc(COM2, 'F');
+    //bwputc(COM2, 'F');
     bwputc(COM1, c);
   }
 

@@ -95,7 +95,7 @@ void task1() {
   int time = startTimeServerTask();
   startIoServerTask();
   startSensorServerTask();
-  startUserInterfaceTask();
+  int ui = startUserInterfaceTask();
   int trainController = startDriverControllerTask();
   int trackController = startTrackManagerTask();
   startCommandDecoderTask();
@@ -107,7 +107,6 @@ void task1() {
   msg.type = SET_TRACK;
   msg.data = 'b';
   Send(trackController, (char *)&msg, sizeof(TrackMsg), (char *)1, 0);
-  Delay(600, time);
 
 #if 0
   Position pos;
@@ -128,18 +127,22 @@ void task1() {
   Send(trainController, (char *)&drive, sizeof(DriverMsg), (char *)NULL, 0);
 #endif
 
+  #if 0
+#endif
+  Delay(600, time);
+
   Exit();
 }
 
 int main(int argc, char* argv[]) {
   CALIBRATION = 0;
-	kernel_init();
+  kernel_init();
 
   int returnVal;
 
   // Create task with low priority to ensure other initialized tasks are blocked.
   kernel_createtask((int*)&returnVal, 28, (int)task1, 0);
 
-	kernel_runloop();
-	return 0;
+  kernel_runloop();
+  return 0;
 }

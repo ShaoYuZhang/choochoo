@@ -22,7 +22,7 @@ struct track_edge {
   track_edge *reverse;
   track_node *src, *dest;
   int dist;             /* in millimetres */
-  int curveness;        /* in percentage */
+  int reserved_train_num;
 };
 
 struct track_node {

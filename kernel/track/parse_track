@@ -250,7 +250,7 @@ class edge:
       self.node2 = line[2]
     # Read the edge properties.
     self.dist = None
-    self.curveness = None
+    self.reserved_train_num = None
     state.next_line()
     while state.line() != None and not state.line().endswith(':'):
       line = state.line().split()
@@ -267,13 +267,13 @@ class edge:
           self.dist = int(line[1])
         except (AssertionError, ValueError):
           state.error("expected 'distance <INTEGER> mm'")
-      elif line[0] == 'curveness':
+      elif line[0] == 'reserved_train_num':
         # distance <INTEGER> mm
-        if self.curveness != None:
+        if self.reserved_train_num != None:
           state.error("duplicate 'distance'")
         try:
           assert len(line) == 2
-          self.curveness = int(line[1])
+          self.reserved_train_num = int(line[1])
         except (AssertionError, ValueError):
           state.error("expected 'distance <INTEGER> mm'")
       else:
@@ -283,8 +283,8 @@ class edge:
     # Make sure that we have all the required data.
     if self.dist == None:
       state.error("missing property 'distance <INTEGER> mm'")
-    if self.curveness == None:
-      self.curveness = 0
+    if self.reserved_train_num == None:
+      self.reserved_train_num = -1
 
 ########################################################################
 #### Parse each of the input files.
@@ -350,7 +350,7 @@ void %s(track_node *track) {
       if nd.__dict__[dir] != None:
         idx2 = nd.__dict__[dir].index
         dist = nd.__dict__[dir+"_edge"].dist
-        curveness = nd.__dict__[dir+"_edge"].curveness
+        reserved_train_num = nd.__dict__[dir+"_edge"].reserved_train_num
         for dir2 in ['ahead', 'straight', 'curved']:
           if nd.__dict__[dir].reverse.__dict__[dir2] == nd.reverse:
             fh.write(("  track[%d].edge[DIR_%s].reverse =" + \
@@ -363,7 +363,7 @@ void %s(track_node *track) {
           (idx, dir.upper(), idx2))
         fh.write("  track[%d].edge[DIR_%s].dist = %s;\n" % \
           (idx, dir.upper(), dist))
-        fh.write("  track[%d].edge[DIR_%s].curveness = %s;\n" % \
-          (idx, dir.upper(), curveness))
+        fh.write("  track[%d].edge[DIR_%s].reserved_train_num = %s;\n" % \
+          (idx, dir.upper(), reserved_train_num))
   fh.write("}\n")
 fh.close()
