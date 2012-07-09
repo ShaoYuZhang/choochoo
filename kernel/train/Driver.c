@@ -103,15 +103,16 @@ static int getStoppingTime(Driver* me) {
     getVelocity(me, me->speed, me->speedDir);
 }
 
-static void updatePredication(Driver* me) {
+static void updatePrediction(Driver* me) {
   int now = Time(me->timeserver) * 10;
-  TrackNextSensorMsg tMsg;
+  TrackNextSensorMsg trackMsg;
   TrackMsg qMsg;
   qMsg.type = QUERY_NEXT_SENSOR_FROM_POS;
   toPosition(me, &qMsg.position1);
   Send(me->trackManager, (char*)&qMsg, sizeof(TrackMsg),
-        (char*)&tMsg, sizeof(TrackNextSensorMsg));
+        (char*)&trackMsg, sizeof(TrackNextSensorMsg));
 
+  TrackSensorPrediction tMsg = trackMsg.predictions[0]; // TODO
   me->distanceToNextSensor = tMsg.dist;
   if (tMsg.sensor.type != LANDMARK_SENSOR &&
       tMsg.sensor.type != LANDMARK_END) {
@@ -269,7 +270,6 @@ static void updateStopNode(Driver* me, int speed) {
       TrainDebug(me, "No room to stop??? %d", stop);
       TrainDebug(me, "StopNode-1 %d, remaining %d ", me->stopNode-1,
           me->routeRemaining);
-      //trainSetSpeed(0, 0, 0, me);
       me->stopNow = 1;
   }
 
@@ -318,7 +318,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
   char msg[4];
   msg[1] = (char)me->trainNum;
 
-  //if (me->lastSensorActualTime > 0) {
+  if (me->lastSensorActualTime > 0) {
     // a/d related stuff
     int newSpeed = speed >=0 ? speed : 0;
     int now = Time(me->timeserver) * 10;
@@ -346,7 +346,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
       me->lastReportDist = 0;
       me->adEndTime = t1;
     }
-  //}
+  }
 
   TrainDebug(me, "Train Setting Speed %d", speed);
 
@@ -394,11 +394,8 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
         me->lastSensorIsTerminal = isTemp;
       }
 
-      // Just reversed so last sensor isn't valid
-      me->invalidLastSensor = 1;
-
       // Update prediction
-      updatePredication(me);
+      updatePrediction(me);
     } else {
       TrainDebug(me, "Set speed. %d %d", speed, me->trainNum);
       msg[0] = (char)speed;
@@ -585,14 +582,22 @@ void driver() {
         dynamicCalibration(&me);
         me.lastSensorPredictedTime = me.nextSensorPredictedTime;
 
-        TrackNextSensorMsg tMsg;
+        TrackNextSensorMsg trackMsg;
         TrackMsg qMsg;
         qMsg.type = QUERY_NEXT_SENSOR_FROM_SENSOR;
         qMsg.landmark1.type = LANDMARK_SENSOR;
         qMsg.landmark1.num1 = me.lastSensorBox;
         qMsg.landmark1.num2 = me.lastSensorVal;
         Send(me.trackManager, (char*)&qMsg, sizeof(TrackMsg),
-              (char*)&tMsg, sizeof(TrackNextSensorMsg));
+              (char*)&trackMsg, sizeof(TrackNextSensorMsg));
+        // For steven
+        TrackSensorPrediction tMsg = trackMsg.predictions[0]; // TODO
+        for (int i = 0; i < trackMsg.num; i++) {
+          TrackSensorPrediction prediction = trackMsg.predictions[i];
+          TrainDebug(&me, "Prediction %d %d %d", prediction.sensor.type, prediction.sensor.num1, prediction.sensor.num2);
+          TrainDebug(&me, "Dist: %d", prediction.dist);
+          TrainDebug(&me, "Condition %d %d %d %d", prediction.conditionLandmark.type, prediction.conditionLandmark.num1, prediction.conditionLandmark.num2, prediction.condition);
+        }
         me.calibrationStart = msg.timestamp;
         me.calibrationDistance = tMsg.dist;
         int dPos = 50 * getVelocity(&me, me.speed, me.speedDir) / 100000.0;
@@ -673,8 +678,8 @@ void driver() {
         }
         break;
       }
-      case BROADCAST_UPDATE_PREDICATION: {
-        updatePredication(&me);
+      case BROADCAST_UPDATE_PREDICTION: {
+        updatePrediction(&me);
         break;
       }
       case FIND_POSITION: {

@@ -63,9 +63,16 @@ typedef struct TrackMsg {
   Position position2;
 } TrackMsg;
 
-typedef struct TrackNextSensorMsg {
+typedef struct TrackSensorPrediction {
   TrackLandmark sensor;   //
   int dist;               // In mm
+  TrackLandmark conditionLandmark; // either switch or sensor
+  int condition; // SWITCH_CURVED/SWITCH_STRAIGHT if condition is switch, -1 if condition sensor, primary doesn't have condition
+} TrackSensorPrediction;
+
+typedef struct TrackNextSensorMsg {
+  int num;
+  TrackSensorPrediction predictions[20]; // [0] is primary, all other is secondary
 } TrackNextSensorMsg;
 
 typedef struct RouteNode {

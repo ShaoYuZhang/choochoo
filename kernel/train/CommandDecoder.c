@@ -136,7 +136,7 @@ static void decodeCommand() {
 
       DriverMsg trainMsg;
       trainMsg.trainNum = 255;
-      trainMsg.type = BROADCAST_UPDATE_PREDICATION;
+      trainMsg.type = BROADCAST_UPDATE_PREDICTION;
       Send(trainController, (char*)&trainMsg, sizeof(trainMsg), (char *)NULL, 0);
     }
   } else if (decoderBuffer[0] == 'r' && decoderBuffer[1] == 'o') {
