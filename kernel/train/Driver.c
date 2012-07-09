@@ -183,6 +183,9 @@ static void getRoute(Driver* me, DriverMsg* msg) {
 }
 
 static int shouldStopNow(Driver* me) {
+  if (me->stopNow) {
+    return 2; // no room to stop, must stop now
+  }
   if ( me->lastSensorBox == me->stopSensorBox &&
         me->lastSensorVal == me->stopSensorVal) {
     me->stopSensorHit = 1;
@@ -296,7 +299,8 @@ static void updateStopNode(Driver* me, int speed) {
       TrainDebug(me, "No room to stop??? %d", stop);
       TrainDebug(me, "StopNode-1 %d, remaining %d ", me->stopNode-1,
           me->routeRemaining);
-      trainSetSpeed(0, 0, 0, me);
+      //trainSetSpeed(0, 0, 0, me);
+      me->stopNow = 1;
   }
 
   TrainDebug(me, "Finish update stop %d %d %d", me->stopNode,
@@ -471,6 +475,7 @@ static void initDriver(Driver* me) {
   me->route.length = 0;
   me->stopCommited = 0; // haven't enabled speed zero yet.
   me->useLastSensorNow = 0;
+  me->stopNow = 0;
   me->stopSensorHit = 0;
   me->nextSensorIsTerminal = 0;
   me->lastSensorIsTerminal = 0;
@@ -677,6 +682,7 @@ void driver() {
               }
               me.stopCommited = 1;
               me.useLastSensorNow = 0;
+              me.stopNow = 0;
               me.stopSensorHit = 0;
             }
           }

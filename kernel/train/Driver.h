@@ -28,6 +28,7 @@ typedef struct Driver {
   int stopSensorVal;
   int distancePassStopSensorToStop;
   int useLastSensorNow;
+  int stopNow;
 
   TrainUiMsg uiMsg;
   Route route;
