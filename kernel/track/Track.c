@@ -8,7 +8,7 @@
 #include <ts7200.h>
 #include <util.h>
 
-//#define DEBUG_RESERVATION 0
+#define DEBUG_RESERVATION
 
 extern int CALIBRATION;
 static int switchStatus[NUM_SWITCHES];
@@ -54,6 +54,7 @@ static int reserveEdges(
       return RESERVE_SUCESS;
     }
   }
+  if (node->type == NODE_EXIT) return RESERVE_SUCESS;
 
   if (node->type == NODE_SENSOR || node->type == NODE_ENTER) {
     // Reserve the next edge.

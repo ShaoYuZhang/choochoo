@@ -127,24 +127,25 @@ void task1() {
   Send(trainController, (char *)&drive, sizeof(DriverMsg), (char *)NULL, 0);
 #endif
 
-  #if 0
-    TrackMsg rmsg;
-    rmsg.type = RESERVE_EDGE;
-    rmsg.data = 44; // train num
-    rmsg.landmark1.type = LANDMARK_SENSOR;
-    rmsg.stoppingDistance = 300;
+#if 0
+    ReleaseOldAndReserveNewTrackMsg rmsg;
+    rmsg.type = RELEASE_OLD_N_RESERVE_NEW;
+    rmsg.trainNum = 44; // train num
+    rmsg.lastSensor.type = LANDMARK_SENSOR;
+    rmsg.stoppingDistance = 20000;
+    rmsg.numPredSensor = 0;
 
-    TrackMsg cmsg;
-    cmsg.type = RESERVE_EDGE;
-    cmsg.data = 43; // train num
-    cmsg.landmark1.type = LANDMARK_SENSOR;
+    ReleaseOldAndReserveNewTrackMsg cmsg;
+    cmsg.type = RELEASE_OLD_N_RESERVE_NEW;
+    cmsg.trainNum = 43; // train num
+    cmsg.lastSensor.type = LANDMARK_SENSOR;
     cmsg.stoppingDistance = 240;
 
     char reply;
-    rmsg.landmark1.num1 = 3;
-    rmsg.landmark1.num2 = 5;
-    Send(trackController, (char*)&rmsg, sizeof(TrackMsg), &reply, 1);
-    PrintDebug(ui, "D5 Good?: %d", reply);
+    rmsg.lastSensor.num1 = 0;
+    rmsg.lastSensor.num2 = 2;
+    Send(trackController, (char*)&rmsg, sizeof(ReleaseOldAndReserveNewTrackMsg), &reply, 1);
+    PrintDebug(ui, "A1 Good?: %d", reply);
 #endif
 
 

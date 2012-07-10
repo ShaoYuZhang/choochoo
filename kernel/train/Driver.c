@@ -648,10 +648,8 @@ void driver() {
               me.stopSensorHit = 0;
             }
           }
-          if (me.rerouteCountdown-- == 0) {
-            setRoute(&me, &(me.routeMsg));
-          }
         }
+        if (me.rerouteCountdown-- == 0) setRoute(&me, &(me.routeMsg));
         if ((++naggCount & 15) == 0) sendUiReport(&me);
         break;
       }
