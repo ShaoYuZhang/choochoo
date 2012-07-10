@@ -58,7 +58,7 @@ static void decodeCommand() {
   unsigned int shortEvalulation = (decoderCurrBufferPos <= 3);
   decoderCurrBufferPos = 0;
   if (shortEvalulation) return;
-  if (decoderBuffer[0] == 'i' && decoderBuffer[1] == 'n' && decoderBuffer[2] == 'i' && decoderBuffer[3] == 't') {
+  if (decoderBuffer[0] == 'i' && decoderBuffer[1] == 'n') {
     char *temp = (char *)decoderBuffer + 5;
     int train_number = strgetui(&temp);
 
