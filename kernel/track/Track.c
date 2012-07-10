@@ -8,7 +8,7 @@
 #include <ts7200.h>
 #include <util.h>
 
-#define DEBUG_RESERVATION
+//#define DEBUG_RESERVATION
 
 extern int CALIBRATION;
 static int switchStatus[NUM_SWITCHES];

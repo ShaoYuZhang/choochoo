@@ -620,6 +620,7 @@ void driver() {
           FinishPositionFinding(me.trainNum, me.trainController);
         }
         if (reserveStatus == RESERVE_FAIL) {
+          TrainDebug(&me, "W:__Fail to reserve");
           trainSetSpeed(0, 0, 0, &me);
           me.rerouteCountdown = 200; // wait 2 seconds then reroute.
         }

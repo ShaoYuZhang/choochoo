@@ -161,6 +161,7 @@ static void setRoute(Driver* me, DriverMsg* msg) {
       } else {
         TrainDebug(me, "Cannot reserve track!");
         trainSetSpeed(0, 0, 0, me);
+        me->rerouteCountdown = 200;
       }
     }
   } else {

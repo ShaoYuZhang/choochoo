@@ -87,6 +87,7 @@ static void trainController() {
         msg.type = FIND_POSITION;
         PrintDebug(ui, "Initing %d ", next);
       } else {
+        PrintDebug(ui, "Found %d ", msg.trainNum);
         continue;
       }
     } else if (someTrainInit(trainWithoutPosition)) {

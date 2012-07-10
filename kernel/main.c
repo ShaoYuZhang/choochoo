@@ -132,7 +132,7 @@ void task1() {
     rmsg.type = RELEASE_OLD_N_RESERVE_NEW;
     rmsg.trainNum = 44; // train num
     rmsg.lastSensor.type = LANDMARK_SENSOR;
-    rmsg.stoppingDistance = 20000;
+    rmsg.stoppingDistance = 10;
     rmsg.numPredSensor = 0;
 
     ReleaseOldAndReserveNewTrackMsg cmsg;
@@ -142,10 +142,10 @@ void task1() {
     cmsg.stoppingDistance = 240;
 
     char reply;
-    rmsg.lastSensor.num1 = 0;
-    rmsg.lastSensor.num2 = 2;
+    rmsg.lastSensor.num1 = 3;
+    rmsg.lastSensor.num2 = 4;
     Send(trackController, (char*)&rmsg, sizeof(ReleaseOldAndReserveNewTrackMsg), &reply, 1);
-    PrintDebug(ui, "A1 Good?: %d", reply);
+    PrintDebug(ui, "D4 Good?: %d", reply);
 #endif
 
 
