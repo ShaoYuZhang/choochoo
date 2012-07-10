@@ -19,8 +19,7 @@
 #define QUERY_NEXT_SENSOR_FROM_POS 4
 #define ROUTE_PLANNING 5
 #define SET_TRACK 6
-#define RESERVE_EDGE  7
-#define RELEASE_EDGE 8
+#define RELEASE_OLD_N_RESERVE_NEW 7
 
 typedef enum {
   LANDMARK_SENSOR,
@@ -41,6 +40,15 @@ typedef struct TrackLandmark {
   char num2; //a number
 } TrackLandmark;
 
+typedef struct ReleaseOldAndReserveNewTrackMsg {
+  char type;
+  char trainNum;
+  int stoppingDistance;
+  char preSensorLen;
+  TrackLandmark lastSensor;
+  TrackLandmark predSensor[10];
+} ReleaseOldAndReserveNewTrackMsg;
+
 typedef struct Position {
   TrackLandmark landmark1;
   TrackLandmark landmark2;
@@ -51,7 +59,6 @@ typedef struct TrackMsg {
   char type;
   char data;
   TrackLandmark landmark1;
-  int stoppingDistance;
   Position position1;
   Position position2;
 } TrackMsg;

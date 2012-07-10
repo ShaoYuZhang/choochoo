@@ -20,6 +20,17 @@ static void trainNavigateNagger();
 static void printRoute(Driver* me);
 static void sendUiReport(Driver* me);
 
+static void toPosition(Driver* me, Position* pos) {
+  pos->landmark1.type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
+  pos->landmark1.num1 = me->lastSensorBox;
+  pos->landmark1.num2 = me->lastSensorVal;
+  pos->landmark2.type = me->nextSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
+  pos->landmark2.num1 = me->nextSensorBox;
+  pos->landmark2.num2 = me->nextSensorVal;
+  pos->offset = (int)me->distanceFromLastSensor;
+}
+
+
 static int interpolateStoppingDistance(Driver* me, int velocity) {
   int speed = 14;
   float percentUp = -1.0;
@@ -44,6 +55,34 @@ static int interpolateStoppingDistance(Driver* me, int velocity) {
   return stopUp * percentUp + stopDown * percentDown;
 }
 
+static int reserveTrack(Driver* me) {
+  TrackNextSensorMsg tMsg;
+  ReleaseOldAndReserveNewTrackMsg qmsg;
+  qmsg.type = RELEASE_OLD_N_RESERVE_NEW;
+  qmsg.trainNum = me->trainNum;
+
+  const int stoppingDistance = interpolateStoppingDistance(
+      me, me->v[me->speed][me->speedDir]);
+  // Start reserving from the first non-fake, non-reverse node.
+  for (int i = 0; i < me->route.length-1; i++) {
+    if (me->route.nodes[i].landmark.type != LANDMARK_FAKE &&
+        me->route.nodes[i].num != REVERSE)
+    {
+      //qmsg.landmark1.type = me->route.nodes[i].landmark.type;
+      //qmsg.stoppingDistance = 300;
+    }
+  }
+
+  qmsg.type = QUERY_NEXT_SENSOR_FROM_POS;
+  //toPosition(me, &qmsg.position1);
+  Send(me->trackManager, (char*)&qmsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
+        (char*)&tMsg, sizeof(TrackNextSensorMsg));
+
+  return 0;
+}
+
+
+
 static int getStoppingDistance(Driver* me) {
   return me->d[(int)me->speed][(int)me->speedDir][MAX_VAL];
 }
@@ -62,16 +101,6 @@ static int getVelocity(Driver* me, int speed, int dir){
 static int getStoppingTime(Driver* me) {
   return 2* getStoppingDistance(me) * 100000 /
     getVelocity(me, me->speed, me->speedDir);
-}
-
-static void toPosition(Driver* me, Position* pos) {
-  pos->landmark1.type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
-  pos->landmark1.num1 = me->lastSensorBox;
-  pos->landmark1.num2 = me->lastSensorVal;
-  pos->landmark2.type = me->nextSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
-  pos->landmark2.num1 = me->nextSensorBox;
-  pos->landmark2.num2 = me->nextSensorVal;
-  pos->offset = (int)me->distanceFromLastSensor;
 }
 
 static void updatePredication(Driver* me) {
@@ -629,8 +658,13 @@ void driver() {
               me.speedAfterReverse = msg.data2;
               trainSetSpeed(-1, getStoppingTime(&me), 0, &me);
             } else {
-              trainSetSpeed(msg.data2, 0, 0, &me);
-              updateStopNode(&me, msg.data2);
+              if (reserveTrack(&me)) {
+                trainSetSpeed(msg.data2, 0, 0, &me);
+                updateStopNode(&me, msg.data2);
+              } else {
+                TrainDebug(&me, "Cannot reserve track!");
+                trainSetSpeed(0, 0, 0, &me);
+              }
             }
           } else {
             TrainDebug(&me, "No route found!");
