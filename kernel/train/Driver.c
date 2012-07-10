@@ -84,14 +84,16 @@ static int reserveMoreTrack(Driver* me, TrackNextSensorMsg* trackMsg) {
   qMsg.lastSensor.num1 = me->lastSensorBox;
   qMsg.lastSensor.num2 = me->lastSensorVal;
 
-  if (trackMsg->numPred > 10) {
-    TrainDebug(me, "__Can't reserve >10 predictions");
-  } else {
-    TrainDebug(me, "Reserving track");
-    qMsg.numPredSensor = trackMsg->numPred;
-    for(int i = 0; i < trackMsg->numPred; i++) {
-      qMsg.predSensor[i] = trackMsg->predictions[i].sensor;
-      printLandmark(me, &qMsg.predSensor[i]);
+  if (!me->positionFinding) {
+    if (trackMsg->numPred > 10) {
+      TrainDebug(me, "__Can't reserve >10 predictions");
+    } else {
+      TrainDebug(me, "Reserving track");
+      qMsg.numPredSensor = trackMsg->numPred;
+      for(int i = 0; i < trackMsg->numPred; i++) {
+        qMsg.predSensor[i] = trackMsg->predictions[i].sensor;
+        printLandmark(me, &qMsg.predSensor[i]);
+      }
     }
   }
 
@@ -584,8 +586,6 @@ void driver() {
 
         TrackNextSensorMsg trackMsg;
         QueryNextSensor(&me, &trackMsg);
-        // Reserve the track above train and future (covers case of init)
-        int reserveStatus = reserveMoreTrack(&me, &trackMsg);
 
         TrackSensorPrediction tMsg = trackMsg.predictions[0]; // TODO
         for (int i = 0; i < trackMsg.numPred; i++) {
@@ -613,17 +613,20 @@ void driver() {
           getVelocity(&me, me.speed, me.speedDir);
 
         updatePosition(&me, msg.timestamp);
-        sendUiReport(&me);
         if (me.positionFinding) {
           trainSetSpeed(0, 0, 0, &me); // Found position, stop.
           me.positionFinding = 0;
           FinishPositionFinding(me.trainNum, me.trainController);
         }
+
+        // Reserve the track above train and future (covers case of init)
+        int reserveStatus = reserveMoreTrack(&me, &trackMsg);
         if (reserveStatus == RESERVE_FAIL) {
           TrainDebug(&me, "W:__Fail to reserve");
           trainSetSpeed(0, 0, 0, &me);
           me.rerouteCountdown = 200; // wait 2 seconds then reroute.
         }
+        sendUiReport(&me);
 
         break;
       }
