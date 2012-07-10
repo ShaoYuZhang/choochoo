@@ -31,9 +31,12 @@ typedef struct Driver {
   int useLastSensorNow;
   int stopNow;
   int positionFinding;
+  int rerouteCountdown;
 
   TrainUiMsg uiMsg;
   Route route;
+
+  DriverMsg routeMsg;
 
   int speedAfterReverse;
 

@@ -10,8 +10,6 @@
 #include <Sensor.h>
 #include <Track.h>
 
-#define REROUTE -1
-
 static void trainSetSpeed(const int speed, const int stopTime, const int delayer, Driver* me);
 static void printLandmark(Driver* me, TrackLandmark* l);
 static void trainDelayer();
@@ -20,6 +18,7 @@ static void trainNavigateNagger();
 static void printRoute(Driver* me);
 static void sendUiReport(Driver* me);
 static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg);
+static void setRoute(Driver* me, DriverMsg* msg);
 
 static int getStoppingDistance(Driver* me) {
   return me->d[(int)me->speed][(int)me->speedDir][MAX_VAL];
@@ -436,6 +435,7 @@ static void initDriver(Driver* me) {
   me->invalidLastSensor = 0;
   me->CC = 0;
   me->speedAfterReverse = -1;
+  me->rerouteCountdown = -1;
 
   char trackName[] = TRACK_NAME;
   me->trackManager = WhoIs(trackName);
@@ -621,7 +621,7 @@ void driver() {
         }
         if (reserveStatus == RESERVE_FAIL) {
           trainSetSpeed(0, 0, 0, &me);
-          // TODO, delay a bit then reroute.
+          me.rerouteCountdown = 200; // wait 2 seconds then reroute.
         }
 
         break;
@@ -648,39 +648,17 @@ void driver() {
               me.stopSensorHit = 0;
             }
           }
+          if (me.rerouteCountdown-- == 0) {
+            setRoute(&me, &(me.routeMsg));
+          }
         }
         if ((++naggCount & 15) == 0) sendUiReport(&me);
         break;
       }
       case SET_ROUTE: {
         Reply(replyTid, (char*)1, 0);
-        TrainDebug(&me, "Route setting!");
-        me.stopCommited = 0;
-
-        if (me.lastSensorActualTime > 0) {
-          getRoute(&me, &msg);
-          if (me.route.length != 0) {
-            if (me.route.nodes[0].dist == 0 && me.route.nodes[1].num == REVERSE) {
-              me.stopNode = 1;
-              me.speedAfterReverse = msg.data2;
-              trainSetSpeed(-1, getStoppingTime(&me), 0, &me);
-            } else {
-              TrackNextSensorMsg trackMsg;
-              QueryNextSensor(&me, &trackMsg);
-              int reserveStatus = reserveMoreTrack(&me, &trackMsg);
-              if (reserveStatus == RESERVE_SUCESS) {
-                trainSetSpeed(msg.data2, 0, 0, &me);
-                updateStopNode(&me, msg.data2);
-              } else {
-                TrainDebug(&me, "Cannot reserve track!");
-                trainSetSpeed(0, 0, 0, &me);
-              }
-            }
-          } else {
-            TrainDebug(&me, "No route found!");
-            trainSetSpeed(0, 0, 0, &me);
-          }
-        }
+        me.routeMsg = msg;
+        setRoute(&me, &msg);
         break;
       }
       case BROADCAST_UPDATE_PREDICTION: {
