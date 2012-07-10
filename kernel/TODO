@@ -1,0 +1,27 @@
+reserve 'stopping distance' past secondary.
+When hit primary:
+  - release last reservation, until current sensor
+When hit secondary: 
+  - stop. 
+  - wait until primary cannot be missed.
+  - release last reservation, keep current secondary reservation.
+
+  - if terminal:
+      Reverse. Reroute.
+  - else 
+      Reroute
+
+
+If miss primary:
+  - Continue (cuz we have reservation past secondary)
+
+
+
+Remove_all_reservation_and_get_new(predictions + $last sensor)
+  - if can get new reservation involving $predictions
+      - remove all current
+      - call reseve all each prediciton
+      - return OK
+  - else:
+      - do nothing
+      - return error

@@ -640,7 +640,7 @@ static void trackController() {
           // Make current reservation
           canReserve |= reserveEdges(start,
             actualMsg.trainNum, actualMsg.stoppingDistance, 0);
-          for (int j = 0; j < actualMsg.preSensorLen; j++) {
+          for (int j = 0; j < actualMsg.numPredSensor; j++) {
             track_node* n = findNode(track, actualMsg.predSensor[j]);
             canReserve |= reserveEdges(n,
                 actualMsg.trainNum, actualMsg.stoppingDistance, 0);

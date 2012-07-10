@@ -19,6 +19,27 @@ static void trainSensor();
 static void trainNavigateNagger();
 static void printRoute(Driver* me);
 static void sendUiReport(Driver* me);
+static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg);
+
+static int getStoppingDistance(Driver* me) {
+  return me->d[(int)me->speed][(int)me->speedDir][MAX_VAL];
+}
+
+// mm/s
+static int getVelocity(Driver* me, int speed, int dir){
+  return me->v[speed][dir];
+  if (me->isAding) {
+    int now = Time(me->timeserver) * 10;
+    return eval_velo(&(me->adPoly), now);
+  } else {
+    return me->v[(int)me->speed][(int)me->speedDir];
+  }
+}
+
+static int getStoppingTime(Driver* me) {
+  return 2* getStoppingDistance(me) * 100000 /
+    getVelocity(me, me->speed, me->speedDir);
+}
 
 static void toPosition(Driver* me, Position* pos) {
   pos->landmark1.type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
@@ -28,11 +49,6 @@ static void toPosition(Driver* me, Position* pos) {
   pos->landmark2.num1 = me->nextSensorBox;
   pos->landmark2.num2 = me->nextSensorVal;
   pos->offset = (int)me->distanceFromLastSensor;
-}
-
-static int reserveMoreTrack(Driver* me, TrackNextSensorMsg* trackMsg) {
-
-  return RESERVE_FAIL;
 }
 
 static int interpolateStoppingDistance(Driver* me, int velocity) {
@@ -59,52 +75,32 @@ static int interpolateStoppingDistance(Driver* me, int velocity) {
   return stopUp * percentUp + stopDown * percentDown;
 }
 
-static int reserveTrack(Driver* me) {
-  TrackNextSensorMsg tMsg;
-  ReleaseOldAndReserveNewTrackMsg qmsg;
-  qmsg.type = RELEASE_OLD_N_RESERVE_NEW;
-  qmsg.trainNum = me->trainNum;
+static int reserveMoreTrack(Driver* me, TrackNextSensorMsg* trackMsg) {
+  ReleaseOldAndReserveNewTrackMsg qMsg;
+  qMsg.type = RELEASE_OLD_N_RESERVE_NEW;
+  qMsg.trainNum = me->trainNum;
+  qMsg.stoppingDistance = interpolateStoppingDistance(
+      me, getVelocity(me, me->speed, me->speedDir));
+  qMsg.lastSensor.type = LANDMARK_SENSOR;
+  qMsg.lastSensor.num1 = me->lastSensorBox;
+  qMsg.lastSensor.num2 = me->lastSensorVal;
 
-  const int stoppingDistance = interpolateStoppingDistance(
-      me, me->v[me->speed][me->speedDir]);
-  // Start reserving from the first non-fake, non-reverse node.
-  for (int i = 0; i < me->route.length-1; i++) {
-    if (me->route.nodes[i].landmark.type != LANDMARK_FAKE &&
-        me->route.nodes[i].num != REVERSE)
-    {
-      //qmsg.landmark1.type = me->route.nodes[i].landmark.type;
-      //qmsg.stoppingDistance = 300;
+  if (trackMsg->numPred > 10) {
+    TrainDebug(me, "__Can't reserve >10 predictions");
+  } else {
+    qMsg.numPredSensor = trackMsg->numPred;
+    for(int i = 0; i < trackMsg->numPred; i++) {
+      qMsg.predSensor[i] = trackMsg->predictions[i].sensor;
     }
   }
 
-  qmsg.type = QUERY_NEXT_SENSOR_FROM_POS;
-  //toPosition(me, &qmsg.position1);
-  Send(me->trackManager, (char*)&qmsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
-        (char*)&tMsg, sizeof(TrackNextSensorMsg));
+    TrainDebug(me, "Reserving track");
+  char status = RESERVE_FAIL;
+  Send(me->trackManager, (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
+      &status, 1);
+    TrainDebug(me, "Got track");
 
-  return 0;
-}
-
-
-
-static int getStoppingDistance(Driver* me) {
-  return me->d[(int)me->speed][(int)me->speedDir][MAX_VAL];
-}
-
-// mm/s
-static int getVelocity(Driver* me, int speed, int dir){
-  return me->v[speed][dir];
-  if (me->isAding) {
-    int now = Time(me->timeserver) * 10;
-    return eval_velo(&(me->adPoly), now);
-  } else {
-    return me->v[(int)me->speed][(int)me->speedDir];
-  }
-}
-
-static int getStoppingTime(Driver* me) {
-  return 2* getStoppingDistance(me) * 100000 /
-    getVelocity(me, me->speed, me->speedDir);
+  return RESERVE_FAIL;
 }
 
 static void updatePrediction(Driver* me) {
@@ -587,14 +583,8 @@ void driver() {
         me.lastSensorPredictedTime = me.nextSensorPredictedTime;
 
         TrackNextSensorMsg trackMsg;
-        TrackMsg qMsg;
-        qMsg.type = QUERY_NEXT_SENSOR_FROM_SENSOR;
-        qMsg.landmark1.type = LANDMARK_SENSOR;
-        qMsg.landmark1.num1 = me.lastSensorBox;
-        qMsg.landmark1.num2 = me.lastSensorVal;
-        Send(me.trackManager, (char*)&qMsg, sizeof(TrackMsg),
-              (char*)&trackMsg, sizeof(TrackNextSensorMsg));
-        // --- Reserve more track
+        QueryNextSensor(&me, &trackMsg);
+        // Reserve the track above train and future (covers case of init)
         int reserveStatus = reserveMoreTrack(&me, &trackMsg);
 
         TrackSensorPrediction tMsg = trackMsg.predictions[0]; // TODO
@@ -675,7 +665,10 @@ void driver() {
               me.speedAfterReverse = msg.data2;
               trainSetSpeed(-1, getStoppingTime(&me), 0, &me);
             } else {
-              if (reserveTrack(&me)) {
+              TrackNextSensorMsg trackMsg;
+              QueryNextSensor(&me, &trackMsg);
+              int reserveStatus = reserveMoreTrack(&me, &trackMsg);
+              if (reserveStatus == RESERVE_SUCESS) {
                 trainSetSpeed(msg.data2, 0, 0, &me);
                 updateStopNode(&me, msg.data2);
               } else {

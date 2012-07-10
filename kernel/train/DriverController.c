@@ -90,7 +90,9 @@ static void trainController() {
         continue;
       }
     } else if (someTrainInit(trainWithoutPosition)) {
-      PrintDebug(ui, "Drop msg cuz a train is init.");
+      PrintDebug(ui, "Drop msg T:%d from %d cuz a train init.",
+          msg.type, tid);
+      Reply(tid, (char*)1, 0);
       continue;
     }
 
@@ -134,7 +136,7 @@ void FinishPositionFinding(int trainNum, int controllerTid) {
   }
   DriverMsg msg;
   msg.type = KNOW_POSITION;
-  msg.trainNum = trainNum;
+  msg.trainNum = (char)trainNum;
   Send(controllerTid, (char*)&msg, sizeof(DriverMsg), (char *)NULL, 0);
 }
 

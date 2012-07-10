@@ -1,3 +1,14 @@
+static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg) {
+  TrackMsg qMsg;
+  qMsg.type = QUERY_NEXT_SENSOR_FROM_SENSOR;
+  qMsg.landmark1.type = LANDMARK_SENSOR;
+  qMsg.landmark1.num1 = me->lastSensorBox;
+  qMsg.landmark1.num2 = me->lastSensorVal;
+  Send(me->trackManager, (char*)&qMsg, sizeof(TrackMsg),
+      (char*)trackMsg, sizeof(TrackNextSensorMsg));
+}
+
+
 
 static void printLandmark(Driver* me, TrackLandmark* l) {
   if (l->type == LANDMARK_SENSOR) {

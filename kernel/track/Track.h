@@ -44,8 +44,8 @@ typedef struct ReleaseOldAndReserveNewTrackMsg {
   char type;
   char trainNum;
   int stoppingDistance;
-  char preSensorLen;
   TrackLandmark lastSensor;
+  int numPredSensor;
   TrackLandmark predSensor[10];
 } ReleaseOldAndReserveNewTrackMsg;
 
