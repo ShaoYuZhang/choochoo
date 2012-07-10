@@ -20,6 +20,7 @@
 #define ROUTE_PLANNING 5
 #define SET_TRACK 6
 #define RELEASE_OLD_N_RESERVE_NEW 7
+#define QUERY_SENSOR_RESERVED 8
 
 typedef enum {
   LANDMARK_SENSOR,

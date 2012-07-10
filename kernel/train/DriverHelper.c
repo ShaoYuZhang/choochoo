@@ -9,6 +9,18 @@ static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg) {
       (char*)trackMsg, sizeof(TrackNextSensorMsg));
 }
 
+static int QueryIsSensorReserved(Driver* me, int box, int val) {
+  char isReserved = 0;
+  TrackMsg qMsg;
+  qMsg.type = QUERY_NEXT_SENSOR_FROM_SENSOR;
+  qMsg.landmark1.type = LANDMARK_SENSOR;
+  qMsg.landmark1.num1 = box;
+  qMsg.landmark1.num2 = val;
+  Send(me->trackManager, (char*)&qMsg, sizeof(TrackMsg),
+      (char*)&isReserved, 1);
+  return (int)isReserved;
+}
+
 static void printLandmark(Driver* me, TrackLandmark* l) {
   if (l->type == LANDMARK_SENSOR) {
     TrainDebug(me, "Landmark Sn  %c%d",

@@ -52,7 +52,6 @@ typedef struct Driver {
   int speedDir;
   float distanceFromLastSensor;
   float distanceToNextSensor;
-  char invalidLastSensor;
 
   char nextSensorIsTerminal;
   char nextSensorBox;
@@ -60,6 +59,10 @@ typedef struct Driver {
   int nextSensorPredictedTime;
 
   int lastSensorDistanceError;
+
+  // prediction stuff
+  TrackSensorPrediction predictions[20];
+  int numPredictions;
 
   // A/D stuff
   int isAding;

@@ -246,7 +246,7 @@ static int calculateDistance(track_node* currentNode, track_node* targetNode) {
 int secondaryPredictionCount;
 
 // Oh my, so many parameters
-static void findNextSensorsHelper(track_node* currentNode, TrackSensorPrediction* predictions, int trainNumber, int distance, int error, TrackLandmark errorLandmark, int errorCondition) {
+static void findNextSensorsHelper(track_node* currentNode, TrackSensorPrediction* predictions, int distance, int error, TrackLandmark errorLandmark, int errorCondition) {
   if (currentNode->type == NODE_SENSOR || currentNode->type == NODE_EXIT) {
     if (error) {
       predictions[1 + secondaryPredictionCount].sensor = getLandmark(currentNode);
@@ -261,37 +261,37 @@ static void findNextSensorsHelper(track_node* currentNode, TrackSensorPrediction
       // Primary Sensor failure
       if (currentNode->type == NODE_SENSOR) {
         track_edge *edge = &currentNode->edge[DIR_AHEAD];
-        findNextSensorsHelper(edge->dest, predictions, trainNumber, distance + edge->dist, 1, getLandmark(currentNode), -1);
+        findNextSensorsHelper(edge->dest, predictions, distance + edge->dist, 1, getLandmark(currentNode), -1);
       }
     }
   } else if (currentNode->type == NODE_BRANCH) {
     int switch_num = currentNode->num;
     if (switchStatus[switch_num] ==  SWITCH_CURVED) {
       track_edge* edge = &currentNode->edge[DIR_CURVED];
-      findNextSensorsHelper(edge->dest, predictions, trainNumber, distance + edge->dist, error, errorLandmark, errorCondition);
+      findNextSensorsHelper(edge->dest, predictions, distance + edge->dist, error, errorLandmark, errorCondition);
 
       // handle failed switch
       if (!error) {
         edge = &currentNode->edge[DIR_STRAIGHT];
-        findNextSensorsHelper(edge->dest, predictions, trainNumber, distance + edge->dist, 1, getLandmark(currentNode), SWITCH_CURVED);
+        findNextSensorsHelper(edge->dest, predictions, distance + edge->dist, 1, getLandmark(currentNode), SWITCH_CURVED);
       }
     } else {
       track_edge* edge = &currentNode->edge[DIR_STRAIGHT];
-      findNextSensorsHelper(edge->dest, predictions, trainNumber, distance + edge->dist, error, errorLandmark, errorCondition);
+      findNextSensorsHelper(edge->dest, predictions, distance + edge->dist, error, errorLandmark, errorCondition);
 
       // handle failed switch
       if (!error) {
         edge = &currentNode->edge[DIR_CURVED];
-        findNextSensorsHelper(edge->dest, predictions, trainNumber, distance + edge->dist, 1, getLandmark(currentNode), SWITCH_CURVED);
+        findNextSensorsHelper(edge->dest, predictions, distance + edge->dist, 1, getLandmark(currentNode), SWITCH_CURVED);
       }
     }
   } else {
     track_edge *edge = &currentNode->edge[DIR_AHEAD];
-    findNextSensorsHelper(edge->dest, predictions, trainNumber, distance + edge->dist, error, errorLandmark, errorCondition);
+    findNextSensorsHelper(edge->dest, predictions, distance + edge->dist, error, errorLandmark, errorCondition);
   }
 }
 
-static int findNextSensors(track_node *track, Position pos, TrackSensorPrediction* predictions, int trainNumber) {
+static int findNextSensors(track_node *track, Position pos, TrackSensorPrediction* predictions) {
   track_edge* fromEdge = (track_edge*)NULL;
   int offset = locateNode(track, pos, &fromEdge);
   if (offset == -1) {
@@ -310,7 +310,7 @@ static int findNextSensors(track_node *track, Position pos, TrackSensorPredictio
   // bad use of globals
   secondaryPredictionCount = 0;
   TrackLandmark fakeLandmark = {LANDMARK_FAKE, 0, 0};
-  findNextSensorsHelper(currentNode, predictions, trainNumber, 0/*distance*/, 0/*error*/, fakeLandmark, 0/*errorCondition*/);
+  findNextSensorsHelper(currentNode, predictions, 0/*distance*/, 0/*error*/, fakeLandmark, 0/*errorCondition*/);
 
   // restore graph
   *nodeSrcPointer = nodeSrc;
@@ -588,6 +588,25 @@ static void trackController() {
         Reply(tid, &canReserve, 1);
         break;
       }
+      case QUERY_SENSOR_RESERVED: {
+        char isReserved = 0;
+        int trainNum = msg->data;
+        if (msg->landmark1.type != LANDMARK_SENSOR) {
+          PrintDebug(ui, "Track Warning: need to be a sensor");
+        } else {
+          track_node* sensor = findNode(track, msg->landmark1);
+          if (sensor == (track_node*) NULL) {
+            PrintDebug(ui, "Track Warning: Invalid sensor");
+          } else {
+            track_node* reverseSensor = sensor->reverse;
+            if (sensor->edge[DIR_AHEAD].reserved_train_num == trainNum && reverseSensor->edge[DIR_AHEAD].reserved_train_num == trainNum) {
+              isReserved = 1;
+            }
+          }
+        }
+        Reply(tid, &isReserved, 1);
+        break;
+      }
       case SET_SWITCH: {
         Reply(tid, (char*)1, 0);
         TrackLandmark sw = msg->landmark1;
@@ -617,7 +636,7 @@ static void trackController() {
 
         TrackNextSensorMsg sensorMsg;
         sensorMsg.numPred =
-          findNextSensors(track, pos, sensorMsg.predictions, (int)msg->data);
+          findNextSensors(track, pos, sensorMsg.predictions);
 
         Reply(tid, (char *)&sensorMsg, sizeof(TrackNextSensorMsg));
         break;
@@ -625,7 +644,7 @@ static void trackController() {
       case QUERY_NEXT_SENSOR_FROM_POS: {
         TrackNextSensorMsg sensorMsg;
         sensorMsg.numPred =
-          findNextSensors(track, msg->position1, sensorMsg.predictions, (int)msg->data);
+          findNextSensors(track, msg->position1, sensorMsg.predictions);
 
         Reply(tid, (char *)&sensorMsg, sizeof(TrackNextSensorMsg));
         break;

@@ -18,6 +18,7 @@ static void trainNavigateNagger();
 static void printRoute(Driver* me);
 static void sendUiReport(Driver* me);
 static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg);
+static int QueryIsSensorReserved(Driver* me, int box, int val);
 static void setRoute(Driver* me, DriverMsg* msg);
 
 static int getStoppingDistance(Driver* me) {
@@ -113,17 +114,17 @@ static void updatePrediction(Driver* me) {
   Send(me->trackManager, (char*)&qMsg, sizeof(TrackMsg),
         (char*)&trackMsg, sizeof(TrackNextSensorMsg));
 
-  TrackSensorPrediction tMsg = trackMsg.predictions[0]; // TODO
-  me->distanceToNextSensor = tMsg.dist;
-  if (tMsg.sensor.type != LANDMARK_SENSOR &&
-      tMsg.sensor.type != LANDMARK_END) {
+  TrackSensorPrediction primaryPrediction = trackMsg.predictions[0];
+  me->distanceToNextSensor = primaryPrediction.dist;
+  if (primaryPrediction.sensor.type != LANDMARK_SENSOR &&
+      primaryPrediction.sensor.type != LANDMARK_END) {
     TrainDebug(me, "QUERY_NEXT_SENSOR_FROM_SENSOR ..bad");
   }
-  me->nextSensorIsTerminal = (tMsg.sensor.type == LANDMARK_END);
+  me->nextSensorIsTerminal = (primaryPrediction.sensor.type == LANDMARK_END);
 
-  if (tMsg.sensor.num2 != 0) {
-    me->nextSensorBox = tMsg.sensor.num1;
-    me->nextSensorVal = tMsg.sensor.num2;
+  if (primaryPrediction.sensor.num2 != 0) {
+    me->nextSensorBox = primaryPrediction.sensor.num1;
+    me->nextSensorVal = primaryPrediction.sensor.num2;
     me->nextSensorPredictedTime =
       now + me->distanceToNextSensor*100000 /
       getVelocity(me, me->speed, me->speedDir) - 50; // 50 ms delay for sensor query.
@@ -434,7 +435,6 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
 static void initDriver(Driver* me) {
   char uiName[] = UI_TASK_NAME;
   me->ui = WhoIs(uiName);
-  me->invalidLastSensor = 0;
   me->CC = 0;
   me->speedAfterReverse = -1;
   me->rerouteCountdown = -1;
@@ -569,65 +569,82 @@ void driver() {
         break;
       }
       case SENSOR_TRIGGER: {
-        me.invalidLastSensor = 0;
         me.lastSensorIsTerminal = 0;
-        if (msg.data2 != me.nextSensorBox || msg.data3 != me.nextSensorVal) {
-          me.lastSensorUnexpected = 1;
-          //reRoute(&me, msg.data2, msg.data3); // TODO
-        } else {
-          me.lastSensorUnexpected = 0;
-        }
-        updateRoute(&me, msg.data2, msg.data3);
-        me.lastSensorBox = msg.data2; // Box
-        me.lastSensorVal = msg.data3; // Val
-        me.lastSensorActualTime = msg.timestamp;
-        dynamicCalibration(&me);
-        me.lastSensorPredictedTime = me.nextSensorPredictedTime;
 
-        TrackNextSensorMsg trackMsg;
-        QueryNextSensor(&me, &trackMsg);
-
-        TrackSensorPrediction tMsg = trackMsg.predictions[0]; // TODO
-        for (int i = 0; i < trackMsg.numPred; i++) {
-          TrackSensorPrediction prediction = trackMsg.predictions[i];
-          TrainDebug(&me, "Prediction %d %d %d", prediction.sensor.type, prediction.sensor.num1, prediction.sensor.num2);
-          TrainDebug(&me, "Dist: %d", prediction.dist);
-          TrainDebug(&me, "Condition %d %d %d %d", prediction.conditionLandmark.type, prediction.conditionLandmark.num1, prediction.conditionLandmark.num2, prediction.condition);
-        }
-        me.calibrationStart = msg.timestamp;
-        me.calibrationDistance = tMsg.dist;
-        int dPos = 50 * getVelocity(&me, me.speed, me.speedDir) / 100000.0;
-        me.lastSensorDistanceError =  -(int)me.distanceToNextSensor - dPos;
-        me.distanceFromLastSensor = dPos;
-        me.distanceToNextSensor = tMsg.dist - dPos;
-        me.lastPosUpdateTime = msg.timestamp;
-        if (tMsg.sensor.type != LANDMARK_SENSOR &&
-            tMsg.sensor.type != LANDMARK_END) {
-          TrainDebug(&me, "QUERY_NEXT_SENSOR_FROM_SENSOR ..bad");
-        }
-        me.nextSensorIsTerminal = (tMsg.sensor.type == LANDMARK_END);
-        me.nextSensorBox = tMsg.sensor.num1;
-        me.nextSensorVal = tMsg.sensor.num2;
-        me.nextSensorPredictedTime =
-          msg.timestamp + me.distanceToNextSensor*100000 /
-          getVelocity(&me, me.speed, me.speedDir);
-
-        updatePosition(&me, msg.timestamp);
+        // only handle sensor reports in primary + secondary prediction if not position finding
+        int sensorReportValid = 0;
+        TrackLandmark conditionLandmark;
+        int condition;
+        int isSensorReserved = QueryIsSensorReserved(&me, msg.data2, msg.data3);
         if (me.positionFinding) {
-          trainSetSpeed(0, 0, 0, &me); // Found position, stop.
-          me.positionFinding = 0;
-          FinishPositionFinding(me.trainNum, me.trainController);
+          sensorReportValid = 1;
+          me.lastSensorUnexpected = 1;
+        } else if (isSensorReserved) {
+          for (int i = 0; i < me.numPredictions; i ++) {
+            TrackLandmark predictedSensor = me.predictions[i].sensor;
+            if (predictedSensor.type == LANDMARK_SENSOR && predictedSensor.num1 == msg.data2 && predictedSensor.num2 == msg.data3) {
+              sensorReportValid = 1;
+              if (i != 0) {
+                // secondary prediction, need to do something about them
+                conditionLandmark = me.predictions[i].conditionLandmark;
+                condition = me.predictions[i].condition;
+                me.lastSensorUnexpected = 1;
+                //reRoute(&me, msg.data2, msg.data3); // TODO??
+              } else {
+                me.lastSensorUnexpected = 0;
+              }
+            }
+          }
         }
+        if (sensorReportValid) {
+          updateRoute(&me, msg.data2, msg.data3);
+          me.lastSensorBox = msg.data2; // Box
+          me.lastSensorVal = msg.data3; // Val
+          me.lastSensorActualTime = msg.timestamp;
+          dynamicCalibration(&me);
+          me.lastSensorPredictedTime = me.nextSensorPredictedTime;
 
-        // Reserve the track above train and future (covers case of init)
-        int reserveStatus = reserveMoreTrack(&me, &trackMsg);
-        if (reserveStatus == RESERVE_FAIL) {
-          TrainDebug(&me, "W:__Fail to reserve");
-          trainSetSpeed(0, 0, 0, &me);
-          me.rerouteCountdown = 200; // wait 2 seconds then reroute.
+          TrackNextSensorMsg trackMsg;
+          QueryNextSensor(&me, &trackMsg);
+
+          for (int i = 0; i < trackMsg.numPred; i++) {
+            me.predictions[i] = trackMsg.predictions[i];
+          }
+          me.numPredictions = trackMsg.numPred;
+
+          TrackSensorPrediction primaryPrediction = me.predictions[0];
+          me.calibrationStart = msg.timestamp;
+          me.calibrationDistance = primaryPrediction.dist;
+          int dPos = 50 * getVelocity(&me, me.speed, me.speedDir) / 100000.0;
+          me.lastSensorDistanceError =  -(int)me.distanceToNextSensor - dPos;
+          me.distanceFromLastSensor = dPos;
+          me.distanceToNextSensor = primaryPrediction.dist - dPos;
+          me.lastPosUpdateTime = msg.timestamp;
+          if (primaryPrediction.sensor.type != LANDMARK_SENSOR &&
+              primaryPrediction.sensor.type != LANDMARK_END) {
+            TrainDebug(&me, "QUERY_NEXT_SENSOR_FROM_SENSOR ..bad");
+          }
+          me.nextSensorIsTerminal = (primaryPrediction.sensor.type == LANDMARK_END);
+          me.nextSensorBox = primaryPrediction.sensor.num1;
+          me.nextSensorVal = primaryPrediction.sensor.num2;
+          me.nextSensorPredictedTime =
+            msg.timestamp + me.distanceToNextSensor*100000 /
+            getVelocity(&me, me.speed, me.speedDir);
+
+          updatePosition(&me, msg.timestamp);
+          // Reserve the track above train and future (covers case of init)
+          int reserveStatus = reserveMoreTrack(&me, &trackMsg);
+          if (reserveStatus == RESERVE_FAIL) {
+            trainSetSpeed(0, 0, 0, &me);
+            me.rerouteCountdown = 200; // wait 2 seconds then reroute.
+          }
+          sendUiReport(&me);
+          if (me.positionFinding) {
+            trainSetSpeed(0, 0, 0, &me); // Found position, stop.
+            me.positionFinding = 0;
+            FinishPositionFinding(me.trainNum, me.trainController);
+          }
         }
-        sendUiReport(&me);
-
         break;
       }
       case NAVIGATE_NAGGER: {
