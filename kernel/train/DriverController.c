@@ -3,6 +3,43 @@
 #include <NameServer.h>
 #include <IoHelper.h>
 
+static int ui;
+int someTrainInit(int* initTrain) {
+  for(int i = 0; i < 3; i++) {
+    if (initTrain[i] != -1) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+void enqueue(int* initTrain, int trainNum) {
+  for (int i = 0; i < 3; i++) {
+    if (initTrain[i] == -1) {
+      initTrain[i] = trainNum;
+      return;
+    }
+  }
+}
+
+void dequeue(int* initTrain, int trainNum) {
+  for (int i = 0; i < 3; i++) {
+    if (initTrain[i] == trainNum) {
+      initTrain[i] = -1;
+      return;
+    }
+  }
+}
+
+int getNext(int* initTrain) {
+  for (int i = 0; i < 3; i++) {
+    if (initTrain[i] != -1) {
+      return initTrain[i];
+    }
+  }
+  return 0;
+}
+
 // An admin that pass message to train.
 // Additionally create train if it does not exist.
 static void trainController() {
@@ -10,7 +47,7 @@ static void trainController() {
   RegisterAs(trainName);
 
   char uiName[] = UI_TASK_NAME;
-  int ui = WhoIs(uiName);
+  ui = WhoIs(uiName);
   char com1Name[] = IOSERVERCOM1_NAME;
   int com1 = WhoIs(com1Name);
 
@@ -20,6 +57,11 @@ static void trainController() {
     trainTid[i] = -1;
   }
 
+  int trainWithoutPosition[3];
+  for (int i = 0; i < 3; i++){
+    trainWithoutPosition[i] = -1;
+  }
+
   for (;;) {
     int tid = -1;
     DriverMsg msg;
@@ -27,6 +69,30 @@ static void trainController() {
     msg.data2 = -1;
     msg.data3 = -1;
     Receive(&tid, (char*)&msg, sizeof(DriverMsg));
+
+    if (msg.type == FIND_POSITION) {
+      Reply(tid, (char*)1, 0);
+      if (someTrainInit(trainWithoutPosition)) {
+        enqueue(trainWithoutPosition, msg.trainNum);
+        continue;
+      }
+      enqueue(trainWithoutPosition, msg.trainNum);
+    }
+    else if (msg.type == KNOW_POSITION) {
+      Reply(tid, (char*)1, 0);
+      dequeue(trainWithoutPosition, msg.trainNum);
+      int next = getNext(trainWithoutPosition);
+      if (next) {
+        msg.trainNum = next;
+        msg.type = FIND_POSITION;
+        PrintDebug(ui, "Initing %d ", next);
+      } else {
+        continue;
+      }
+    } else if (someTrainInit(trainWithoutPosition)) {
+      PrintDebug(ui, "Drop msg cuz a train is init.");
+      continue;
+    }
 
     if (msg.trainNum == 255) {
       // Broadcast, can't receive replies
@@ -56,9 +122,20 @@ static void trainController() {
       }
       else {
         PrintDebug(ui, "Bad train num %d", msg.trainNum);
+        Reply(tid, (char*)1, 0);
       }
     }
   }
+}
+
+void FinishPositionFinding(int trainNum, int controllerTid) {
+  if (trainNum == 255) {
+    PrintDebug(ui, "Cannot broadcast finish position.");
+  }
+  DriverMsg msg;
+  msg.type = KNOW_POSITION;
+  msg.trainNum = trainNum;
+  Send(controllerTid, (char*)&msg, sizeof(DriverMsg), (char *)NULL, 0);
 }
 
 int startDriverControllerTask() {

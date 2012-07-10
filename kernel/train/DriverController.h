@@ -13,6 +13,7 @@
 #define NAVIGATE_NAGGER 7
 #define BROADCAST_UPDATE_PREDICTION 8
 #define FIND_POSITION 9
+#define KNOW_POSITION 10
 
 #include <UserInterface.h>
 #include <Track.h>
@@ -34,6 +35,8 @@ typedef struct DriverInitMsg {
 } DriverInitMsg;
 
 int startDriverControllerTask();
+
+void FinishPositionFinding(int trainNum, int controllerTid);
 
 void driver();
 

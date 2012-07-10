@@ -452,11 +452,11 @@ static void initDriver(Driver* me) {
   me->timeserver = WhoIs(timename);
 
   DriverInitMsg init;
-  int controller;
-  Receive(&controller, (char*)&init, sizeof(DriverInitMsg));
-  Reply(controller, (char*)1, 0);
+  Receive(&(me->trainController), (char*)&init, sizeof(DriverInitMsg));
+  Reply(me->trainController, (char*)1, 0);
   me->trainNum = init.trainNum;
   me->uiMsg.nth = init.nth;
+  me->uiMsg.trainNum = (char)init.trainNum;
   me->com1 = init.com1;
   me->uiMsg.type = UPDATE_TRAIN;
 
@@ -619,8 +619,9 @@ void driver() {
         updatePosition(&me, msg.timestamp);
         sendUiReport(&me);
         if (me.positionFinding) {
-          trainSetSpeed(5, 0, 0, &me);
+          trainSetSpeed(0, 0, 0, &me); // Found position, stop.
           me.positionFinding = 0;
+          FinishPositionFinding(me.trainNum, me.trainController);
         }
         break;
       }
@@ -683,7 +684,6 @@ void driver() {
         break;
       }
       case FIND_POSITION: {
-        Reply(replyTid, (char*)1, 0);
         trainSetSpeed(5, 0, 0, &me);
         me.positionFinding = 1;
         break;

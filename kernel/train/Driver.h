@@ -9,6 +9,7 @@ typedef struct Driver {
   int CC;
 
   // Task Id
+  int trainController;
   int delayer;
   int ui;
   int com1;

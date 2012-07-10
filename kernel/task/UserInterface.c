@@ -150,7 +150,7 @@ static char* updateTrain(TrainUiMsg* train, char* msg) {
   *msg++ = 'm';
   *msg++ = ':';
   *msg++ = ' ';
-  *msg++ = '0' + train->nth;
+  msg = formatInt(train->trainNum, 2, msg);
   row++;
   msg = resetColor(msg);
 

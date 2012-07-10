@@ -23,6 +23,7 @@ typedef struct UiMsg {
 typedef struct TrainUiMsg {
   char type;       // always UPDATE_TRAIN  (used for consistency with UiMsg)
   char nth;
+  char trainNum;
 
   char lastSensorUnexpected;
   char lastSensorBox;
