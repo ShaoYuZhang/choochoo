@@ -30,6 +30,10 @@ static void toPosition(Driver* me, Position* pos) {
   pos->offset = (int)me->distanceFromLastSensor;
 }
 
+static int reserveMoreTrack(Driver* me, TrackNextSensorMsg* trackMsg) {
+
+  return RESERVE_FAIL;
+}
 
 static int interpolateStoppingDistance(Driver* me, int velocity) {
   int speed = 14;
@@ -590,9 +594,11 @@ void driver() {
         qMsg.landmark1.num2 = me.lastSensorVal;
         Send(me.trackManager, (char*)&qMsg, sizeof(TrackMsg),
               (char*)&trackMsg, sizeof(TrackNextSensorMsg));
-        // For steven
+        // --- Reserve more track
+        int reserveStatus = reserveMoreTrack(&me, &trackMsg);
+
         TrackSensorPrediction tMsg = trackMsg.predictions[0]; // TODO
-        for (int i = 0; i < trackMsg.num; i++) {
+        for (int i = 0; i < trackMsg.numPred; i++) {
           TrackSensorPrediction prediction = trackMsg.predictions[i];
           TrainDebug(&me, "Prediction %d %d %d", prediction.sensor.type, prediction.sensor.num1, prediction.sensor.num2);
           TrainDebug(&me, "Dist: %d", prediction.dist);
@@ -623,6 +629,11 @@ void driver() {
           me.positionFinding = 0;
           FinishPositionFinding(me.trainNum, me.trainController);
         }
+        if (reserveStatus == RESERVE_FAIL) {
+          trainSetSpeed(0, 0, 0, &me);
+          // TODO, delay a bit then reroute.
+        }
+
         break;
       }
       case NAVIGATE_NAGGER: {

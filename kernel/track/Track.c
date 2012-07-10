@@ -677,14 +677,16 @@ static void trackController() {
         Position pos = {sensor, nextLandmark, 0};
 
         TrackNextSensorMsg sensorMsg;
-        sensorMsg.num = findNextSensors(track, pos, sensorMsg.predictions, (int)msg->data);
+        sensorMsg.numPred =
+          findNextSensors(track, pos, sensorMsg.predictions, (int)msg->data);
 
         Reply(tid, (char *)&sensorMsg, sizeof(TrackNextSensorMsg));
         break;
       }
       case QUERY_NEXT_SENSOR_FROM_POS: {
         TrackNextSensorMsg sensorMsg;
-        sensorMsg.num = findNextSensors(track, msg->position1, sensorMsg.predictions, (int)msg->data);
+        sensorMsg.numPred =
+          findNextSensors(track, msg->position1, sensorMsg.predictions, (int)msg->data);
 
         Reply(tid, (char *)&sensorMsg, sizeof(TrackNextSensorMsg));
         break;

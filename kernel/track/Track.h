@@ -71,7 +71,7 @@ typedef struct TrackSensorPrediction {
 } TrackSensorPrediction;
 
 typedef struct TrackNextSensorMsg {
-  int num;
+  int numPred;
   TrackSensorPrediction predictions[20]; // [0] is primary, all other is secondary
 } TrackNextSensorMsg;
 
