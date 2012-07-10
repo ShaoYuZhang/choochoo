@@ -17,6 +17,8 @@ static void printLandmark(Driver* me, TrackLandmark* l);
 static void trainDelayer();
 static void trainSensor();
 static void trainNavigateNagger();
+static void printRoute(Driver* me);
+static void sendUiReport(Driver* me);
 
 static int interpolateStoppingDistance(Driver* me, int velocity) {
   int speed = 14;
@@ -72,39 +74,6 @@ static void toPosition(Driver* me, Position* pos) {
   pos->offset = (int)me->distanceFromLastSensor;
 }
 
-static void sendUiReport(Driver* me) {
-  me->uiMsg.velocity = getVelocity(me, me->speed, me->speedDir) / 100;
-  //if (!me->invalidLastSensor){
-    me->uiMsg.lastSensorUnexpected     = me->lastSensorUnexpected;
-    me->uiMsg.lastSensorBox            = me->lastSensorBox;
-    me->uiMsg.lastSensorVal            = me->lastSensorVal;
-    me->uiMsg.lastSensorActualTime     = me->lastSensorActualTime;
-    me->uiMsg.lastSensorPredictedTime  = me->lastSensorPredictedTime;
-    me->uiMsg.lastSensorIsTerminal     = me->lastSensorIsTerminal;
-  //} else {
-  //  me->uiMsg.lastSensorUnexpected     = 0;
-  //  me->uiMsg.lastSensorBox            = 0;
-  //  me->uiMsg.lastSensorVal            = 0;
-  //  me->uiMsg.lastSensorActualTime     = 0;
-  //  me->uiMsg.lastSensorPredictedTime  = 0;
-  //  me->uiMsg.lastSensorIsTerminal     = 0;
-  //}
-
-  me->uiMsg.speed                    = me->speed;      // 0 - 14
-  me->uiMsg.speedDir                 = me->speedDir;
-  me->uiMsg.distanceFromLastSensor   = (int)me->distanceFromLastSensor;
-  me->uiMsg.distanceToNextSensor     = (int)me->distanceToNextSensor;
-
-  me->uiMsg.nextSensorBox            = me->nextSensorBox;
-  me->uiMsg.nextSensorVal            = me->nextSensorVal;
-  me->uiMsg.nextSensorPredictedTime  = me->nextSensorPredictedTime;
-  me->uiMsg.nextSensorIsTerminal     = me->nextSensorIsTerminal;
-
-  me->uiMsg.lastSensorDistanceError  = me->lastSensorDistanceError;
-
-  Send(me->ui, (char*)&(me->uiMsg), sizeof(TrainUiMsg), (char*)1, 0);
-}
-
 static void updatePredication(Driver* me) {
   int now = Time(me->timeserver) * 10;
   TrackNextSensorMsg tMsg;
@@ -151,35 +120,7 @@ static void getRoute(Driver* me, DriverMsg* msg) {
   Send(me->trackManager, (char*)&trackmsg,
       sizeof(TrackMsg), (char*)&(me->route), sizeof(Route));
   me->routeRemaining = 0;
-
-  TrainDebug(me, "Route Distance %d", me->route.dist);
-  TrainDebug(me, "Num Node %d", me->route.length);
-
-  TrainDebug(me, "<Route>");
-  for (int i = 0; i < me->route.length; i++) {
-    RouteNode node = me->route.nodes[i];
-    if (node.num == -1) {
-      TrainDebug(me, "%d reverse", i);
-    } else {
-      if (node.landmark.type == LANDMARK_SENSOR) {
-        TrainDebug(me, "%d Landmark Sn  %c%d D:%d",
-            i, 'A' +node.landmark.num1, node.landmark.num2, node.dist);
-      } else if (node.landmark.type == LANDMARK_END) {
-        TrainDebug(me, "%d Landmark %s %d D:%d",
-            i, node.landmark.num1 == EN ? "EN" : "EX",
-            node.landmark.num2, node.dist);
-      } else if (node.landmark.type == LANDMARK_FAKE) {
-        TrainDebug(me, "%d Landmark Fake %d %d D:%d",
-            i, node.landmark.num1, node.landmark.num2, node.dist);
-      }
-
-      if (node.landmark.type == LANDMARK_SWITCH && node.landmark.num1 == BR) {
-        TrainDebug(me, "%d Set switch %d %s", i, node.landmark.num2,
-            node.num == SWITCH_CURVED ? "Curve" : "Straight");
-      }
-    }
-  }
-  TrainDebug(me, "</Route>");
+  printRoute(me);
 }
 
 static int shouldStopNow(Driver* me) {
