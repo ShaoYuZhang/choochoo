@@ -8,8 +8,6 @@ static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg) {
       (char*)trackMsg, sizeof(TrackNextSensorMsg));
 }
 
-
-
 static void printLandmark(Driver* me, TrackLandmark* l) {
   if (l->type == LANDMARK_SENSOR) {
     TrainDebug(me, "Landmark Sn  %c%d",

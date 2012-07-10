@@ -68,5 +68,4 @@ int startUserInterfaceTask();
   Send(moi->ui, DebugBuffer, DebugLen + 2, (char*)1, 0);  \
 }
 
-
 #endif // USER_INTERFACE_H_

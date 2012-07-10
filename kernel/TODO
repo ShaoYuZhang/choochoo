@@ -1,3 +1,6 @@
+Change switches from primary prediction -> intended secondary.. else could be to late.
+secondary is defined to be sensors that can be reached due to single error.
+
 reserve 'stopping distance' past secondary.
 When hit primary:
   - release last reservation, until current sensor
@@ -17,6 +20,7 @@ If miss primary:
 
 
 
+-- DONE?
 Remove_all_reservation_and_get_new(predictions + $last sensor)
   - if can get new reservation involving $predictions
       - remove all current

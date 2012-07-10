@@ -128,7 +128,26 @@ void task1() {
 #endif
 
   #if 0
+    TrackMsg rmsg;
+    rmsg.type = RESERVE_EDGE;
+    rmsg.data = 44; // train num
+    rmsg.landmark1.type = LANDMARK_SENSOR;
+    rmsg.stoppingDistance = 300;
+
+    TrackMsg cmsg;
+    cmsg.type = RESERVE_EDGE;
+    cmsg.data = 43; // train num
+    cmsg.landmark1.type = LANDMARK_SENSOR;
+    cmsg.stoppingDistance = 240;
+
+    char reply;
+    rmsg.landmark1.num1 = 3;
+    rmsg.landmark1.num2 = 5;
+    Send(trackController, (char*)&rmsg, sizeof(TrackMsg), &reply, 1);
+    PrintDebug(ui, "D5 Good?: %d", reply);
 #endif
+
+
   Delay(600, time);
 
   Exit();

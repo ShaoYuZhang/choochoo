@@ -8,6 +8,8 @@
 #include <ts7200.h>
 #include <util.h>
 
+//#define DEBUG_RESERVATION 0
+
 extern int CALIBRATION;
 static int switchStatus[NUM_SWITCHES];
 static int com1;
@@ -37,93 +39,11 @@ static void clearNodeReservation(track_node* node, int trainNum) {
   }
 }
 
-static void releaseEdges(track_node* node, int trainNum, int stoppingDistance) {
-  int status = RESERVE_SUCESS;
-
-  if (node->type == NODE_SENSOR || node->type == NODE_ENTER) {
-    // Release the next edge.
-    track_edge* e1 = &(node->edge[DIR_AHEAD]);
-    track_edge* e2 = e1->reverse;
-
-    if (e1->reserved_train_num == trainNum) {
-      e1->reserved_train_num = UNRESERVED;
-      e2->reserved_train_num = UNRESERVED;
-      stoppingDistance -= e1->dist;
-     // PrintDebug(ui, "Release sensor edge %s by: %d %d di:%d", node->name,
-     //     e1->reserved_train_num, e2->reserved_train_num, stoppingDistance);
-      if (stoppingDistance > 0 || e1->dest->type == NODE_BRANCH || e1->dest->type == NODE_MERGE) {
-        releaseEdges(e1->dest, trainNum, stoppingDistance);
-      }
-    }
-  }
-  else if (node->type == NODE_BRANCH) {
-    // Release left and right
-    track_edge* e1 = &(node->edge[DIR_STRAIGHT]);
-    track_edge* e2 = &(node->edge[DIR_CURVED]);
-    track_edge* e3 = e1->reverse;
-    track_edge* e4 = e2->reverse;
-
-    if (e1->reserved_train_num == trainNum &&
-        e2->reserved_train_num == trainNum &&
-        e3->reserved_train_num == trainNum &&
-        e4->reserved_train_num == trainNum) {
-      //PrintDebug(ui, "Release Branch switch edge %s", node->name);
-      e1->reserved_train_num = UNRESERVED;
-      e2->reserved_train_num = UNRESERVED;
-      e3->reserved_train_num = UNRESERVED;
-      e4->reserved_train_num = UNRESERVED;
-
-      // Destination is already reserved.. recurse if dest is switch
-      int tmpStopping = stoppingDistance - e1->dist;
-      if (e1->dest->type == NODE_MERGE || e1->dest->type == NODE_BRANCH ||
-          tmpStopping > 0) {
-        releaseEdges(e1->dest, trainNum, tmpStopping);
-      }
-      tmpStopping = stoppingDistance - e2->dist;
-      if (e2->dest->type == NODE_MERGE || e2->dest->type == NODE_BRANCH ||
-          tmpStopping > 0) {
-        releaseEdges(e2->dest, trainNum, tmpStopping);
-      }
-    }
-  } else if (node->type == NODE_MERGE) {
-    //PrintDebug(ui, "MergE__edge %s", node->name);
-    track_edge* e1 = &(node->edge[DIR_AHEAD]);
-    track_edge* e2 = e1->reverse;
-    // Release BR of MR edge.
-    track_edge* e3 = &(e2->dest->edge[DIR_STRAIGHT]);
-    track_edge* e4 = &(e2->dest->edge[DIR_CURVED]);
-    track_edge* e5 = e3->reverse;
-    track_edge* e6 = e4->reverse;
-
-    if (e1->reserved_train_num == trainNum) {
-      e1->reserved_train_num = UNRESERVED;
-      e2->reserved_train_num = UNRESERVED;
-      e3->reserved_train_num = UNRESERVED;
-      e4->reserved_train_num = UNRESERVED;
-      e5->reserved_train_num = UNRESERVED;
-      e6->reserved_train_num = UNRESERVED;
-      // Release center switch.
-      if (e3->dest->num > 100 &&
-          e3->dest->edge[DIR_CURVED].reserved_train_num == trainNum) {
-        e3->dest->edge[DIR_CURVED].reserved_train_num = UNRESERVED;
-        e3->dest->edge[DIR_CURVED].reverse->reserved_train_num = UNRESERVED;
-        e3->dest->edge[DIR_STRAIGHT].reserved_train_num = UNRESERVED;
-        e3->dest->edge[DIR_STRAIGHT].reverse->reserved_train_num = UNRESERVED;
-      }
-
-      int tmpStopping = stoppingDistance - e1->dist;
-      if (e1->dest->type ==  NODE_BRANCH || e1->dest->type ==  NODE_MERGE
-          || tmpStopping > 0){
-        releaseEdges(e1->dest, trainNum, stoppingDistance - e2->dist);
-      }
-    }
-  }
-}
-
-static int canReserver(track_edge* edge, int trainNum){
+static int canReserve(track_edge* edge, int trainNum){
   return edge->reserved_train_num == UNRESERVED ||
     edge->reserved_train_num == trainNum;
 }
+
 static int reserveEdges(
     track_node* node, int trainNum, int stoppingDistance, int dryrun) {
   int status = RESERVE_SUCESS;
@@ -140,12 +60,14 @@ static int reserveEdges(
     track_edge* e1 = &(node->edge[DIR_AHEAD]);
     track_edge* e2 = e1->reverse;
 
-    if (canReserver(e1, trainNum) && canReserver(e2, trainNum)) {
+    if (canReserve(e1, trainNum) && canReserve(e2, trainNum)) {
       e1->reserved_train_num = trainNum;
       e2->reserved_train_num = trainNum;
       stoppingDistance -= e1->dist;
-      //PrintDebug(ui, "Reserve sensor edge %s by: %d %d di:%d %d", node->name,
-      //    e1->reserved_train_num, e2->reserved_train_num, stoppingDistance, e1->dist);
+#ifdef DEBUG_RESERVATION
+      PrintDebug(ui, "Reserve sensor edge %s by: %d %d di:%d %d", node->name,
+          e1->reserved_train_num, e2->reserved_train_num, stoppingDistance, e1->dist);
+#endif
       if (stoppingDistance > 0 || e1->dest->type == NODE_BRANCH || e1->dest->type == NODE_MERGE) {
         status = reserveEdges(e1->dest, trainNum, stoppingDistance, dryrun);
       }
@@ -154,8 +76,10 @@ static int reserveEdges(
         e2->reserved_train_num = UNRESERVED;
       }
     } else {
-      //PrintDebug(ui, "%d Reserved sensor edge %s",
-      //    e1->reserved_train_num, node->name);
+#ifdef DEBUG_RESERVATION
+      PrintDebug(ui, "%d Reserved sensor edge %s",
+          e1->reserved_train_num, node->name);
+#endif
       return RESERVE_FAIL;
     }
   } else if (node->type == NODE_BRANCH) {
@@ -165,9 +89,11 @@ static int reserveEdges(
     track_edge* e3 = e1->reverse;
     track_edge* e4 = e2->reverse;
 
-    if (canReserver(e1, trainNum) && canReserver(e2, trainNum) &&
-        canReserver(e3, trainNum) && canReserver(e4, trainNum)) {
-      //PrintDebug(ui, "Reserve branch switch edge %s", node->name);
+    if (canReserve(e1, trainNum) && canReserve(e2, trainNum) &&
+        canReserve(e3, trainNum) && canReserve(e4, trainNum)) {
+#ifdef DEBUG_RESERVATION
+      PrintDebug(ui, "Reserve branch switch edge %s", node->name);
+#endif
       e1->reserved_train_num = trainNum;
       e2->reserved_train_num = trainNum;
       e3->reserved_train_num = trainNum;
@@ -192,8 +118,10 @@ static int reserveEdges(
         e4->reserved_train_num = UNRESERVED;
       }
     } else {
-      //PrintDebug(ui, "%d Reserved switch edge Fail %s",
-      //    e1->reserved_train_num, node->name);
+#ifdef DEBUG_RESERVATION
+      PrintDebug(ui, "%d Reserved switch edge Fail %s",
+          e1->reserved_train_num, node->name);
+#endif
       return RESERVE_FAIL;
     }
   } else if (node->type == NODE_MERGE) {
@@ -206,16 +134,18 @@ static int reserveEdges(
     track_edge* e5 = e3->reverse;
     track_edge* e6 = e4->reverse;
 
-    if (canReserver(e1, trainNum) && canReserver(e2, trainNum) &&
-        canReserver(e3, trainNum) && canReserver(e4, trainNum) &&
-        canReserver(e5, trainNum) && canReserver(e6, trainNum)) {
-      //PrintDebug(ui, "%d Merge.. %s %s %s %s %s %s %s %s %s %s %s %s",
-      //    trainNum, e1->src->name, e1->dest->name, e2->src->name, e2->dest->name, e3->src->name,
-      //    e3->dest->name, e4->src->name, e4->dest->name, e5->src->name, e5->dest->name,
-      //    e6->src->name, e6->dest->name);
+    if (canReserve(e1, trainNum) && canReserve(e2, trainNum) &&
+        canReserve(e3, trainNum) && canReserve(e4, trainNum) &&
+        canReserve(e5, trainNum) && canReserve(e6, trainNum)) {
+#ifdef DEBUG_RESERVATION
+      PrintDebug(ui, "%d Merge.. %s %s %s %s %s %s %s %s %s %s %s %s",
+          trainNum, e1->src->name, e1->dest->name, e2->src->name, e2->dest->name, e3->src->name,
+          e3->dest->name, e4->src->name, e4->dest->name, e5->src->name, e5->dest->name,
+          e6->src->name, e6->dest->name);
+#endif
       // Center stuff, dont support EX1, EX2
       if (e3->dest->num > 100 &&
-          canReserver(&(e3->dest->edge[DIR_CURVED]), trainNum)) {
+          canReserve(&(e3->dest->edge[DIR_CURVED]), trainNum)) {
         e3->dest->edge[DIR_CURVED].reserved_train_num = trainNum;
         e3->dest->edge[DIR_STRAIGHT].reserved_train_num = trainNum;
         e3->dest->edge[DIR_CURVED].reverse->reserved_train_num = trainNum;
@@ -249,12 +179,16 @@ static int reserveEdges(
         }
       }
     } else {
-      //PrintDebug(ui, "%d Reserved switch edge %s FAIL",
-      //    e1->reserved_train_num, node->name);
+#ifdef DEBUG_RESERVATION
+      PrintDebug(ui, "%d Reserved switch edge %s FAIL",
+          e1->reserved_train_num, node->name);
+#endif
       return RESERVE_FAIL;
     }
   } else {
-    //PrintDebug(ui, "Canot reserve edge type: %d %d", node->type, node->name);
+#ifdef DEBUG_RESERVATION
+    PrintDebug(ui, "Canot reserve edge type: %d %d", node->type, node->name);
+#endif
     return RESERVE_FAIL;
   }
   return status;
@@ -627,11 +561,15 @@ static void trackController() {
         char canReserve = reserveEdges(start,
             actualMsg.trainNum, actualMsg.stoppingDistance, 1); // Dryrun
         if (canReserve != RESERVE_SUCESS) {
+#ifdef DEBUG_RESERVATION
           PrintDebug(ui, "Train:%d denied reservation %s.",
               actualMsg.trainNum, start->name);
+#endif
         } else {
+#ifdef DEBUG_RESERVATION
           PrintDebug(ui, "Train:%d got reservation %s.",
               actualMsg.trainNum, start->name);
+#endif
           // Clear the train's previous reservation
           for (int j = 0; j < TRACK_MAX +4; j++) {
             clearNodeReservation(&track[j], actualMsg.trainNum);

@@ -88,19 +88,19 @@ static int reserveMoreTrack(Driver* me, TrackNextSensorMsg* trackMsg) {
   if (trackMsg->numPred > 10) {
     TrainDebug(me, "__Can't reserve >10 predictions");
   } else {
+    TrainDebug(me, "Reserving track");
     qMsg.numPredSensor = trackMsg->numPred;
     for(int i = 0; i < trackMsg->numPred; i++) {
       qMsg.predSensor[i] = trackMsg->predictions[i].sensor;
+      printLandmark(me, &qMsg.predSensor[i]);
     }
   }
 
-    TrainDebug(me, "Reserving track");
   char status = RESERVE_FAIL;
   Send(me->trackManager, (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
       &status, 1);
-    TrainDebug(me, "Got track");
 
-  return RESERVE_FAIL;
+  return status;
 }
 
 static void updatePrediction(Driver* me) {

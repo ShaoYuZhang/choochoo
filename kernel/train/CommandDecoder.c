@@ -187,6 +187,40 @@ static void decodeCommand() {
     } else {
       Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
     }
+  } else if (decoderBuffer[0] == 'r' && decoderBuffer[1] == 'v') {
+    char *temp = (char *)decoderBuffer + 3;
+
+    int train_number = strgetui(&temp);
+    temp++;
+    int train_speed = 9;
+    if (*temp >= '0' && *temp <= '9'){
+      train_speed = strgetui(&temp);
+      temp++;
+    } else {
+      PrintDebug(ui, "Parse fail: %s", decoderBuffer);
+      return;
+    }
+    char letter;
+    int num;
+
+
+#if 0
+    letter = *temp++;
+    num = strgetui(&temp);
+    temp++;
+    Landmark land0 = formLandmarkFromInput(letter, num);
+
+    letter = *temp++;
+    num = strgetui(&temp);
+    temp++;
+    Landmark land1 = formLandmarkFromInput(letter, num);
+
+    ReleaseOldAndReserveNewTrackMsg qMsg;
+    qMsg.type = RELEASE_OLD_N_RESERVE_NEW;
+    qMsg.trainNum = train_number;
+    qMsg.stoppingDistance = 100;
+#endif
+
   } else {
     PrintDebug(ui, "Bad: %s", decoderBuffer);
   }
