@@ -20,6 +20,7 @@ static void sendUiReport(Driver* me);
 static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg);
 static int QueryIsSensorReserved(Driver* me, int box, int val);
 static void setRoute(Driver* me, DriverMsg* msg);
+static void updatePrediction(Driver* me);
 
 static int getStoppingDistance(Driver* me) {
   return me->d[(int)me->speed][(int)me->speedDir][MAX_VAL];
@@ -96,6 +97,7 @@ static void trySetSwitch_and_getNextSwitch(Driver* me) {
         me->nextSetSwitchNode = i;
       }
     }
+    updatePrediction(me);
     if (!haveNextSwitch) {
       me->nextSetSwitchNode = -1;
     }
