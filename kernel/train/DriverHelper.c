@@ -12,7 +12,7 @@ static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg) {
 static int QueryIsSensorReserved(Driver* me, int box, int val) {
   char isReserved = 0;
   TrackMsg qMsg;
-  qMsg.type = QUERY_NEXT_SENSOR_FROM_SENSOR;
+  qMsg.type = QUERY_SENSOR_RESERVED;
   qMsg.landmark1.type = LANDMARK_SENSOR;
   qMsg.landmark1.num1 = box;
   qMsg.landmark1.num2 = val;
