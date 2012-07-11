@@ -13,6 +13,7 @@ static int QueryIsSensorReserved(Driver* me, int box, int val) {
   char isReserved = 0;
   TrackMsg qMsg;
   qMsg.type = QUERY_SENSOR_RESERVED;
+  qMsg.data = me->trainNum;
   qMsg.landmark1.type = LANDMARK_SENSOR;
   qMsg.landmark1.num1 = box;
   qMsg.landmark1.num2 = val;
@@ -167,9 +168,7 @@ static void setRoute(Driver* me, DriverMsg* msg) {
       me->speedAfterReverse = msg->data2;
       trainSetSpeed(-1, getStoppingTime(me), 0, me);
     } else {
-      TrackNextSensorMsg trackMsg;
-      QueryNextSensor(me, &trackMsg);
-      int reserveStatus = reserveMoreTrack(me, &trackMsg);
+      int reserveStatus = reserveMoreTrack(me);
       if (reserveStatus == RESERVE_SUCESS) {
         trainSetSpeed(msg->data2, 0, 0, me);
         updateStopNode(me, msg->data2);

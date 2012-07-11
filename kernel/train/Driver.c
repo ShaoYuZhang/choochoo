@@ -86,8 +86,8 @@ static void trySetSwitch_and_getNextSwitch(Driver* me) {
   Send(me->trackManager, (char*)&setSwitch, sizeof(TrackMsg), &reply, 1);
 
   if (reply == SET_SWITCH_SUCCESS) {
-    TrainDebug(me, "Set Switch Success");
-    printLandmark(me, &setSwitch.landmark1);
+    //TrainDebug(me, "Set Switch Success");
+    //printLandmark(me, &setSwitch.landmark1);
     for (int i = me->routeRemaining; i < me->route.length-1; i++) {
       if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
           me->route.nodes[i].landmark.num1 == BR && me->nextSetSwitchNode != -1) {
@@ -97,7 +97,7 @@ static void trySetSwitch_and_getNextSwitch(Driver* me) {
   }
 }
 
-static int reserveMoreTrack(Driver* me, TrackNextSensorMsg* trackMsg) {
+static int reserveMoreTrack(Driver* me) {
   ReleaseOldAndReserveNewTrackMsg qMsg;
   qMsg.type = RELEASE_OLD_N_RESERVE_NEW;
   qMsg.trainNum = me->trainNum;
@@ -108,13 +108,13 @@ static int reserveMoreTrack(Driver* me, TrackNextSensorMsg* trackMsg) {
   qMsg.lastSensor.num2 = me->lastSensorVal;
 
   if (!me->positionFinding) {
-    if (trackMsg->numPred > 10) {
+    if (me->numPredictions > 10) {
       TrainDebug(me, "__Can't reserve >10 predictions");
     } else {
       TrainDebug(me, "Reserving track");
-      qMsg.numPredSensor = trackMsg->numPred;
-      for(int i = 0; i < trackMsg->numPred; i++) {
-        qMsg.predSensor[i] = trackMsg->predictions[i].sensor;
+      qMsg.numPredSensor = me->numPredictions;
+      for(int i = 0; i < me->numPredictions; i++) {
+        qMsg.predSensor[i] = me->predictions[i].sensor;
         printLandmark(me, &qMsg.predSensor[i]);
       }
     }
@@ -142,6 +142,12 @@ static void updatePrediction(Driver* me) {
     me->predictions[i] = trackMsg.predictions[i];
   }
   me->numPredictions = trackMsg.numPred;
+  for (int i = 0; i < trackMsg.numPred; i++) {
+    TrackSensorPrediction prediction = trackMsg.predictions[i];
+    TrainDebug(me, "Prediction %d %d %d", prediction.sensor.type, prediction.sensor.num1, prediction.sensor.num2);
+    TrainDebug(me, "Dist: %d", prediction.dist);
+    TrainDebug(me, "Condition %d %d %d %d", prediction.conditionLandmark.type, prediction.conditionLandmark.num1, prediction.conditionLandmark.num2, prediction.condition);
+        }
 
   TrackSensorPrediction primaryPrediction = trackMsg.predictions[0];
   me->distanceToNextSensor = primaryPrediction.dist;
@@ -423,18 +429,15 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
         me->lastSensorIsTerminal = isTemp;
       }
 
-      // Reserve more
-      TrackNextSensorMsg trackMsg;
-      QueryNextSensor(me, &trackMsg);
       // Reserve the track above train and future (covers case of init)
-      int reserveStatus = reserveMoreTrack(me, &trackMsg);
+
+      // Update prediction
+      updatePrediction(me);
+      int reserveStatus = reserveMoreTrack(me);
       if  (reserveStatus == RESERVE_FAIL) {
         trainSetSpeed(0, 0, 0, me);
         me->rerouteCountdown = 200; // wait 2 seconds then reroute.
       }
-
-      // Update prediction
-      updatePrediction(me);
     } else {
       TrainDebug(me, "Set speed. %d %d", speed, me->trainNum);
       msg[0] = (char)speed;
@@ -619,6 +622,9 @@ void driver() {
         if (me.positionFinding) {
           sensorReportValid = 1;
           me.lastSensorUnexpected = 1;
+          trainSetSpeed(0, 0, 0, &me); // Found position, stop.
+          me.positionFinding = 0;
+          FinishPositionFinding(me.trainNum, me.trainController);
         } else if (isSensorReserved) {
           for (int i = 0; i < me.numPredictions; i ++) {
             TrackLandmark predictedSensor = me.predictions[i].sensor;
@@ -649,16 +655,17 @@ void driver() {
           TrackNextSensorMsg trackMsg;
           QueryNextSensor(&me, &trackMsg);
           // Reserve the track above train and future (covers case of init)
-          int reserveStatus = reserveMoreTrack(&me, &trackMsg);
-          if  (reserveStatus == RESERVE_FAIL) {
-            trainSetSpeed(0, 0, 0, &me);
-            me.rerouteCountdown = 200; // wait 2 seconds then reroute.
-          }
 
           for (int i = 0; i < trackMsg.numPred; i++) {
             me.predictions[i] = trackMsg.predictions[i];
           }
           me.numPredictions = trackMsg.numPred;
+
+          int reserveStatus = reserveMoreTrack(&me);
+          if  (reserveStatus == RESERVE_FAIL) {
+            trainSetSpeed(0, 0, 0, &me);
+            me.rerouteCountdown = 200; // wait 2 seconds then reroute.
+          }
 
           TrackSensorPrediction primaryPrediction = me.predictions[0];
           me.calibrationStart = msg.timestamp;
@@ -681,11 +688,6 @@ void driver() {
 
           updatePosition(&me, msg.timestamp);
           sendUiReport(&me);
-          if (me.positionFinding) {
-            trainSetSpeed(0, 0, 0, &me); // Found position, stop.
-            me.positionFinding = 0;
-            FinishPositionFinding(me.trainNum, me.trainController);
-          }
         }
         break;
       }
