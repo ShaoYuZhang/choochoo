@@ -608,7 +608,9 @@ void driver() {
                 conditionLandmark = me.predictions[i].conditionLandmark;
                 condition = me.predictions[i].condition;
                 me.lastSensorUnexpected = 1;
-                //reRoute(&me, msg.data2, msg.data3); // TODO??
+                // Stop and then try to reroute.
+                trainSetSpeed(0, 0, 0, me);
+                me->rerouteCountdown = 200; // wait 2 seconds then reroute.
               } else {
                 me.lastSensorUnexpected = 0;
               }
