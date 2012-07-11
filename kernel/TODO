@@ -9,10 +9,7 @@ When hit secondary:
   - wait until primary cannot be missed.
   - release last reservation, keep current secondary reservation.
 
-  - if terminal:
-      Reverse. Reroute.
-  - else 
-      Reroute
+  - Reroute.
 
 
 If miss primary:

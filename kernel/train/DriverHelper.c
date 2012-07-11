@@ -153,6 +153,8 @@ static void sendUiReport(Driver* me) {
   me->uiMsg.nextSensorIsTerminal     = me->nextSensorIsTerminal;
 
   me->uiMsg.lastSensorDistanceError  = me->lastSensorDistanceError;
+  me->uiMsg.nextSwitchToBeSetNum     = me->route.nodes[me->nextSetSwitchNode].landmark.num2;
+  me->uiMsg.nextSwitchToBeSetState   = me->route.nodes[me->nextSetSwitchNode].num;
 
   Send(me->ui, (char*)&(me->uiMsg), sizeof(TrainUiMsg), (char*)1, 0);
 }

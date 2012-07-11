@@ -71,7 +71,7 @@ typedef struct TrackMsg {
 
 typedef struct TrackSensorPrediction {
   TrackLandmark sensor;   //
-  int dist;               // In mm
+  int dist;               // From position passed in to Sensor in mm
   TrackLandmark conditionLandmark; // either switch or sensor
   int condition; // SWITCH_CURVED/SWITCH_STRAIGHT if condition is switch, -1 if condition sensor, primary doesn't have condition
 } TrackSensorPrediction;

@@ -1,5 +1,6 @@
 #include "DriverController.h"
 #include <IoServer.h>
+#include <TimeServer.h>
 #include <NameServer.h>
 #include <IoHelper.h>
 
@@ -51,6 +52,9 @@ static void trainController() {
   char com1Name[] = IOSERVERCOM1_NAME;
   int com1 = WhoIs(com1Name);
 
+  char timename[] = TIMESERVER_NAME;
+  int timeserver = WhoIs(timename);
+
   int nth = 0;
   int trainTid[80]; // Train num -> train tid
   for (int i = 0; i < 80; i++) {
@@ -58,7 +62,7 @@ static void trainController() {
   }
 
   int trainWithoutPosition[3];
-  for (int i = 0; i < 3; i++){
+  for (int i = 0; i < 3; i++) {
     trainWithoutPosition[i] = -1;
   }
 
@@ -70,7 +74,34 @@ static void trainController() {
     msg.data3 = -1;
     Receive(&tid, (char*)&msg, sizeof(DriverMsg));
 
-    if (msg.type == FIND_POSITION) {
+    if (msg.type == BROADCAST_LOST) {
+      // Assume no train initing.
+      Reply(tid, (char*)1, 0);
+
+      PrintDebug(ui, "Stop all trains.. a train is lost.");
+      for (int i = 0; i < 80; i++) {
+        if (trainTid[i] != -1) {
+          DriverMsg stopMoving;
+          stopMoving.type = SET_SPEED;
+          stopMoving.trainNum = (char)i;
+          stopMoving.data2 = 0;
+          stopMoving.data3 = 100; // junk so won't be confused with delayer
+
+          // Tell train to stop moving
+          Send(trainTid[i], (char*)&stopMoving, sizeof(DriverMsg), (char*)1, 0);
+
+          enqueue(trainWithoutPosition, i);
+        }
+      }
+
+      PrintDebug(ui, "Waiting... for trains to stop");
+      Delay(timeserver, 300);
+
+      msg.type = FIND_POSITION;
+      msg.trainNum = trainWithoutPosition[0];
+      PrintDebug(ui, "Initing trains... %d", msg.trainNum);
+
+    } else if (msg.type == FIND_POSITION) {
       Reply(tid, (char*)1, 0);
       if (someTrainInit(trainWithoutPosition)) {
         enqueue(trainWithoutPosition, msg.trainNum);
@@ -82,12 +113,12 @@ static void trainController() {
       Reply(tid, (char*)1, 0);
       dequeue(trainWithoutPosition, msg.trainNum);
       int next = getNext(trainWithoutPosition);
+      PrintDebug(ui, "Found %d ", msg.trainNum);
       if (next) {
         msg.trainNum = next;
         msg.type = FIND_POSITION;
         PrintDebug(ui, "Initing %d ", next);
       } else {
-        PrintDebug(ui, "Found %d ", msg.trainNum);
         continue;
       }
     } else if (someTrainInit(trainWithoutPosition)) {
@@ -138,6 +169,14 @@ void FinishPositionFinding(int trainNum, int controllerTid) {
   DriverMsg msg;
   msg.type = KNOW_POSITION;
   msg.trainNum = (char)trainNum;
+  Send(controllerTid, (char*)&msg, sizeof(DriverMsg), (char *)NULL, 0);
+}
+
+void BroadcastLost(int controllerTid) {
+  DriverMsg msg;
+  msg.type = BROADCAST_LOST;
+  msg.trainNum = (char)255; // Broadcast
+  msg.data2 = 0;            // Speed zero.
   Send(controllerTid, (char*)&msg, sizeof(DriverMsg), (char *)NULL, 0);
 }
 

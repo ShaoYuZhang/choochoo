@@ -21,6 +21,7 @@
 #define HIGHEST_PRIORITY 0
 
 #define LIKELY(x) __builtin_expect((x), 1)
+#define UNLIKELY(x) __builtin_expect((x), 0)
 
 // Also look at the variables in orex.ld
 #define USER_MEM_START	0x300000

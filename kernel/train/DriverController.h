@@ -12,8 +12,10 @@
 #define SET_ROUTE  6
 #define NAVIGATE_NAGGER 7
 #define BROADCAST_UPDATE_PREDICTION 8
-#define FIND_POSITION 9
-#define KNOW_POSITION 10
+#define FIND_POSITION  9
+#define KNOW_POSITION  10
+#define LOST_TRAIN     11
+#define BROADCAST_LOST 12
 
 #include <UserInterface.h>
 #include <Track.h>
@@ -36,6 +38,7 @@ typedef struct DriverInitMsg {
 
 int startDriverControllerTask();
 
+void BroadcastLost(int controllerTid);
 void FinishPositionFinding(int trainNum, int controllerTid);
 
 void driver();

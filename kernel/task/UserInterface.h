@@ -45,6 +45,8 @@ typedef struct TrainUiMsg {
 
   int lastSensorDistanceError;
 
+  char nextSwitchToBeSetNum;
+  char nextSwitchToBeSetState;
   Position destination;
 } TrainUiMsg;
 

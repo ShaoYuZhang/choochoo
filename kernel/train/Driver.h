@@ -36,6 +36,7 @@ typedef struct Driver {
   int rerouteCountdown;
   int nextSetSwitchNode;
   int setSwitchNaggerCount;
+  int currentlyLost;
 
   TrainUiMsg uiMsg;
   Route route;
@@ -63,6 +64,7 @@ typedef struct Driver {
   int nextSensorPredictedTime;
 
   int lastSensorDistanceError;
+  int distanceToLongestSecondary;
 
   // prediction stuff
   TrackSensorPrediction predictions[20];

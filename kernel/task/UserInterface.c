@@ -238,6 +238,12 @@ static char* updateTrain(TrainUiMsg* train, char* msg) {
   *msg++ = ' ';
   *msg++ = ' ';
 
+  msg = moveTo(row++, col, msg);
+  *msg++ = 'S';
+  *msg++ = 'w';
+  msg = formatInt(train->nextSwitchToBeSetNum, 2, msg);
+  *msg++ = (train->nextSwitchToBeSetState == SWITCH_STRAIGHT) ? '|': '~';
+
   row++;
 
   // ---------------------------------
@@ -485,6 +491,9 @@ static char* drawTrainFrame(char* msg) {
 
   msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " N Sensor    ", "          ");
+
+  msg = moveTo(row++, 10, msg);
+  msg = drawTrainFrameHelper(msg, '|', '|', '|', " Nx Switch   ", "          ");
 
   msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', "             ", "          ");

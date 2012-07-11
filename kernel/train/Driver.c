@@ -37,6 +37,29 @@ static int getVelocity(Driver* me){
   }
 }
 
+static int isLost(Driver* me) {
+  if (me->currentlyLost != 1 &&
+      me->positionFinding == 0 &&
+      me->distanceFromLastSensor > me->distanceToLongestSecondary+100) {
+    TrainDebug(me, "I'm Lost... ");
+    me->positionFinding = 1;
+    me->routeRemaining = -1; // No more route following
+    BroadcastLost(me->trainController);
+    me->currentlyLost = 1;
+    return 0;
+  }
+  return 1;
+}
+
+static void setDistanceToLongestSecondary(Driver* me) {
+  int max = -1;
+  for (int i = 0; i < me->numPredictions; i++) {
+    max = MAX(me->predictions[i].dist, max);
+  }
+  me->distanceToLongestSecondary = max;
+  TrainDebug(me, "Max: %dmm", max);
+}
+
 static int interpolateStoppingDistance(Driver* me, int velocity) {
   int speed = 14;
   float percentUp = -1.0;
@@ -161,7 +184,7 @@ static void updatePrediction(Driver* me) {
   me->distanceToNextSensor = primaryPrediction.dist;
   if (primaryPrediction.sensor.type != LANDMARK_SENSOR &&
       primaryPrediction.sensor.type != LANDMARK_END) {
-    TrainDebug(me, "QUERY_NEXT_SENSOR_FROM_SENSOR ..bad");
+    TrainDebug(me, "QUERY_NEXT_SENSOR_FROM_SENSOR ..bad %d", primaryPrediction.sensor.type);
   }
   me->nextSensorIsTerminal = (primaryPrediction.sensor.type == LANDMARK_END);
 
@@ -177,6 +200,7 @@ static void updatePrediction(Driver* me) {
     printLandmark(me, &qMsg.position1.landmark2);
     TrainDebug(me, "Offset %d", qMsg.position1.offset);
   }
+  setDistanceToLongestSecondary(me);
   sendUiReport(me);
 }
 
@@ -447,7 +471,6 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
         me->nextSensorIsTerminal = me->lastSensorIsTerminal;
         me->lastSensorIsTerminal = isTemp;
       }
-
       // Reserve the track above train and future (covers case of init)
 
       // Update prediction
@@ -491,7 +514,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
   }
 }
 
-static void initDriver(Driver* me) {
+static void initDriver(Driver* me, int firstTime) {
   char uiName[] = UI_TASK_NAME;
   me->ui = WhoIs(uiName);
   me->CC = 0;
@@ -506,6 +529,7 @@ static void initDriver(Driver* me) {
   me->useLastSensorNow = 0;
   me->stopNow = 0;
   me->positionFinding = 0;
+  me->currentlyLost = 0;
   me->stopSensorHit = 0;
   me->nextSensorIsTerminal = 0;
   me->lastSensorIsTerminal = 0;
@@ -531,9 +555,11 @@ static void initDriver(Driver* me) {
   me->lastSensorActualTime = 0;
   me->lastSensorDistanceError = 0;
 
-  me->delayer = Create(1, trainDelayer);
-  me->sensorWatcher = Create(3, trainSensor);
-  me->navigateNagger = Create(2, trainNavigateNagger);
+  if (firstTime) {
+    me->delayer = Create(1, trainDelayer);
+    me->sensorWatcher = Create(3, trainSensor);
+    me->navigateNagger = Create(2, trainNavigateNagger);
+  }
   me->routeRemaining = -1;
 
   me->isAding = 0;
@@ -568,23 +594,13 @@ static void updatePosition(Driver* me, int time){
     me->distanceFromLastSensor += dPosition;
     me->distanceToNextSensor -= dPosition;
 
-    //haha &= 15;
-    //if (haha++ == 0 && 0) {
-    //  if (me->isAding && time > me->adPoly.t0) {
-    //    TrainDebug(me, "AD UpdatePos: %d %d",
-    //        (int)me->distanceToNextSensor, (int)me->distanceToNextSensor);
-    //  }
-    //  else {
-    //    TrainDebug(me, "VE UpdatePos: %d %d",
-    //        (int)me->distanceToNextSensor, (int)me->distanceToNextSensor);
-    //  }
-    //}
+    isLost(me);
   }
 }
 
 void driver() {
   Driver me;
-  initDriver(&me);
+  initDriver(&me, 1);
 
   unsigned int naggCount = 0;
   unsigned int updateStoppingDistanceCount = 0;
@@ -708,11 +724,13 @@ void driver() {
             msg.timestamp + me.distanceToNextSensor*100000 /
             getVelocity(&me);
 
+          setDistanceToLongestSecondary(&me);
           updatePosition(&me, msg.timestamp);
           sendUiReport(&me);
           if (me.positionFinding) {
             trainSetSpeed(0, 0, 0, &me); // Found position, stop.
             me.positionFinding = 0;
+            me.currentlyLost = 0;
           }
         }
         break;
