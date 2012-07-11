@@ -7,6 +7,7 @@
 #include <UserInterface.h>
 #include <ts7200.h>
 #include <util.h>
+#include <TimeServer.h>
 
 #define DEBUG_RESERVATION
 
@@ -14,6 +15,7 @@ extern int CALIBRATION;
 static int switchStatus[NUM_SWITCHES];
 static int com1;
 static int ui;
+static int timeServer;
 
 static int get_node_type(TrackLandmark landmark);
 static int get_node_num(TrackLandmark landmark);
@@ -210,6 +212,7 @@ static void fakeNode(track_edge* edge, track_node* fake1, track_node* fake2, int
   fake1->edge[DIR_AHEAD].src = fake1;
   fake1->edge[DIR_AHEAD].dest = edge->dest;
   fake1->edge[DIR_AHEAD].dist = edge->dist - offset;
+  fake1->edge[DIR_AHEAD].reserved_train_num = edge->reserved_train_num;
 
   fake2->name = "Reverse Fake";
   fake2->type = NODE_FAKE;
@@ -218,6 +221,7 @@ static void fakeNode(track_edge* edge, track_node* fake1, track_node* fake2, int
   fake2->edge[DIR_AHEAD].src = fake2;
   fake2->edge[DIR_AHEAD].dest = edgeReverse->dest;
   fake2->edge[DIR_AHEAD].dist = offset;
+  fake2->edge[DIR_AHEAD].reserved_train_num = edgeReverse->reserved_train_num;
 
   edge->dest->reverse->edge[dirTypeReverse].reverse = &fake1->edge[DIR_AHEAD];
   edge->dest->reverse->edge[dirTypeReverse].dest = fake2;
@@ -356,7 +360,7 @@ static void computeSafeReverseDist(track_node* track) {
 }
 
 // Dijkstra's algorithm, currently slow, need a heap for efficiency
-static void findRoute(track_node* track, Position from, Position to, Route* result) {
+static void findRoute(track_node* track, Position from, Position to, Route* result, int trainNum) {
   // fake position into graph
   track_edge* fromEdge = (track_edge*)NULL;
   int offsetFrom = locateNode(track, from, &fromEdge);
@@ -441,19 +445,48 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
 
     // reverse
     if (curr_node->safe_reverse_dist != INT_MAX && curr_node->reverse->in_queue) {
-      neighbours[neighbour_count] = curr_node->reverse;
-      neighbours_dist[neighbour_count++] = 2 * curr_node->safe_reverse_dist;
+      // reverse need a bit of distance beyond the current node,
+      // so need a bit of reservation beyond the current node
+      track_edge *tempEdge = (track_edge *)NULL;
+      if (curr_node->type == NODE_BRANCH) {
+        tempEdge = &curr_node->edge[DIR_CURVED];
+      } else if (curr_node->type != NODE_EXIT) {
+        tempEdge = &curr_node->edge[DIR_AHEAD];
+      }
+
+      if (tempEdge != (track_edge *)NULL && (tempEdge->reserved_train_num == -1 || tempEdge->reserved_train_num == trainNum)) {
+        neighbours[neighbour_count] = curr_node->reverse;
+        neighbours_dist[neighbour_count++] = 2 * curr_node->safe_reverse_dist;
+      }
     }
 
     if (curr_node->type == NODE_BRANCH) {
-      neighbours[neighbour_count] = curr_node->edge[DIR_STRAIGHT].dest;
-      neighbours_dist[neighbour_count++] = curr_node->edge[DIR_STRAIGHT].dist;
-      neighbours[neighbour_count] = curr_node->edge[DIR_CURVED].dest;
-      neighbours_dist[neighbour_count++] = curr_node->edge[DIR_CURVED].dist;
-    }
-    else if (curr_node->type != NODE_EXIT) {
-      neighbours[neighbour_count] = curr_node->edge[DIR_AHEAD].dest;
-      neighbours_dist[neighbour_count++] = curr_node->edge[DIR_AHEAD].dist;
+      track_edge *tempEdge = &curr_node->edge[DIR_STRAIGHT];
+      // in queue and unreserved
+      if (tempEdge->dest->in_queue &&
+          (tempEdge->reserved_train_num == -1 ||
+           tempEdge->reserved_train_num == trainNum)
+         ) {
+        neighbours[neighbour_count] = tempEdge->dest;
+        neighbours_dist[neighbour_count++] = tempEdge->dist;
+      }
+      tempEdge = &curr_node->edge[DIR_CURVED];
+      if (tempEdge->dest->in_queue &&
+          (tempEdge->reserved_train_num == -1 ||
+           tempEdge->reserved_train_num == trainNum)
+         ) {
+        neighbours[neighbour_count] = tempEdge->dest;
+        neighbours_dist[neighbour_count++] = tempEdge->dist;
+      }
+    } else if (curr_node->type != NODE_EXIT) {
+      track_edge *tempEdge = &curr_node->edge[DIR_AHEAD];
+      if (tempEdge->dest->in_queue &&
+          (tempEdge->reserved_train_num == -1 ||
+           tempEdge->reserved_train_num == trainNum)
+         ) {
+        neighbours[neighbour_count] = curr_node->edge[DIR_AHEAD].dest;
+        neighbours_dist[neighbour_count++] = curr_node->edge[DIR_AHEAD].dist;
+      }
     }
 
     for (int i = 0; i < neighbour_count; i++) {
@@ -538,6 +571,8 @@ static void trackController() {
   if (!CALIBRATION) {
     ui = WhoIs(uiName);
   }
+  char timeServerName[] = TIMESERVER_NAME;
+  timeServer = WhoIs(timeServerName);
 
   if (!CALIBRATION) {
     for (int i = 1; i < 19; i++) {
@@ -663,8 +698,9 @@ static void trackController() {
       case ROUTE_PLANNING: {
         Position from = msg->position1;
         Position to = msg->position2;
+        int trainNum = (int)msg->data;
         Route route;
-        findRoute(track, from, to , &route);
+        findRoute(track, from, to , &route, trainNum);
 
         Reply(tid, (char *)&route, 8 + sizeof(RouteNode) * route.length);
         break;

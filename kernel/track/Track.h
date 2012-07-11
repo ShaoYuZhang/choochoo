@@ -83,7 +83,7 @@ typedef struct RouteNode {
 } RouteNode;
 
 #define MAX_ROUTE_NODE 150
-#define SAFE_REVERSE_DIST 320 // TODO(cao) too generous?
+#define SAFE_REVERSE_DIST 200
 
 typedef struct Route {
   int dist;
