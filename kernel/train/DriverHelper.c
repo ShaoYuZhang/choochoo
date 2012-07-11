@@ -32,6 +32,9 @@ static void printLandmark(Driver* me, TrackLandmark* l) {
   } else if (l->type == LANDMARK_FAKE) {
     TrainDebug(me, "Landmark Fake %d %d",
         l->num1, l->num2);
+  } else if (l->type == LANDMARK_SWITCH) {
+    TrainDebug(me, "Landmark Switch Num:%d Type:%s",
+        l->num2, l->num1 == MR ? "MR" : "BR");
   }
 }
 
@@ -120,8 +123,8 @@ static void printRoute(Driver* me) {
       }
 
       if (node.landmark.type == LANDMARK_SWITCH && node.landmark.num1 == BR) {
-        TrainDebug(me, "%d Set switch %d %s", i, node.landmark.num2,
-            node.num == SWITCH_CURVED ? "Curve" : "Straight");
+        TrainDebug(me, "%d Set switch %d %s Type:%d", i, node.landmark.num2,
+            node.num == SWITCH_CURVED ? "Curve" : "Straight", node.landmark.num1);
       }
     }
   }

@@ -75,6 +75,28 @@ static int interpolateStoppingDistance(Driver* me, int velocity) {
   return stopUp * percentUp + stopDown * percentDown;
 }
 
+static void trySetSwitch_and_getNextSwitch(Driver* me) {
+  TrackMsg setSwitch;
+  setSwitch.type = SET_SWITCH;
+  setSwitch.trainNum = me->trainNum;
+  setSwitch.data = me->route.nodes[me->nextSetSwitchNode].num;
+  setSwitch.landmark1 = me->route.nodes[me->nextSetSwitchNode].landmark;
+
+  char reply = SET_SWITCH_FAIL;
+  Send(me->trackManager, (char*)&setSwitch, sizeof(TrackMsg), &reply, 1);
+
+  if (reply == SET_SWITCH_SUCCESS) {
+    TrainDebug(me, "Set Switch Success");
+    printLandmark(me, &setSwitch.landmark1);
+    for (int i = me->routeRemaining; i < me->route.length-1; i++) {
+      if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
+          me->route.nodes[i].landmark.num1 == BR && me->nextSetSwitchNode != -1) {
+        me->nextSetSwitchNode = i;
+      }
+    }
+  }
+}
+
 static int reserveMoreTrack(Driver* me, TrackNextSensorMsg* trackMsg) {
   ReleaseOldAndReserveNewTrackMsg qMsg;
   qMsg.type = RELEASE_OLD_N_RESERVE_NEW;
@@ -201,6 +223,7 @@ static int shouldStopNow(Driver* me) {
 static void updateStopNode(Driver* me, int speed) {
   // Find the first reverse on the path, stop if possible.
   me->stopNode = me->route.length-1;
+  me->nextSetSwitchNode = -1;
   const int stoppingDistance =
     interpolateStoppingDistance(me,
         me->v[speed][me->speedDir]);
@@ -212,14 +235,10 @@ static void updateStopNode(Driver* me, int speed) {
       break;
     }
     else if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
-        me->route.nodes[i].landmark.num1 == BR) {
-      TrackMsg setSwitch;
-      setSwitch.type = SET_SWITCH;
-      setSwitch.data = me->route.nodes[i].num;
-      setSwitch.landmark1 = me->route.nodes[i].landmark;
-
-      TrainDebug(me, "Set switch %c", 'a');
-      Send(me->trackManager, (char*)&setSwitch, sizeof(TrackMsg), (char*)NULL, 0);
+        me->route.nodes[i].landmark.num1 == BR && me->nextSetSwitchNode == -1) {
+      TrainDebug(me, "Will try to set:");
+      printLandmark(me, &(me->route.nodes[i].landmark));
+      me->nextSetSwitchNode = i;
     }
   }
   TrainDebug(me, "UpdateStop. Node:%d %dmm Spd:%d Dir:%d",
@@ -456,6 +475,7 @@ static void initDriver(Driver* me) {
   me->CC = 0;
   me->speedAfterReverse = -1;
   me->rerouteCountdown = -1;
+  me->nextSetSwitchNode = -1;
 
   char trackName[] = TRACK_NAME;
   me->trackManager = WhoIs(trackName);
@@ -468,6 +488,7 @@ static void initDriver(Driver* me) {
   me->nextSensorIsTerminal = 0;
   me->lastSensorIsTerminal = 0;
   me->lastSensorVal = 0; // NOte to ui to don't print sensor.
+  me->setSwitchNaggerCount = 0;
 
   char timename[] = TIMESERVER_NAME;
   me->timeserver = WhoIs(timename);
@@ -609,8 +630,8 @@ void driver() {
                 condition = me.predictions[i].condition;
                 me.lastSensorUnexpected = 1;
                 // Stop and then try to reroute.
-                trainSetSpeed(0, 0, 0, me);
-                me->rerouteCountdown = 200; // wait 2 seconds then reroute.
+                trainSetSpeed(0, 0, 0, &me);
+                me.rerouteCountdown = 200; // wait 2 seconds then reroute.
               } else {
                 me.lastSensorUnexpected = 0;
               }
@@ -690,6 +711,10 @@ void driver() {
               me.stopSensorHit = 0;
             }
           }
+        }
+
+        if (me.nextSetSwitchNode != -1 && (++me.setSwitchNaggerCount & 3) == 0) {
+          trySetSwitch_and_getNextSwitch(&me);
         }
         if (me.rerouteCountdown-- == 0) setRoute(&me, &(me.routeMsg));
         if ((++naggCount & 15) == 0) sendUiReport(&me);
