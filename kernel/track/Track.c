@@ -562,12 +562,12 @@ static void trackController() {
         char canReserve =
         reserveEdges(start, actualMsg.trainNum, actualMsg.stoppingDistance, 1); // Dryrun
         for (int j = 0; j < actualMsg.numPredSensor; j++) {
-          track_node* n = findNode(track, actualMsg.predSensor[j]);
-          canReserve = reserveEdges(n,
-              actualMsg.trainNum, actualMsg.stoppingDistance, 0);
           if (canReserve == RESERVE_FAIL) {
             break;
           }
+          track_node* n = findNode(track, actualMsg.predSensor[j]);
+          canReserve = reserveEdges(n,
+              actualMsg.trainNum, actualMsg.stoppingDistance, 0);
         }
 
         if (canReserve == RESERVE_FAIL) {
@@ -584,6 +584,7 @@ static void trackController() {
           for (int j = 0; j < TRACK_MAX +4; j++) {
             clearNodeReservation(&track[j], actualMsg.trainNum);
           }
+
 #if 1
           // Make current reservation
           reserveEdges(start,
