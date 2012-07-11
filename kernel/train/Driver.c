@@ -116,6 +116,11 @@ static void updatePrediction(Driver* me) {
   Send(me->trackManager, (char*)&qMsg, sizeof(TrackMsg),
         (char*)&trackMsg, sizeof(TrackNextSensorMsg));
 
+  for (int i = 0; i < trackMsg.numPred; i++) {
+    me->predictions[i] = trackMsg.predictions[i];
+  }
+  me->numPredictions = trackMsg.numPred;
+
   TrackSensorPrediction primaryPrediction = trackMsg.predictions[0];
   me->distanceToNextSensor = primaryPrediction.dist;
   if (primaryPrediction.sensor.type != LANDMARK_SENSOR &&
