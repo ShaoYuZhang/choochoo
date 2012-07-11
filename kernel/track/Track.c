@@ -9,7 +9,7 @@
 #include <util.h>
 #include <TimeServer.h>
 
-#define DEBUG_RESERVATION
+//#define DEBUG_RESERVATION
 
 extern int CALIBRATION;
 static int switchStatus[NUM_SWITCHES];

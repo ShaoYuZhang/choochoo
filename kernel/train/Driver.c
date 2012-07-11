@@ -150,6 +150,7 @@ static void getRoute(Driver* me, DriverMsg* msg) {
   TrainDebug(me, "Offset %d", trackmsg.position1.offset);
 
   trackmsg.position2 = msg->pos;
+  trackmsg.data = (char)me->trainNum;
 
   Send(me->trackManager, (char*)&trackmsg,
       sizeof(TrackMsg), (char*)&(me->route), sizeof(Route));
