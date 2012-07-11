@@ -8,7 +8,7 @@
 #include <ts7200.h>
 #include <util.h>
 
-//#define DEBUG_RESERVATION
+#define DEBUG_RESERVATION
 
 extern int CALIBRATION;
 static int switchStatus[NUM_SWITCHES];
@@ -559,9 +559,18 @@ static void trackController() {
     switch (msg->type) {
       case RELEASE_OLD_N_RESERVE_NEW: {
         track_node* start = findNode(track, actualMsg.lastSensor);
-        char canReserve = reserveEdges(start,
-            actualMsg.trainNum, actualMsg.stoppingDistance, 1); // Dryrun
-        if (canReserve != RESERVE_SUCESS) {
+        char canReserve =
+        reserveEdges(start, actualMsg.trainNum, actualMsg.stoppingDistance, 1); // Dryrun
+        for (int j = 0; j < actualMsg.numPredSensor; j++) {
+          track_node* n = findNode(track, actualMsg.predSensor[j]);
+          canReserve = reserveEdges(n,
+              actualMsg.trainNum, actualMsg.stoppingDistance, 0);
+          if (canReserve == RESERVE_FAIL) {
+            break;
+          }
+        }
+
+        if (canReserve == RESERVE_FAIL) {
 #ifdef DEBUG_RESERVATION
           PrintDebug(ui, "Train:%d denied reservation %s.",
               actualMsg.trainNum, start->name);
@@ -575,15 +584,16 @@ static void trackController() {
           for (int j = 0; j < TRACK_MAX +4; j++) {
             clearNodeReservation(&track[j], actualMsg.trainNum);
           }
-
+#if 1
           // Make current reservation
-          canReserve |= reserveEdges(start,
+          reserveEdges(start,
             actualMsg.trainNum, actualMsg.stoppingDistance, 0);
           for (int j = 0; j < actualMsg.numPredSensor; j++) {
             track_node* n = findNode(track, actualMsg.predSensor[j]);
-            canReserve |= reserveEdges(n,
+            reserveEdges(n,
                 actualMsg.trainNum, actualMsg.stoppingDistance, 0);
           }
+#endif
         }
         Reply(tid, &canReserve, 1);
         break;

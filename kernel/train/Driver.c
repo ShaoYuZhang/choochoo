@@ -96,7 +96,10 @@ static int reserveMoreTrack(Driver* me, TrackNextSensorMsg* trackMsg) {
         printLandmark(me, &qMsg.predSensor[i]);
       }
     }
+  } else {
+      qMsg.numPredSensor = 0;
   }
+  Delay(100, me->timeserver);
 
   char status = RESERVE_FAIL;
   Send(me->trackManager, (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
@@ -396,6 +399,16 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
         me->lastSensorIsTerminal = isTemp;
       }
 
+      // Reserve more
+      TrackNextSensorMsg trackMsg;
+      QueryNextSensor(me, &trackMsg);
+      // Reserve the track above train and future (covers case of init)
+      int reserveStatus = reserveMoreTrack(me, &trackMsg);
+      if  (reserveStatus == RESERVE_FAIL) {
+        trainSetSpeed(0, 0, 0, me);
+        me->rerouteCountdown = 200; // wait 2 seconds then reroute.
+      }
+
       // Update prediction
       updatePrediction(me);
     } else {
@@ -449,6 +462,7 @@ static void initDriver(Driver* me) {
   me->stopSensorHit = 0;
   me->nextSensorIsTerminal = 0;
   me->lastSensorIsTerminal = 0;
+  me->lastSensorVal = 0; // NOte to ui to don't print sensor.
 
   char timename[] = TIMESERVER_NAME;
   me->timeserver = WhoIs(timename);
@@ -606,6 +620,12 @@ void driver() {
 
           TrackNextSensorMsg trackMsg;
           QueryNextSensor(&me, &trackMsg);
+          // Reserve the track above train and future (covers case of init)
+          int reserveStatus = reserveMoreTrack(&me, &trackMsg);
+          if  (reserveStatus == RESERVE_FAIL) {
+            trainSetSpeed(0, 0, 0, &me);
+            me.rerouteCountdown = 200; // wait 2 seconds then reroute.
+          }
 
           for (int i = 0; i < trackMsg.numPred; i++) {
             me.predictions[i] = trackMsg.predictions[i];
@@ -632,12 +652,6 @@ void driver() {
             getVelocity(&me, me.speed, me.speedDir);
 
           updatePosition(&me, msg.timestamp);
-          // Reserve the track above train and future (covers case of init)
-          int reserveStatus = reserveMoreTrack(&me, &trackMsg);
-          if (reserveStatus == RESERVE_FAIL) {
-            trainSetSpeed(0, 0, 0, &me);
-            me.rerouteCountdown = 200; // wait 2 seconds then reroute.
-          }
           sendUiReport(&me);
           if (me.positionFinding) {
             trainSetSpeed(0, 0, 0, &me); // Found position, stop.
