@@ -13,7 +13,11 @@
 #define RESERVE_FAIL   1
 
 #define GET_SWITCH 0
+#define SUDO_SET_SWITCH 100
 #define SET_SWITCH 1
+  #define SET_SWITCH_NO_RESERVATION 1
+  #define SET_SWITCH_SUCCESS  2
+  #define SET_SWITCH_FAIL  4
 //#define QUERY_DISTANCE 2
 #define QUERY_NEXT_SENSOR_FROM_SENSOR 3
 #define QUERY_NEXT_SENSOR_FROM_POS 4
@@ -59,6 +63,7 @@ typedef struct Position {
 typedef struct TrackMsg {
   char type;
   char data;
+  char trainNum;
   TrackLandmark landmark1;
   Position position1;
   Position position2;

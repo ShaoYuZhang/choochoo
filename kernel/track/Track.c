@@ -653,16 +653,32 @@ static void trackController() {
         Reply(tid, &isReserved, 1);
         break;
       }
+      case SUDO_SET_SWITCH:
       case SET_SWITCH: {
-        Reply(tid, (char*)1, 0);
         TrackLandmark sw = msg->landmark1;
-        trackSetSwitch((int)sw.num2, (int)msg->data);
+
+        char reply = SET_SWITCH_FAIL;
+        track_node* trackNode = findNode(track, sw);
+        if (trackNode->type == NODE_MERGE) trackNode = trackNode->reverse;
+        if (trackNode->type == NODE_BRANCH) {
+          if ((trackNode->edge[DIR_CURVED].reserved_train_num == msg->trainNum &&
+              trackNode->edge[DIR_STRAIGHT].reserved_train_num == msg->trainNum) ||
+              msg->type == SUDO_SET_SWITCH) {
+            reply = SET_SWITCH_SUCCESS;
+            trackSetSwitch((int)sw.num2, (int)msg->data);
+          } else {
+            reply = SET_SWITCH_NO_RESERVATION;
+          }
+        } else {
+          PrintDebug(ui, "Invalid SetSwitch msg from %d", tid);
+        }
         if (!CALIBRATION) {
           uimsg.type = UPDATE_SWITCH;
           uimsg.data1 = sw.num2;
           uimsg.data2 = msg->data;
           Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
         }
+        Reply(tid, &reply, 1);
         break;
       }
       //case QUERY_DISTANCE: {

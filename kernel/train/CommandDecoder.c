@@ -129,7 +129,7 @@ static void decodeCommand() {
       sw.num1 = 0;
       sw.num2 = (char)switch_number;
 
-      setSwitch.type = SET_SWITCH;
+      setSwitch.type = SUDO_SET_SWITCH;
       setSwitch.landmark1 = sw;
       setSwitch.data = switch_pos == 'c' ? SWITCH_CURVED : SWITCH_STRAIGHT;
       Send(trackController, (char*)&setSwitch, sizeof(TrackMsg), (char *)NULL, 0);

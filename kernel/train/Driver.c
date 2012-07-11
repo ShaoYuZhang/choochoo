@@ -97,7 +97,7 @@ static int reserveMoreTrack(Driver* me, TrackNextSensorMsg* trackMsg) {
       }
     }
   } else {
-      qMsg.numPredSensor = 0;
+    qMsg.numPredSensor = 0;
   }
   Delay(100, me->timeserver);
 
