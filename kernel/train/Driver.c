@@ -99,7 +99,6 @@ static int reserveMoreTrack(Driver* me, TrackNextSensorMsg* trackMsg) {
   } else {
     qMsg.numPredSensor = 0;
   }
-  Delay(100, me->timeserver);
 
   char status = RESERVE_FAIL;
   Send(me->trackManager, (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
