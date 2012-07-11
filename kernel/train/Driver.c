@@ -87,12 +87,17 @@ static void trySetSwitch_and_getNextSwitch(Driver* me) {
 
   if (reply == SET_SWITCH_SUCCESS) {
     //TrainDebug(me, "Set Switch Success");
-    //printLandmark(me, &setSwitch.landmark1);
-    for (int i = me->routeRemaining; i < me->route.length-1; i++) {
+    printLandmark(me, &setSwitch.landmark1);
+    int haveNextSwitch = 0;
+    for (int i = me->nextSetSwitchNode + 1; i < me->route.length-1; i++) {
       if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
           me->route.nodes[i].landmark.num1 == BR && me->nextSetSwitchNode != -1) {
+        haveNextSwitch = 1;
         me->nextSetSwitchNode = i;
       }
+    }
+    if (!haveNextSwitch) {
+      me->nextSetSwitchNode = -1;
     }
   }
 }
