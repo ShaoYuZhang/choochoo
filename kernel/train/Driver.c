@@ -27,8 +27,7 @@ static int getStoppingDistance(Driver* me) {
 }
 
 // mm/s
-static int getVelocity(Driver* me, int speed, int dir){
-  return me->v[speed][dir];
+static int getVelocity(Driver* me){
   if (me->isAding) {
     int now = Time(me->timeserver) * 10;
     return eval_velo(&(me->adPoly), now);
@@ -39,7 +38,7 @@ static int getVelocity(Driver* me, int speed, int dir){
 
 static int getStoppingTime(Driver* me) {
   return 2* getStoppingDistance(me) * 100000 /
-    getVelocity(me, me->speed, me->speedDir);
+    getVelocity(me);
 }
 
 static void toPosition(Driver* me, Position* pos) {
@@ -61,8 +60,8 @@ static int interpolateStoppingDistance(Driver* me, int velocity) {
     if (me->v[i][MAX_VAL] >= velocity && me->v[i-1][MAX_VAL] <= velocity) {
       speed = i;
       float diff = (float)(me->v[i][MAX_VAL] - me->v[i-1][MAX_VAL]);
-      percentUp = (float)(me->v[i][MAX_VAL] - velocity) / diff;
-      percentDown = 1.0 - percentUp;
+      percentDown = (float)(me->v[i][MAX_VAL] - velocity) / diff;
+      percentUp = 1.0 - percentDown;
       break;
     }
   }
@@ -88,7 +87,7 @@ static void trySetSwitch_and_getNextSwitch(Driver* me) {
 
   if (reply == SET_SWITCH_SUCCESS) {
     //TrainDebug(me, "Set Switch Success");
-    printLandmark(me, &setSwitch.landmark1);
+    //printLandmark(me, &setSwitch.landmark1);
     int haveNextSwitch = 0;
     for (int i = me->nextSetSwitchNode + 1; i < me->route.length-1; i++) {
       if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
@@ -108,8 +107,7 @@ static int reserveMoreTrack(Driver* me) {
   ReleaseOldAndReserveNewTrackMsg qMsg;
   qMsg.type = RELEASE_OLD_N_RESERVE_NEW;
   qMsg.trainNum = me->trainNum;
-  qMsg.stoppingDistance = interpolateStoppingDistance(
-      me, getVelocity(me, me->speed, me->speedDir));
+  qMsg.stoppingDistance = getStoppingDistance(me);
   qMsg.lastSensor.type = LANDMARK_SENSOR;
   qMsg.lastSensor.num1 = me->lastSensorBox;
   qMsg.lastSensor.num2 = me->lastSensorVal;
@@ -151,10 +149,7 @@ static void updatePrediction(Driver* me) {
   me->numPredictions = trackMsg.numPred;
   for (int i = 0; i < trackMsg.numPred; i++) {
     TrackSensorPrediction prediction = trackMsg.predictions[i];
-    TrainDebug(me, "Prediction %d %d %d", prediction.sensor.type, prediction.sensor.num1, prediction.sensor.num2);
-    TrainDebug(me, "Dist: %d", prediction.dist);
-    TrainDebug(me, "Condition %d %d %d %d", prediction.conditionLandmark.type, prediction.conditionLandmark.num1, prediction.conditionLandmark.num2, prediction.condition);
-        }
+  }
 
   TrackSensorPrediction primaryPrediction = trackMsg.predictions[0];
   me->distanceToNextSensor = primaryPrediction.dist;
@@ -169,7 +164,7 @@ static void updatePrediction(Driver* me) {
     me->nextSensorVal = primaryPrediction.sensor.num2;
     me->nextSensorPredictedTime =
       now + me->distanceToNextSensor*100000 /
-      getVelocity(me, me->speed, me->speedDir) - 50; // 50 ms delay for sensor query.
+      getVelocity(me) - 50; // 50 ms delay for sensor query.
   } else {
     TrainDebug(me, "No prediction.. has position");
     printLandmark(me, &qMsg.position1.landmark1);
@@ -195,6 +190,8 @@ static void getRoute(Driver* me, DriverMsg* msg) {
   Send(me->trackManager, (char*)&trackmsg,
       sizeof(TrackMsg), (char*)&(me->route), sizeof(Route));
   me->routeRemaining = 0;
+  me->previousStopNode = 0;
+  me->distanceFromLastSensorAtPreviousStopNode = me->distanceFromLastSensor;
   printRoute(me);
 }
 
@@ -233,29 +230,21 @@ static int shouldStopNow(Driver* me) {
   return 0;
 }
 
-static void updateStopNode(Driver* me, int speed) {
+static void updateStopNode(Driver* me) {
   // Find the first reverse on the path, stop if possible.
   me->stopNode = me->route.length-1;
-  me->nextSetSwitchNode = -1;
   const int stoppingDistance =
     interpolateStoppingDistance(me,
-        me->v[speed][me->speedDir]);
-        //getVelocity(me, speed, me->speedDir));
+        getVelocity(me));
   int stop = stoppingDistance;
-  for (int i = me->routeRemaining; i < me->route.length-1; i++) {
+  for (int i = me->previousStopNode; i < me->route.length-1; i++) {
     if (me->route.nodes[i].num == REVERSE) {
       me->stopNode = i;
       break;
     }
-    else if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
-        me->route.nodes[i].landmark.num1 == BR && me->nextSetSwitchNode == -1) {
-      TrainDebug(me, "Will try to set:");
-      printLandmark(me, &(me->route.nodes[i].landmark));
-      me->nextSetSwitchNode = i;
-    }
   }
-  TrainDebug(me, "UpdateStop. Node:%d %dmm Spd:%d Dir:%d",
-      me->stopNode, stoppingDistance, speed, me->speedDir);
+  //TrainDebug(me, "UpdateStop. Node:%d %dmm",
+  //    me->stopNode, stoppingDistance);
 
   // Find the stopping distance for the stopNode.
   // S------L------L---|-----L---------R------F
@@ -263,11 +252,11 @@ static void updateStopNode(Driver* me, int speed) {
   // |__travel_dist____|
   // |delay this much..|
   //TrainDebug(me, "Need %d mm at StopNode %d", stop, me->stopNode-1);
-  for (int i = me->stopNode-1; i >= me->routeRemaining; i--) {
+  for (int i = me->stopNode-1; i >= me->previousStopNode; i--) {
     // Minus afterwards so that stoppping distance can be zero.
     if (stop > 0) {
       stop -= me->route.nodes[i].dist;
-      TrainDebug(me, "Stop %d %d", stop, i);
+      //TrainDebug(me, "Stop %d %d", stop, i);
     }
 
     if (stop <= 0) {
@@ -277,7 +266,7 @@ static void updateStopNode(Driver* me, int speed) {
       me->stopSensorVal = -1;
 
       // Find previous sensor.
-      for (int j = i; j >= me->routeRemaining; j--) {
+      for (int j = i; j >= me->previousStopNode; j--) {
         if (me->route.nodes[j].landmark.type == LANDMARK_SENSOR) {
           // The Sensor to begin using distance to next sensor
           me->stopSensorBox = me->route.nodes[j].landmark.num1;
@@ -293,7 +282,7 @@ static void updateStopNode(Driver* me, int speed) {
         //          |  |___ current position
         //          |______ distanceFromLastSensor
         me->useLastSensorNow = 1;
-        previousStop += (int)me->distanceFromLastSensor;
+        previousStop += (int)me->distanceFromLastSensorAtPreviousStopNode;
       }
       // Else..
       //     |---stopSensorBox
@@ -302,21 +291,21 @@ static void updateStopNode(Driver* me, int speed) {
       //       |__|
       //          |______ previous stop
       me->distancePassStopSensorToStop = previousStop;
-      TrainDebug(me, "Stop Sensor %c%d",
-          'A'+me->stopSensorBox, me->stopSensorVal);
-      TrainDebug(me, "Stop %dmm after sensor", previousStop);
+      //TrainDebug(me, "Stop Sensor %c%d",
+      //    'A'+me->stopSensorBox, me->stopSensorVal);
+      //TrainDebug(me, "Stop %dmm after sensor", previousStop);
       break;
     }
   }
   if (stop > 0) {
-      TrainDebug(me, "No room to stop??? %d", stop);
-      TrainDebug(me, "StopNode-1 %d, remaining %d ", me->stopNode-1,
-          me->routeRemaining);
+      //TrainDebug(me, "No room to stop??? %d", stop);
+      //TrainDebug(me, "StopNode-1 %d, remaining %d ", me->stopNode-1,
+      //    me->previousStopNode);
       me->stopNow = 1;
   }
 
-  TrainDebug(me, "Finish update stop %d %d %d", me->stopNode,
-  (me->stopNode == (me->route.length-1)), (me->route.nodes[me->stopNode].num == REVERSE));
+  //TrainDebug(me, "Finish update stop %d %d %d", me->stopNode,
+  //(me->stopNode == (me->route.length-1)), (me->route.nodes[me->stopNode].num == REVERSE));
   int stopAfterReverse =
       ((me->stopNode == (me->route.length-2)) &&
        (me->route.nodes[me->stopNode].num == REVERSE));
@@ -340,6 +329,17 @@ static void updateRoute(Driver* me, char box, char val) {
   }
 
   // TODO if stoppped, update next stopNode.
+}
+
+static void updateSetSwitch(Driver* me) {
+  for (int i = me->routeRemaining; i < me->route.length-1; i++) {
+    if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
+        me->route.nodes[i].landmark.num1 == BR && me->nextSetSwitchNode == -1) {
+      //TrainDebug(me, "Will try to set:");
+      //printLandmark(me, &(me->route.nodes[i].landmark));
+      me->nextSetSwitchNode = i;
+    }
+  }
 }
 
 static void dynamicCalibration(Driver* me) {
@@ -369,7 +369,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     }
     else if (me->speed == 0) {
       // accelerating from 0
-      int v0 = getVelocity(me, me->speed, me->speedDir);
+      int v0 = getVelocity(me);
       int v1 = me->v[newSpeed][ACCELERATE];
       int t0 = now + 8; // compensate for time it takes to send to train
       int t1 = now + 8 + me->a[newSpeed];
@@ -379,7 +379,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
       me->adEndTime = t1;
     } else if (newSpeed == 0) {
       // decelerating to 0
-      int v0 = getVelocity(me, me->speed, me->speedDir);
+      int v0 = getVelocity(me);
       int v1 = me->v[newSpeed][DECELERATE];
       int t0 = now + 8; // compensate for time it takes to send to train
       int t1 = now + 8 + getStoppingTime(me);
@@ -550,7 +550,7 @@ static void updatePosition(Driver* me, int time){
 
     } else {
       // In mm
-      dPosition = (time - me->lastPosUpdateTime) * getVelocity(me, me->speed, me->speedDir) / 100000.0;
+      dPosition = (time - me->lastPosUpdateTime) * getVelocity(me) / 100000.0;
     }
     me->lastPosUpdateTime = time;
     me->distanceFromLastSensor += dPosition;
@@ -575,6 +575,7 @@ void driver() {
   initDriver(&me);
 
   unsigned int naggCount = 0;
+  unsigned int updateStoppingDistanceCount = 0;
 
   for (;;) {
     int tid = -1;
@@ -608,8 +609,11 @@ void driver() {
           me.stopCommited = 0; // We're moving again.
           // We've completed everything up to the reverse node.
           me.routeRemaining = me.stopNode+1;
+          me.previousStopNode = me.routeRemaining;
+          me.distanceFromLastSensorAtPreviousStopNode = me.distanceFromLastSensor;
           // Calculate the next stop node.
-          updateStopNode(&me, msg.data2);
+          updateStopNode(&me);
+          updateSetSwitch(&me);
           // if the reverse is last node, nothing to do
           // if it isn't.. it should speed up again.
         }
@@ -677,7 +681,7 @@ void driver() {
           TrackSensorPrediction primaryPrediction = me.predictions[0];
           me.calibrationStart = msg.timestamp;
           me.calibrationDistance = primaryPrediction.dist;
-          int dPos = 50 * getVelocity(&me, me.speed, me.speedDir) / 100000.0;
+          int dPos = 50 * getVelocity(&me) / 100000.0;
           me.lastSensorDistanceError =  -(int)me.distanceToNextSensor - dPos;
           me.distanceFromLastSensor = dPos;
           me.distanceToNextSensor = primaryPrediction.dist - dPos;
@@ -691,7 +695,7 @@ void driver() {
           me.nextSensorVal = primaryPrediction.sensor.num2;
           me.nextSensorPredictedTime =
             msg.timestamp + me.distanceToNextSensor*100000 /
-            getVelocity(&me, me.speed, me.speedDir);
+            getVelocity(&me);
 
           updatePosition(&me, msg.timestamp);
           sendUiReport(&me);
@@ -718,6 +722,8 @@ void driver() {
               me.useLastSensorNow = 0;
               me.stopNow = 0;
               me.stopSensorHit = 0;
+            } else {
+              if ((++updateStoppingDistanceCount & 15) == 0) updateStopNode(&me);
             }
           }
         }

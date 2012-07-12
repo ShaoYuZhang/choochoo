@@ -23,6 +23,8 @@ typedef struct Driver {
   int calibrationDistance;
   int routeRemaining;
   int stopNode;
+  int previousStopNode;
+  int distanceFromLastSensorAtPreviousStopNode;
   int stopCommited;
   int stopSensorHit;
   int stopSensorBox;

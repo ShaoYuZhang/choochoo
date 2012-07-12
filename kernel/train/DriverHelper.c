@@ -134,7 +134,7 @@ static void printRoute(Driver* me) {
 }
 
 static void sendUiReport(Driver* me) {
-  me->uiMsg.velocity = getVelocity(me, me->speed, me->speedDir) / 100;
+  me->uiMsg.velocity = getVelocity(me) / 100;
   me->uiMsg.lastSensorUnexpected     = me->lastSensorUnexpected;
   me->uiMsg.lastSensorBox            = me->lastSensorBox;
   me->uiMsg.lastSensorVal            = me->lastSensorVal;
@@ -165,13 +165,16 @@ static void setRoute(Driver* me, DriverMsg* msg) {
   if (me->route.length != 0) {
     if (me->route.nodes[0].dist == 0 && me->route.nodes[1].num == REVERSE) {
       me->stopNode = 1;
+      me->previousStopNode = 1;
+      me->distanceFromLastSensorAtPreviousStopNode = me->distanceFromLastSensor;
       me->speedAfterReverse = msg->data2;
       trainSetSpeed(-1, getStoppingTime(me), 0, me);
     } else {
       int reserveStatus = reserveMoreTrack(me);
       if (reserveStatus == RESERVE_SUCESS) {
         trainSetSpeed(msg->data2, 0, 0, me);
-        updateStopNode(me, msg->data2);
+        updateStopNode(me);
+        updateSetSwitch(me);
       } else {
         TrainDebug(me, "Cannot reserve track!");
         trainSetSpeed(0, 0, 0, me);
