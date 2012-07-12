@@ -147,7 +147,7 @@ static int locateNode(track_node* track, Position pos, track_edge** edge) {
   if (len > 0) {
     int dist = pos.offset;
     // for robusteness, when offset less than zero, assume position is on top of landmark1
-    if (dist < 0) {
+    if (dist <= 0) {
       *edge = edges[0];
       return 0;
     }
@@ -161,7 +161,7 @@ static int locateNode(track_node* track, Position pos, track_edge** edge) {
       }
     }
     // for robusteness, when offset is more than distance between landmark1 and landmark2, assume position is on top of landmark2
-    if (dist > 0) {
+    if (dist >= 0) {
       *edge = edges[len-1];
       return edges[len-1]->dist;
     }
