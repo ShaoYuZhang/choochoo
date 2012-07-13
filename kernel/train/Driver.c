@@ -36,21 +36,6 @@ static int getVelocity(Driver* me){
   }
 }
 
-static int getStoppingTime(Driver* me) {
-  return 2* getStoppingDistance(me) * 100000 /
-    getVelocity(me);
-}
-
-static void toPosition(Driver* me, Position* pos) {
-  pos->landmark1.type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
-  pos->landmark1.num1 = me->lastSensorBox;
-  pos->landmark1.num2 = me->lastSensorVal;
-  pos->landmark2.type = me->nextSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
-  pos->landmark2.num1 = me->nextSensorBox;
-  pos->landmark2.num2 = me->nextSensorVal;
-  pos->offset = (int)me->distanceFromLastSensor;
-}
-
 static int interpolateStoppingDistance(Driver* me, int velocity) {
   int speed = 14;
   float percentUp = -1.0;
@@ -73,6 +58,21 @@ static int interpolateStoppingDistance(Driver* me, int velocity) {
   float stopDown = (float)me->d[speed-1][me->speedDir][MAX_VAL];
 
   return stopUp * percentUp + stopDown * percentDown;
+}
+
+static int getStoppingTime(Driver* me) {
+  return 2* interpolateStoppingDistance(me, getVelocity(me)) * 100000 /
+    getVelocity(me);
+}
+
+static void toPosition(Driver* me, Position* pos) {
+  pos->landmark1.type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
+  pos->landmark1.num1 = me->lastSensorBox;
+  pos->landmark1.num2 = me->lastSensorVal;
+  pos->landmark2.type = me->nextSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
+  pos->landmark2.num1 = me->nextSensorBox;
+  pos->landmark2.num2 = me->nextSensorVal;
+  pos->offset = (int)me->distanceFromLastSensor;
 }
 
 static void trySetSwitch_and_getNextSwitch(Driver* me) {
@@ -304,7 +304,8 @@ static void updateStopNode(Driver* me) {
       //TrainDebug(me, "No room to stop??? %d", stop);
       //TrainDebug(me, "StopNode-1 %d, remaining %d ", me->stopNode-1,
       //    me->previousStopNode);
-      //me->stopNow = 1;
+
+      me->stopNow = 1;
   }
 
   TrainDebug(me, "Finish update stop %d %d %d", me->stopNode,
