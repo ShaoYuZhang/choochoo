@@ -89,7 +89,7 @@ static void trySetSwitch_and_getNextSwitch(Driver* me) {
     //TrainDebug(me, "Set Switch Success");
     //printLandmark(me, &setSwitch.landmark1);
     int haveNextSwitch = 0;
-    for (int i = me->nextSetSwitchNode + 1; i < me->route.length-1; i++) {
+    for (int i = me->nextSetSwitchNode + 1; i < me->stopNode; i++) {
       if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
           me->route.nodes[i].landmark.num1 == BR && me->nextSetSwitchNode != -1) {
         haveNextSwitch = 1;
@@ -332,7 +332,7 @@ static void updateRoute(Driver* me, char box, char val) {
 }
 
 static void updateSetSwitch(Driver* me) {
-  for (int i = me->routeRemaining; i < me->route.length-1; i++) {
+  for (int i = me->routeRemaining; i < me->stopNode; i++) {
     if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
         me->route.nodes[i].landmark.num1 == BR && me->nextSetSwitchNode == -1) {
       //TrainDebug(me, "Will try to set:");
@@ -633,8 +633,6 @@ void driver() {
         if (me.positionFinding) {
           sensorReportValid = 1;
           me.lastSensorUnexpected = 1;
-          trainSetSpeed(0, 0, 0, &me); // Found position, stop.
-          me.positionFinding = 0;
           FinishPositionFinding(me.trainNum, me.trainController);
         } else if (isSensorReserved) {
           for (int i = 0; i < me.numPredictions; i ++) {
@@ -699,6 +697,10 @@ void driver() {
 
           updatePosition(&me, msg.timestamp);
           sendUiReport(&me);
+          if (me.positionFinding) {
+            trainSetSpeed(0, 0, 0, &me); // Found position, stop.
+            me.positionFinding = 0;
+          }
         }
         break;
       }
