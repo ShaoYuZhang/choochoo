@@ -564,6 +564,7 @@ static void trackSetSwitch(int sw, int state) {
 
   Putstr(com1, msg, 2);
   switchStatus[sw] = state;
+  Putc(com1, 32); // turn off switch
 }
 
 static void trackController() {
