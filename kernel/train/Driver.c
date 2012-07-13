@@ -236,6 +236,9 @@ static void updateStopNode(Driver* me) {
   const int stoppingDistance =
     interpolateStoppingDistance(me,
         getVelocity(me));
+  if (stoppingDistance == 0) {
+    return;
+  }
   int stop = stoppingDistance;
   for (int i = me->previousStopNode; i < me->route.length-1; i++) {
     if (me->route.nodes[i].num == REVERSE) {

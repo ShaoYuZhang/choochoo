@@ -541,7 +541,13 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
     result->nodes[i-index] = tempRoute[i];
   }
   result->length = 150 - index;
-  result->nodes[result->length-1].dist = 0;
+
+  // a route of length 1 is actually not a route
+  if (result->length == 1) {
+    result->length = 0;
+  } else {
+    result->nodes[result->length-1].dist = 0;
+  }
 
   // restore graph
   *toNodeSrcPointer = toNodeSrc;
