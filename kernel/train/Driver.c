@@ -460,7 +460,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     TrainDebug(me, "Reverse... %d ", me->speed);
     DriverMsg delayMsg;
     delayMsg.type = SET_SPEED;
-    delayMsg.timestamp = stopTime;
+    delayMsg.timestamp = stopTime + 500;
     if (me->speedAfterReverse == -1) {
       delayMsg.data2 = (signed char)me->speed;
     } else {
