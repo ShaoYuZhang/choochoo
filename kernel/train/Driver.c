@@ -236,9 +236,6 @@ static void updateStopNode(Driver* me) {
   const int stoppingDistance =
     interpolateStoppingDistance(me,
         getVelocity(me));
-  if (stoppingDistance == 0) {
-    return;
-  }
   int stop = stoppingDistance;
   for (int i = me->previousStopNode; i < me->route.length-1; i++) {
     if (me->route.nodes[i].num == REVERSE) {
@@ -246,8 +243,8 @@ static void updateStopNode(Driver* me) {
       break;
     }
   }
-  TrainDebug(me, "UpdateStop. Node:%d %dmm",
-      me->stopNode, stoppingDistance);
+  //TrainDebug(me, "UpdateStop. Node:%d %dmm",
+  //    me->stopNode, stoppingDistance);
 
   // Find the stopping distance for the stopNode.
   // S------L------L---|-----L---------R------F
@@ -255,11 +252,14 @@ static void updateStopNode(Driver* me) {
   // |__travel_dist____|
   // |delay this much..|
   //TrainDebug(me, "Need %d mm at StopNode %d", stop, me->stopNode-1);
+  if (stoppingDistance == 0) {
+    return;
+  }
   for (int i = me->stopNode-1; i >= me->previousStopNode; i--) {
     // Minus afterwards so that stoppping distance can be zero.
     if (stop > 0) {
       stop -= me->route.nodes[i].dist;
-      TrainDebug(me, "Stop %d %d", stop, i);
+      //TrainDebug(me, "Stop %d %d", stop, i);
     }
 
     if (stop <= 0) {
@@ -301,10 +301,10 @@ static void updateStopNode(Driver* me) {
     }
   }
   if (stop > 0) {
-      TrainDebug(me, "No room to stop??? %d", stop);
-      TrainDebug(me, "StopNode-1 %d, remaining %d ", me->stopNode-1,
-          me->previousStopNode);
-      me->stopNow = 1;
+      //TrainDebug(me, "No room to stop??? %d", stop);
+      //TrainDebug(me, "StopNode-1 %d, remaining %d ", me->stopNode-1,
+      //    me->previousStopNode);
+      //me->stopNow = 1;
   }
 
   TrainDebug(me, "Finish update stop %d %d %d", me->stopNode,
