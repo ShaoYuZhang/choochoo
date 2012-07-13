@@ -192,6 +192,8 @@ static void getRoute(Driver* me, DriverMsg* msg) {
   me->routeRemaining = 0;
   me->previousStopNode = 0;
   me->distanceFromLastSensorAtPreviousStopNode = me->distanceFromLastSensor;
+  me->stopSensorVal = -1;
+  me->stopSensorBox = -1;
   printRoute(me);
 }
 
@@ -608,7 +610,7 @@ void driver() {
           Reply(replyTid, (char*)1, 0);
           sendUiReport(&me);
           break;
-        } else if (me.route.length != 1) {
+        } else if (me.route.length != 0) {
           // Delayer came back. Reverse command completed
           me.stopCommited = 0; // We're moving again.
           // We've completed everything up to the reverse node.

@@ -177,5 +177,6 @@ static void setRoute(Driver* me, DriverMsg* msg) {
   } else {
     TrainDebug(me, "No route found!");
     trainSetSpeed(0, 0, 0, me);
+    me->stopCommited = 1;
   }
 }
