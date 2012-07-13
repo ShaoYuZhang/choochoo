@@ -163,25 +163,16 @@ static void setRoute(Driver* me, DriverMsg* msg) {
 
   getRoute(me, msg);
   if (me->route.length != 0) {
-    if (me->route.nodes[0].dist == 0 && me->route.nodes[1].num == REVERSE) {
-      me->stopNode = 1;
-      me->previousStopNode = 1;
-      me->distanceFromLastSensorAtPreviousStopNode = me->distanceFromLastSensor;
-      me->speedAfterReverse = msg->data2;
-      TrainDebug(me, "Reverse First");
-      trainSetSpeed(-1, getStoppingTime(me), 0, me);
+    int reserveStatus = reserveMoreTrack(me);
+    if (reserveStatus == RESERVE_SUCESS) {
+      trainSetSpeed(msg->data2, 0, 0, me);
+      updateStopNode(me);
+      me->nextSetSwitchNode = -1;
+      updateSetSwitch(me);
     } else {
-      int reserveStatus = reserveMoreTrack(me);
-      if (reserveStatus == RESERVE_SUCESS) {
-        trainSetSpeed(msg->data2, 0, 0, me);
-        updateStopNode(me);
-        me->nextSetSwitchNode = -1;
-        updateSetSwitch(me);
-      } else {
-        TrainDebug(me, "Cannot reserve track!");
-        trainSetSpeed(0, 0, 0, me);
-        me->rerouteCountdown = 200;
-      }
+      TrainDebug(me, "Cannot reserve track!");
+      trainSetSpeed(0, 0, 0, me);
+      me->rerouteCountdown = 200;
     }
   } else {
     TrainDebug(me, "No route found!");

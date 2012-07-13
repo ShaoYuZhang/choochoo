@@ -368,6 +368,10 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
   if (offsetFrom == -1) {
     result->dist = 0;
     result->length = 0;
+    PrintDebug(ui, "Find Route Error: invalid poistion FROM");
+    PrintDebug(ui, "%d %d %d %d %d %d %d", from.landmark1.type, from.landmark1.num1,
+        from.landmark1.num2, from.landmark2.type, from.landmark2.num1, from.landmark2.num2,
+        from.offset);
     return;
   }
 
@@ -384,6 +388,10 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
   if (offsetTo == -1) {
     result->dist = 0;
     result->length = 0;
+    PrintDebug(ui, "Find Route Error: invalid poistion TO");
+    PrintDebug(ui, "%d %d %d %d %d %d %d", to.landmark1.type, to.landmark1.num1,
+        to.landmark1.num2, to.landmark2.type, to.landmark2.num1, to.landmark2.num2,
+        to.offset);
     return;
   }
 
@@ -545,6 +553,13 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
   // a route of length 1 is actually not a route
   if (result->length == 1) {
     result->length = 0;
+    PrintDebug(ui, "Can't frind route");
+    PrintDebug(ui, "FROM: %d %d %d %d %d %d %d", from.landmark1.type, from.landmark1.num1,
+        from.landmark1.num2, from.landmark2.type, from.landmark2.num1, from.landmark2.num2,
+        from.offset);
+    PrintDebug(ui, "To: %d %d %d %d %d %d %d", to.landmark1.type, to.landmark1.num1,
+        to.landmark1.num2, to.landmark2.type, to.landmark2.num1, to.landmark2.num2,
+        to.offset);
   } else {
     result->nodes[result->length-1].dist = 0;
   }
