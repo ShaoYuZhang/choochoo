@@ -168,6 +168,7 @@ static void setRoute(Driver* me, DriverMsg* msg) {
       me->previousStopNode = 1;
       me->distanceFromLastSensorAtPreviousStopNode = me->distanceFromLastSensor;
       me->speedAfterReverse = msg->data2;
+      TrainDebug(me, "Reverse First");
       trainSetSpeed(-1, getStoppingTime(me), 0, me);
     } else {
       int reserveStatus = reserveMoreTrack(me);

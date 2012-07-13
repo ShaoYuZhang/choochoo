@@ -243,8 +243,8 @@ static void updateStopNode(Driver* me) {
       break;
     }
   }
-  //TrainDebug(me, "UpdateStop. Node:%d %dmm",
-  //    me->stopNode, stoppingDistance);
+  TrainDebug(me, "UpdateStop. Node:%d %dmm",
+      me->stopNode, stoppingDistance);
 
   // Find the stopping distance for the stopNode.
   // S------L------L---|-----L---------R------F
@@ -256,7 +256,7 @@ static void updateStopNode(Driver* me) {
     // Minus afterwards so that stoppping distance can be zero.
     if (stop > 0) {
       stop -= me->route.nodes[i].dist;
-      //TrainDebug(me, "Stop %d %d", stop, i);
+      TrainDebug(me, "Stop %d %d", stop, i);
     }
 
     if (stop <= 0) {
@@ -298,14 +298,14 @@ static void updateStopNode(Driver* me) {
     }
   }
   if (stop > 0) {
-      //TrainDebug(me, "No room to stop??? %d", stop);
-      //TrainDebug(me, "StopNode-1 %d, remaining %d ", me->stopNode-1,
-      //    me->previousStopNode);
+      TrainDebug(me, "No room to stop??? %d", stop);
+      TrainDebug(me, "StopNode-1 %d, remaining %d ", me->stopNode-1,
+          me->previousStopNode);
       me->stopNow = 1;
   }
 
-  //TrainDebug(me, "Finish update stop %d %d %d", me->stopNode,
-  //(me->stopNode == (me->route.length-1)), (me->route.nodes[me->stopNode].num == REVERSE));
+  TrainDebug(me, "Finish update stop %d %d %d", me->stopNode,
+  (me->stopNode == (me->route.length-1)), (me->route.nodes[me->stopNode].num == REVERSE));
   int stopAfterReverse =
       ((me->stopNode == (me->route.length-2)) &&
        (me->route.nodes[me->stopNode].num == REVERSE));
