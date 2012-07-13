@@ -616,6 +616,7 @@ void driver() {
           me.distanceFromLastSensorAtPreviousStopNode = me.distanceFromLastSensor;
           // Calculate the next stop node.
           updateStopNode(&me);
+          me.nextSetSwitchNode = -1;
           updateSetSwitch(&me);
           // if the reverse is last node, nothing to do
           // if it isn't.. it should speed up again.

@@ -175,6 +175,7 @@ static void setRoute(Driver* me, DriverMsg* msg) {
       if (reserveStatus == RESERVE_SUCESS) {
         trainSetSpeed(msg->data2, 0, 0, me);
         updateStopNode(me);
+        me->nextSetSwitchNode = -1;
         updateSetSwitch(me);
       } else {
         TrainDebug(me, "Cannot reserve track!");
