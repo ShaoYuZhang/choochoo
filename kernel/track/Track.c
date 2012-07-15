@@ -759,6 +759,31 @@ static void trackController() {
         Reply(tid, (char *)NULL, 0);
         break;
       }
+      case QUERY_EDGES_RESERVED: {
+        int trainNum = (int)msg->data;
+        // Clear the train's previous reservation
+        for (int j = 0; j < TRACK_MAX +4; j++) {
+          track_node* node = &track[j];
+          char* type;
+          switch (node->type) {
+            case NODE_SENSOR: type = "SENSOR_EDGE"; break;
+            case NODE_ENTER: type = "ENTER_EDGE"; break;
+            case NODE_MERGE: type = "MERGE_EDGE"; break;
+            case NODE_BRANCH: type = "BRANCH_EDGE"; break;
+            default: type = NULL;
+          }
+          if (type != NULL) {
+            if (node->edge[DIR_AHEAD].reserved_train_num == trainNum) {
+              PrintDebug(ui, "%s (%s,%s)",
+                  type,
+                  node->edge[DIR_AHEAD].src->name,
+                  node->edge[DIR_AHEAD].dest->name);
+            }
+          }
+        }
+
+        Reply(tid, (char *)NULL, 0);
+      }
       case GET_SWITCH: {
         Reply(tid, (char*)(switchStatus + msg->data), 4);
         break;

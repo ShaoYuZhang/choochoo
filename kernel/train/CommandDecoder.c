@@ -220,6 +220,14 @@ static void decodeCommand() {
     qMsg.trainNum = train_number;
     qMsg.stoppingDistance = 100;
 #endif
+  } else if (decoderBuffer[0] == 'r' && decoderBuffer[1] == 's') {
+    char *temp = (char*)decoderBuffer + 3;
+
+    int train_number = strgetui(&temp);
+    TrackMsg msg;
+    msg.type = QUERY_EDGES_RESERVED;
+    msg.data = (char)train_number;
+    Send(trackController, (char *)&msg, sizeof(TrackMsg), (char *)1, 0);
 
   } else {
     PrintDebug(ui, "Bad: %s", decoderBuffer);

@@ -127,7 +127,7 @@ void task1() {
   Send(trainController, (char *)&drive, sizeof(DriverMsg), (char *)NULL, 0);
 #endif
 
-#if 0
+#if 1
     ReleaseOldAndReserveNewTrackMsg rmsg;
     rmsg.type = RELEASE_OLD_N_RESERVE_NEW;
     rmsg.trainNum = 44; // train num
