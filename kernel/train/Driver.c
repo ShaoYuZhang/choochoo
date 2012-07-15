@@ -604,7 +604,7 @@ static void updatePosition(Driver* me, int time){
     me->distanceFromLastSensor += dPosition;
     me->distanceToNextSensor -= dPosition;
 
-    isLost(me);
+    //isLost(me);
   }
 }
 

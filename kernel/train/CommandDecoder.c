@@ -1,6 +1,7 @@
 #include <CommandDecoder.h>
 #include <Driver.h>
 #include <IoHelper.h>
+#include <RandomController.h>
 #include <Track.h>
 #include <IoServer.h>
 #include <NameServer.h>
@@ -15,6 +16,7 @@
 static char decoderBuffer[DECODER_BUFFER_SIZE];
 static unsigned int decoderCurrBufferPos;
 
+static int randomController;
 static int trainController;
 static int trackController;
 static int sensorServer;
@@ -228,7 +230,10 @@ static void decodeCommand() {
     msg.type = QUERY_EDGES_RESERVED;
     msg.data = (char)train_number;
     Send(trackController, (char *)&msg, sizeof(TrackMsg), (char *)1, 0);
-
+  } else if (decoderBuffer[0] == 'x' && decoderBuffer[1] == 'x') {
+    char *temp = (char*)decoderBuffer + 3;
+    int train_number = strgetui(&temp);
+    Send(randomController, (char*)&train_number, 4, (char *)1, 0);
   } else {
     PrintDebug(ui, "Bad: %s", decoderBuffer);
   }
@@ -238,6 +243,8 @@ static void commandDecoder() {
   decoderCurrBufferPos = 0;
   char com2Name[] = IOSERVERCOM2_NAME;
   com2 = WhoIs(com2Name);
+  char randomName[] = RANDOM_CONTROL_NAME;
+  randomController = WhoIs(randomName);
   char trainControllerName[] = TRAIN_CONTROLLER_NAME;
   trainController = WhoIs(trainControllerName);
   char trackControllerName[] = TRACK_NAME;

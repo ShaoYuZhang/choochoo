@@ -11,6 +11,7 @@
 #include <Sensor.h>
 #include <Track.h>
 #include <IoHelper.h>
+#include <RandomController.h>
 
 int CALIBRATION;
 
@@ -98,6 +99,7 @@ void task1() {
   int ui = startUserInterfaceTask();
   int trainController = startDriverControllerTask();
   int trackController = startTrackManagerTask();
+  int randomController = startRandomTrainControllerTask();
   startCommandDecoderTask();
 
   //Create(20, test_track);
@@ -127,7 +129,7 @@ void task1() {
   Send(trainController, (char *)&drive, sizeof(DriverMsg), (char *)NULL, 0);
 #endif
 
-#if 1
+#if 0
     ReleaseOldAndReserveNewTrackMsg rmsg;
     rmsg.type = RELEASE_OLD_N_RESERVE_NEW;
     rmsg.trainNum = 44; // train num
@@ -157,6 +159,27 @@ void task1() {
     rmsg.stoppingDistance = 485;
 
     Send(trackController, (char*)&rmsg, sizeof(ReleaseOldAndReserveNewTrackMsg), &reply, 1);
+#endif
+
+#if 0
+    DriverMsg driveMsg;
+    driveMsg.type = SET_ROUTE;
+    driveMsg.data2 = 9; // speeed
+
+    TrackMsg trackMsg;
+    trackMsg.type = GET_RANDOM_POSITION;
+    Send(trackController,
+        (char*)&trackMsg, sizeof(TrackMsg), (char*)&driveMsg.pos,
+        sizeof(Position));
+    driveMsg.pos.offset = 0;
+
+    PrintDebug(ui, "Random: Route %d %d %d %d %d %d %d %d %d",
+        44, driveMsg.data2,
+        driveMsg.pos.landmark1.type, driveMsg.pos.landmark1.num1,
+        driveMsg.pos.landmark1.num2, driveMsg.pos.landmark2.type,
+        driveMsg.pos.landmark2.num1, driveMsg.pos.landmark2.num2,
+        driveMsg.pos.offset);
+
 #endif
 
 

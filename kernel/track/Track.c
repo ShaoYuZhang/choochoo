@@ -806,6 +806,23 @@ static void trackController() {
         Reply(tid, (char*)(switchStatus + msg->data), 4);
         break;
       }
+      case GET_RANDOM_POSITION: {
+        for (;;) {
+          track_node* node = &track[GET_TIMER4() % TRACK_MAX];
+          if (node->type == NODE_SENSOR ||
+              node->type == NODE_BRANCH ||
+              node->type == NODE_MERGE ||
+              node->type == NODE_ENTER){
+            Position pos;
+            pos.landmark1 = getLandmark(node);
+            // DIR_HEAD guranteed to exist cuz node type.
+            pos.landmark2 = getLandmark(node->edge[DIR_AHEAD].dest);
+            Reply(tid, (char*)&pos, sizeof(Position));
+            break;
+          }
+        }
+        break;
+      }
       default: {
         ASSERT(FALSE, "Not suppported track message type.");
       }
