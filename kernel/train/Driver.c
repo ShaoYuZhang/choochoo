@@ -21,6 +21,7 @@ static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg);
 static int QueryIsSensorReserved(Driver* me, int box, int val);
 static void setRoute(Driver* me, DriverMsg* msg);
 static void updatePrediction(Driver* me);
+static int reserveMoreTrack(Driver* me);
 
 static int getStoppingDistance(Driver* me) {
   return me->d[(int)me->speed][(int)me->speedDir][MAX_VAL];
@@ -97,6 +98,11 @@ static void trySetSwitch_and_getNextSwitch(Driver* me) {
       }
     }
     updatePrediction(me);
+    int reserveStatus = reserveMoreTrack(me);
+    if  (reserveStatus == RESERVE_FAIL) {
+      trainSetSpeed(0, 0, 0, me);
+      me->rerouteCountdown = 200; // wait 2 seconds then reroute.
+    }
     if (!haveNextSwitch) {
       me->nextSetSwitchNode = -1;
     }
@@ -752,6 +758,11 @@ void driver() {
       }
       case BROADCAST_UPDATE_PREDICTION: {
         updatePrediction(&me);
+        int reserveStatus = reserveMoreTrack(&me);
+        if  (reserveStatus == RESERVE_FAIL) {
+          trainSetSpeed(0, 0, 0, &me);
+          me.rerouteCountdown = 200; // wait 2 seconds then reroute.
+        }
         break;
       }
       case FIND_POSITION: {
