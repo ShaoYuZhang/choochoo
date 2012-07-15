@@ -16,6 +16,7 @@
 #define KNOW_POSITION  10
 #define LOST_TRAIN     11
 #define BROADCAST_LOST 12
+#define STOP_DELAYER 13
 
 #include <UserInterface.h>
 #include <Track.h>

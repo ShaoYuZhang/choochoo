@@ -95,7 +95,7 @@ static track_node* findNode(track_node* track, TrackLandmark landmark) {
       return &track[i];
     }
   }
-  PrintDebug(ui, "WARNING: can't find node %d %d %d", landmark.type, landmark.num1, landmark.num2);
+  PrintDebug(ui, "WARNING: can't find node %d %d %d, FIXME NOW", landmark.type, landmark.num1, landmark.num2);
   return (track_node*) NULL;
 }
 

@@ -87,6 +87,23 @@ static void trainDelayer() {
   }
 }
 
+// Unlike the delayer above, this one handles stop commands
+// as opposed to reverse commands
+static void trainStopDelayer() {
+  char timename[] = TIMESERVER_NAME;
+  int timeserver = WhoIs(timename);
+  int parent = MyParentsTid();
+
+  DriverMsg msg;
+  msg.type = STOP_DELAYER;
+  for (;;) {
+    int stopTime = 0;
+    Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)&stopTime, 4);
+    int numTick = stopTime / 10;
+    Delay(numTick, timeserver);
+  }
+}
+
 static void trainNavigateNagger() {
   char timename[] = TIMESERVER_NAME;
   int timeserver = WhoIs(timename);
@@ -165,7 +182,7 @@ static void setRoute(Driver* me, DriverMsg* msg) {
 
   getRoute(me, msg);
   if (me->route.length != 0) {
-    int reserveStatus = reserveMoreTrack(me);
+    int reserveStatus = reserveMoreTrack(me, 0); // Moving
     if (reserveStatus == RESERVE_SUCESS) {
       trainSetSpeed(msg->data2, 0, 0, me);
       updateStopNode(me);

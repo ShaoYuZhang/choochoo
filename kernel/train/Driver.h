@@ -11,6 +11,7 @@ typedef struct Driver {
   // Task Id
   int trainController;
   int delayer;
+  int stopDelayer;
   int ui;
   int com1;
   int sensorWatcher;

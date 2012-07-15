@@ -13,6 +13,7 @@
 static void trainSetSpeed(const int speed, const int stopTime, const int delayer, Driver* me);
 static void printLandmark(Driver* me, TrackLandmark* l);
 static void trainDelayer();
+static void trainStopDelayer();
 static void trainSensor();
 static void trainNavigateNagger();
 static void printRoute(Driver* me);
@@ -21,7 +22,12 @@ static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg);
 static int QueryIsSensorReserved(Driver* me, int box, int val);
 static void setRoute(Driver* me, DriverMsg* msg);
 static void updatePrediction(Driver* me);
-static int reserveMoreTrack(Driver* me);
+static int reserveMoreTrack(Driver* me, int stopped);
+
+static void reroute(Driver* me) {
+  trainSetSpeed(0, 0, 0, me);
+  me->rerouteCountdown = 200; // wait 2 seconds then reroute.
+}
 
 static int getStoppingDistance(Driver* me) {
   return me->d[(int)me->speed][(int)me->speedDir][MAX_VAL];
@@ -121,10 +127,9 @@ static void trySetSwitch_and_getNextSwitch(Driver* me) {
       }
     }
     updatePrediction(me);
-    int reserveStatus = reserveMoreTrack(me);
-    if  (reserveStatus == RESERVE_FAIL) {
-      trainSetSpeed(0, 0, 0, me);
-      me->rerouteCountdown = 200; // wait 2 seconds then reroute.
+    int reserveStatus = reserveMoreTrack(me, 0); // moving
+    if (reserveStatus == RESERVE_FAIL) {
+      reroute(me);
     }
     if (!haveNextSwitch) {
       me->nextSetSwitchNode = -1;
@@ -132,7 +137,7 @@ static void trySetSwitch_and_getNextSwitch(Driver* me) {
   }
 }
 
-static int reserveMoreTrack(Driver* me) {
+static int reserveMoreTrack(Driver* me, int stationary) {
   ReleaseOldAndReserveNewTrackMsg qMsg;
   qMsg.type = RELEASE_OLD_N_RESERVE_NEW;
   qMsg.trainNum = me->trainNum;
@@ -141,7 +146,7 @@ static int reserveMoreTrack(Driver* me) {
   qMsg.lastSensor.num1 = me->lastSensorBox;
   qMsg.lastSensor.num2 = me->lastSensorVal;
 
-  if (!me->positionFinding) {
+  if (!stationary) {
     if (me->numPredictions > 10) {
       TrainDebug(me, "__Can't reserve >10 predictions");
     } else {
@@ -153,6 +158,7 @@ static int reserveMoreTrack(Driver* me) {
       }
     }
   } else {
+    qMsg.stoppingDistance = 1;
     qMsg.numPredSensor = 0;
   }
 
@@ -475,15 +481,18 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
 
       // Update prediction
       updatePrediction(me);
-      int reserveStatus = reserveMoreTrack(me);
-      if  (reserveStatus == RESERVE_FAIL) {
-        trainSetSpeed(0, 0, 0, me);
-        me->rerouteCountdown = 200; // wait 2 seconds then reroute.
+      int reserveStatus = reserveMoreTrack(me, 0); // moving
+      if (reserveStatus == RESERVE_FAIL) {
+        reroute(me);
       }
     } else {
       TrainDebug(me, "Set speed. %d %d", speed, me->trainNum);
       msg[0] = (char)speed;
       Putstr(me->com1, msg, 2);
+      if (speed == 0) {
+        int delayTime = stopTime + 500;
+        Reply(me->stopDelayer, (char*)&delayTime, 4);
+      }
     }
     if (speed > me->speed) {
       me->speedDir = ACCELERATE;
@@ -557,6 +566,7 @@ static void initDriver(Driver* me, int firstTime) {
 
   if (firstTime) {
     me->delayer = Create(1, trainDelayer);
+    me->stopDelayer = Create(1, trainStopDelayer);
     me->sensorWatcher = Create(3, trainSensor);
     me->navigateNagger = Create(2, trainNavigateNagger);
   }
@@ -612,7 +622,7 @@ void driver() {
     msg.data3 = -1;
     msg.replyTid = -1;
     Receive(&tid, (char*)&msg, sizeof(DriverMsg));
-    if (tid != me.delayer) {
+    if (tid != me.delayer && tid != me.stopDelayer) {
       Reply(tid, (char*)1, 0);
     }
     const int replyTid = msg.replyTid;
@@ -651,6 +661,16 @@ void driver() {
         TrainDebug(&me, "delayer come back.");
         break;
       }
+      case STOP_DELAYER: {
+        // To prevent the first receive from this delayer
+        if (me.lastSensorActualTime > 0) {
+          int reserveStatus = reserveMoreTrack(&me, 1);
+          if (reserveStatus == RESERVE_FAIL) {
+            TrainDebug(&me, "WARNING: unable to reserve during init");
+          }
+        }
+        break;
+      }
       case SENSOR_TRIGGER: {
         me.lastSensorIsTerminal = 0;
 
@@ -674,8 +694,7 @@ void driver() {
                 condition = me.predictions[i].condition;
                 me.lastSensorUnexpected = 1;
                 // Stop and then try to reroute.
-                trainSetSpeed(0, 0, 0, &me);
-                me.rerouteCountdown = 200; // wait 2 seconds then reroute.
+                reroute(&me);
               } else {
                 me.lastSensorUnexpected = 0;
               }
@@ -699,10 +718,13 @@ void driver() {
           }
           me.numPredictions = trackMsg.numPred;
 
-          int reserveStatus = reserveMoreTrack(&me);
-          if  (reserveStatus == RESERVE_FAIL) {
-            trainSetSpeed(0, 0, 0, &me);
-            me.rerouteCountdown = 200; // wait 2 seconds then reroute.
+          int reserveStatus = reserveMoreTrack(&me, me.positionFinding);
+          if (reserveStatus == RESERVE_FAIL) {
+            if (!me.positionFinding) {
+              reroute(&me);
+            } else {
+              TrainDebug(&me, "WARNING: unable to reserve during init");
+            }
           }
 
           TrackSensorPrediction primaryPrediction = me.predictions[0];
@@ -776,8 +798,8 @@ void driver() {
       }
       case BROADCAST_UPDATE_PREDICTION: {
         updatePrediction(&me);
-        int reserveStatus = reserveMoreTrack(&me);
-        if  (reserveStatus == RESERVE_FAIL) {
+        int reserveStatus = reserveMoreTrack(&me, 0); // moving
+        if (reserveStatus == RESERVE_FAIL) {
           trainSetSpeed(0, 0, 0, &me);
           me.rerouteCountdown = 200; // wait 2 seconds then reroute.
         }
