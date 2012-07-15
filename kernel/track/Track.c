@@ -617,7 +617,7 @@ static void trackController() {
 
   for ( ;; ) {
     int tid = -1;
-    Receive(&tid, (char*)msg, sizeof(TrackMsg));
+    Receive(&tid, (char*)msg, sizeof(ReleaseOldAndReserveNewTrackMsg));
     switch (msg->type) {
       case RELEASE_OLD_N_RESERVE_NEW: {
         track_node* start = findNode(track, actualMsg.lastSensor);
