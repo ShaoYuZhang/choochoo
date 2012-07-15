@@ -587,6 +587,10 @@ static void trackSetSwitch(int sw, int state) {
   Putc(com1, 32); // turn off switch
 }
 
+static void trackUpdateSwtichState(int sw, int state) {
+  switchStatus[sw] = state;
+}
+
 static void trackController() {
   char trackName[] = TRACK_NAME;
   RegisterAs(trackName);
@@ -706,6 +710,20 @@ static void trackController() {
           Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
         }
         Reply(tid, &reply, 1);
+        break;
+      }
+      case UPDATE_SWITCH_STATE: {
+        TrackLandmark sw = msg->landmark1;
+
+        trackUpdateSwtichState((int)sw.num2, (int)msg->data);
+
+        if (!CALIBRATION) {
+          uimsg.type = UPDATE_SWITCH;
+          uimsg.data1 = sw.num2;
+          uimsg.data2 = msg->data;
+          Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
+        }
+        Reply(tid, (char *)1, 0);
         break;
       }
       //case QUERY_DISTANCE: {

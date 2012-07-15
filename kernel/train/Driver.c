@@ -693,6 +693,16 @@ void driver() {
                 conditionLandmark = me.predictions[i].conditionLandmark;
                 condition = me.predictions[i].condition;
                 me.lastSensorUnexpected = 1;
+                if (conditionLandmark.type == LANDMARK_SWITCH) {
+                  TrackMsg setSwitch;
+                  setSwitch.type = UPDATE_SWITCH_STATE;
+                  TrainDebug(&me, "UPDATE SWITCH STATE");
+                  setSwitch.landmark1 = conditionLandmark;
+                  setSwitch.data = condition;
+
+                  Send(me.trackManager, (char*)&setSwitch, sizeof(TrackMsg), (char *)1, 0);
+                }
+
                 // Stop and then try to reroute.
                 reroute(&me);
               } else {
