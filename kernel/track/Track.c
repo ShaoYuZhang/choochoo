@@ -43,8 +43,14 @@ static void clearNodeReservation(track_node* node, int trainNum) {
 }
 
 static int canReserve(track_edge* edge, int trainNum){
-  return edge->reserved_train_num == UNRESERVED ||
-    edge->reserved_train_num == trainNum;
+  int val =
+    (edge->reserved_train_num == UNRESERVED ||
+    edge->reserved_train_num == trainNum);
+  if (!val) {
+      PrintDebug(ui, "RS Fail %d want (%s,%s) owned by %d",
+          trainNum, edge->src->name, edge->dest->name, edge->reserved_train_num);
+  }
+  return val;
 }
 
 static int reserveEdges(
@@ -80,8 +86,6 @@ static int reserveEdges(
         e2->reserved_train_num = UNRESERVED;
       }
     } else {
-      PrintDebug(ui, "RS Fail %d need edge %s",
-          e1->reserved_train_num, node->name);
       return RESERVE_FAIL;
     }
   } else if (node->type == NODE_BRANCH) {
@@ -120,8 +124,6 @@ static int reserveEdges(
         e4->reserved_train_num = UNRESERVED;
       }
     } else {
-      PrintDebug(ui, "RS Fail %d need edge %s",
-          e1->reserved_train_num, node->name);
       return RESERVE_FAIL;
     }
   } else if (node->type == NODE_MERGE) {
@@ -179,8 +181,6 @@ static int reserveEdges(
         }
       }
     } else {
-      PrintDebug(ui, "RS Fail %d need edge %s",
-          e1->reserved_train_num, node->name);
       return RESERVE_FAIL;
     }
   } else {
@@ -765,6 +765,7 @@ static void trackController() {
       }
       case QUERY_EDGES_RESERVED: {
         int trainNum = (int)msg->data;
+        PrintDebug(ui, "Edges Reserved for %d", trainNum);
         // Clear the train's previous reservation
         for (int j = 0; j < TRACK_MAX +4; j++) {
           track_node* node = &track[j];
