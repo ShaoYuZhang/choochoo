@@ -11,6 +11,7 @@
 
 //#define DEBUG_RESERVATION
 
+extern int CALIBRATION;
 static int switchStatus[NUM_SWITCHES];
 static int com1;
 static int ui;
@@ -43,14 +44,8 @@ static void clearNodeReservation(track_node* node, int trainNum) {
 }
 
 static int canReserve(track_edge* edge, int trainNum){
-  int val =
-    (edge->reserved_train_num == UNRESERVED ||
-    edge->reserved_train_num == trainNum);
-  if (!val) {
-      PrintDebug(ui, "RS Fail %d want (%s,%s) owned by %d",
-          trainNum, edge->src->name, edge->dest->name, edge->reserved_train_num);
-  }
-  return val;
+  return edge->reserved_train_num == UNRESERVED ||
+    edge->reserved_train_num == trainNum;
 }
 
 static int reserveEdges(
@@ -86,6 +81,10 @@ static int reserveEdges(
         e2->reserved_train_num = UNRESERVED;
       }
     } else {
+#ifdef DEBUG_RESERVATION
+      PrintDebug(ui, "%d Reserved sensor edge %s",
+          e1->reserved_train_num, node->name);
+#endif
       return RESERVE_FAIL;
     }
   } else if (node->type == NODE_BRANCH) {
@@ -124,6 +123,10 @@ static int reserveEdges(
         e4->reserved_train_num = UNRESERVED;
       }
     } else {
+#ifdef DEBUG_RESERVATION
+      PrintDebug(ui, "%d Reserved switch edge Fail %s",
+          e1->reserved_train_num, node->name);
+#endif
       return RESERVE_FAIL;
     }
   } else if (node->type == NODE_MERGE) {
@@ -181,10 +184,16 @@ static int reserveEdges(
         }
       }
     } else {
+#ifdef DEBUG_RESERVATION
+      PrintDebug(ui, "%d Reserved switch edge %s FAIL",
+          e1->reserved_train_num, node->name);
+#endif
       return RESERVE_FAIL;
     }
   } else {
+#ifdef DEBUG_RESERVATION
     PrintDebug(ui, "Canot reserve edge type: %d %d", node->type, node->name);
+#endif
     return RESERVE_FAIL;
   }
   return status;
@@ -417,7 +426,9 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
   fromNode->curr_dist = 0;
   char uiName[] = UI_TASK_NAME;
   int ui = -1;
-  ui = WhoIs(uiName);
+  if (!CALIBRATION) {
+    ui = WhoIs(uiName);
+  }
 
   // Dijkstra's
   while (1) {
@@ -590,15 +601,19 @@ static void trackController() {
   com1 = WhoIs(com1Name);
 
   char uiName[] = UI_TASK_NAME;
-  ui = WhoIs(uiName);
+  if (!CALIBRATION) {
+    ui = WhoIs(uiName);
+  }
   char timeServerName[] = TIMESERVER_NAME;
   timeServer = WhoIs(timeServerName);
 
-  for (int i = 1; i < 19; i++) {
-    trackSetSwitch(i, SWITCH_CURVED);
-  }
-  for (int i = 153; i< 157; i++) {
-    trackSetSwitch(i, SWITCH_CURVED);
+  if (!CALIBRATION) {
+    for (int i = 1; i < 19; i++) {
+      trackSetSwitch(i, SWITCH_CURVED);
+    }
+    for (int i = 153; i< 157; i++) {
+      trackSetSwitch(i, SWITCH_CURVED);
+    }
   }
 
   track_node track[TRACK_MAX + 4]; // four fake nodes for route finding
@@ -693,10 +708,12 @@ static void trackController() {
         } else {
           PrintDebug(ui, "Invalid SetSwitch msg from %d", tid);
         }
-        uimsg.type = UPDATE_SWITCH;
-        uimsg.data1 = sw.num2;
-        uimsg.data2 = msg->data;
-        Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
+        if (!CALIBRATION) {
+          uimsg.type = UPDATE_SWITCH;
+          uimsg.data1 = sw.num2;
+          uimsg.data2 = msg->data;
+          Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
+        }
         Reply(tid, &reply, 1);
         break;
       }
@@ -705,10 +722,12 @@ static void trackController() {
 
         trackUpdateSwtichState((int)sw.num2, (int)msg->data);
 
-        uimsg.type = UPDATE_SWITCH;
-        uimsg.data1 = sw.num2;
-        uimsg.data2 = msg->data;
-        Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
+        if (!CALIBRATION) {
+          uimsg.type = UPDATE_SWITCH;
+          uimsg.data1 = sw.num2;
+          uimsg.data2 = msg->data;
+          Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
+        }
         Reply(tid, (char *)1, 0);
         break;
       }
@@ -765,7 +784,6 @@ static void trackController() {
       }
       case QUERY_EDGES_RESERVED: {
         int trainNum = (int)msg->data;
-        PrintDebug(ui, "Edges Reserved for %d", trainNum);
         // Clear the train's previous reservation
         for (int j = 0; j < TRACK_MAX +4; j++) {
           track_node* node = &track[j];

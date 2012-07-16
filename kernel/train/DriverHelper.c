@@ -120,7 +120,7 @@ static void trainNavigateNagger() {
 
 static void printRoute(Driver* me) {
   TrainDebug(me, "Route Distance %d", me->route.dist);
-  //TrainDebug(me, "Num Node %d", me->route.length);
+  TrainDebug(me, "Num Node %d", me->route.length);
 
   TrainDebug(me, "<Route>");
   for (int i = 0; i < me->route.length; i++) {
@@ -141,9 +141,8 @@ static void printRoute(Driver* me) {
       }
 
       if (node.landmark.type == LANDMARK_SWITCH && node.landmark.num1 == BR) {
-        TrainDebug(me, "%d Switch %d to %s Type:%d D:%d", i, node.landmark.num2,
-            node.num == SWITCH_CURVED ? "Curve" : "Straight", node.landmark.num1,
-            node.dist);
+        TrainDebug(me, "%d Set switch %d %s Type:%d", i, node.landmark.num2,
+            node.num == SWITCH_CURVED ? "Curve" : "Straight", node.landmark.num1);
       }
     }
   }
