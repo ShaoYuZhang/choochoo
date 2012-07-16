@@ -164,13 +164,13 @@ static int reserveMoreTrack(Driver* me, int stationary) {
   }
 
 
-  TrackLandmark failedLandmark;
+  me->reserveFailedLandmark.type = LANDMARK_BAD;
   int len = Send(
       me->trackManager, (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
-      (char*)&failedLandmark, sizeof(TrackLandmark));
+      (char*)&(me->reserveFailedLandmark), sizeof(TrackLandmark));
   if (len > 0) {
     TrainDebug(me, "Failed cuz couldn't get landmark");
-    printLandmark(me, &failedLandmark);
+    printLandmark(me, &me->reserveFailedLandmark);
     return RESERVE_FAIL;
   }
   return RESERVE_SUCESS;
@@ -226,7 +226,7 @@ static void getRoute(Driver* me, DriverMsg* msg) {
     trackmsg.data = msg->data3; // an index to a preset route
   } else {
     trackmsg.type = ROUTE_PLANNING;
-
+    trackmsg.landmark1 = me->reserveFailedLandmark;
     toPosition(me, &trackmsg.position1);
     printLandmark(me, &trackmsg.position1.landmark1);
     printLandmark(me, &trackmsg.position1.landmark2);
@@ -547,6 +547,7 @@ static void initDriver(Driver* me, int firstTime) {
   me->speedAfterReverse = -1;
   me->rerouteCountdown = -1;
   me->nextSetSwitchNode = -1;
+  me->reserveFailedLandmark.type = LANDMARK_BAD;
 
   char trackName[] = TRACK_NAME;
   me->trackManager = WhoIs(trackName);

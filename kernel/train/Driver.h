@@ -40,6 +40,7 @@ typedef struct Driver {
   int currentlyLost;
   int testMode;
 
+  TrackLandmark reserveFailedLandmark;
   TrainUiMsg uiMsg;
   Route route;
 

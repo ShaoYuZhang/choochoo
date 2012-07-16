@@ -35,6 +35,7 @@ typedef enum {
   LANDMARK_SWITCH,
   LANDMARK_END,
   LANDMARK_FAKE,
+  LANDMARK_BAD,
 } LandmarkType;
 
 #define MR 0

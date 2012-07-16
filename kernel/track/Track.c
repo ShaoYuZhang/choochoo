@@ -774,6 +774,10 @@ static void trackController() {
       case ROUTE_PLANNING: {
         Position from = msg->position1;
         Position to = msg->position2;
+        TrackLandmark failedLandmark = msg->landmark1;
+        if (failedLandmark.type == LANDMARK_BAD){
+          // Don't use.
+        }
         int trainNum = (int)msg->data;
         Route route;
         findRoute(track, from, to , &route, trainNum);
