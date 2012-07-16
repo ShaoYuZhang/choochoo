@@ -696,11 +696,14 @@ void driver() {
           me.lastSensorUnexpected = 1;
           FinishPositionFinding(me.trainNum, me.trainController);
         } else if (isSensorReserved) {
+          TrainDebug(&me, "Predictions.");
           for (int i = 0; i < me.numPredictions; i ++) {
             TrackLandmark predictedSensor = me.predictions[i].sensor;
+            printLandmark(&me, &predictedSensor);
             if (predictedSensor.type == LANDMARK_SENSOR && predictedSensor.num1 == msg.data2 && predictedSensor.num2 == msg.data3) {
               sensorReportValid = 1;
               if (i != 0) {
+                TrainDebug(&me, "Trigger Secondary");
                 // secondary prediction, need to do something about them
                 conditionLandmark = me.predictions[i].conditionLandmark;
                 condition = me.predictions[i].condition;
