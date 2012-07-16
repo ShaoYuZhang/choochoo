@@ -681,7 +681,6 @@ void driver() {
           if (reserveStatus == RESERVE_FAIL) {
             TrainDebug(&me, "WARNING: unable to reserve during init");
           }
-          me.testMode = 0;
         }
         break;
       }
@@ -796,6 +795,7 @@ void driver() {
                 const int speed = 0;  // Set speed zero.
                 trainSetSpeed(speed, getStoppingTime(&me), 0, &me);
                 me.route.length = 0; // Finished the route.
+                me.testMode = 0;
               }
               me.stopCommited = 1;
               me.useLastSensorNow = 0;
@@ -810,7 +810,22 @@ void driver() {
         if (me.nextSetSwitchNode != -1 && (++me.setSwitchNaggerCount & 3) == 0) {
           trySetSwitch_and_getNextSwitch(&me);
         }
-        if (me.rerouteCountdown-- == 0 && !me.testMode) setRoute(&me, &(me.routeMsg));
+        if (me.rerouteCountdown-- == 0) {
+          if (me.testMode) {
+            //test mode should just keep following the same route
+            updatePrediction(&me);
+            int reserveStatus = reserveMoreTrack(&me, 0); // moving
+            if (reserveStatus == RESERVE_FAIL) {
+              me.rerouteCountdown = 200; // wait 2 seconds then reroute.
+            } else {
+              updateSetSwitch(&me);
+              trainSetSpeed(9, 0, 0, &me);
+            }
+          } else {
+            // reroute
+            setRoute(&me, &(me.routeMsg));
+          }
+        }
         if ((++naggCount & 15) == 0) sendUiReport(&me);
         break;
       }
