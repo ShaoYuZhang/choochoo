@@ -36,6 +36,8 @@ static void printLandmark(Driver* me, TrackLandmark* l) {
   } else if (l->type == LANDMARK_SWITCH) {
     TrainDebug(me, "Landmark Switch Num:%d Type:%s",
         l->num2, l->num1 == MR ? "MR" : "BR");
+  } else if (l->type == LANDMARK_BAD) {
+    //TrainDebug(me, "Landmark type: bad.");
   }
 }
 
@@ -120,7 +122,6 @@ static void trainNavigateNagger() {
 
 static void printRoute(Driver* me) {
   TrainDebug(me, "Route Distance %d", me->route.dist);
-  TrainDebug(me, "Num Node %d", me->route.length);
 
   TrainDebug(me, "<Route>");
   for (int i = 0; i < me->route.length; i++) {
@@ -141,8 +142,9 @@ static void printRoute(Driver* me) {
       }
 
       if (node.landmark.type == LANDMARK_SWITCH && node.landmark.num1 == BR) {
-        TrainDebug(me, "%d Set switch %d %s Type:%d", i, node.landmark.num2,
-            node.num == SWITCH_CURVED ? "Curve" : "Straight", node.landmark.num1);
+        TrainDebug(me, "%d Switch %d to %s Type:%d D:%d", i, node.landmark.num2,
+            node.num == SWITCH_CURVED ? "Curve" : "Straight", node.landmark.num1,
+            node.dist);
       }
     }
   }
@@ -177,21 +179,29 @@ static void sendUiReport(Driver* me) {
 }
 
 static void setRoute(Driver* me, DriverMsg* msg) {
-  TrainDebug(me, "Route setting!");
+  //TrainDebug(me, "Route setting!");
   me->stopCommited = 0;
 
   getRoute(me, msg);
   if (me->route.length != 0) {
-    int reserveStatus = reserveMoreTrack(me, 0, me->d[(int)msg->data2][ACCELERATE][MAX_VAL]); // Moving
-    if (reserveStatus == RESERVE_SUCESS) {
+    if (me->route.nodes[1].num == REVERSE) {
+      // Don't need to reverse... cuz.. it's probably stuck.
       trainSetSpeed(msg->data2, 0, 0, me);
       updateStopNode(me);
       me->nextSetSwitchNode = -1;
       updateSetSwitch(me);
     } else {
-      TrainDebug(me, "Cannot reserve track!");
-      trainSetSpeed(0, 0, 0, me);
-      me->rerouteCountdown = 200;
+      int reserveStatus = reserveMoreTrack(me, 0, me->d[(int)msg->data2][ACCELERATE][MAX_VAL]); // Moving
+      if (reserveStatus == RESERVE_SUCESS) {
+        trainSetSpeed(msg->data2, 0, 0, me);
+        updateStopNode(me);
+        me->nextSetSwitchNode = -1;
+        updateSetSwitch(me);
+      } else {
+        TrainDebug(me, "Cannot reserve track!");
+        trainSetSpeed(0, 0, 0, me);
+        me->rerouteCountdown = 200;
+      }
     }
   } else {
     TrainDebug(me, "No route found!");

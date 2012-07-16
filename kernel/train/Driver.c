@@ -60,7 +60,7 @@ static void setDistanceToLongestSecondary(Driver* me) {
     max = MAX(me->predictions[i].dist, max);
   }
   me->distanceToLongestSecondary = max;
-  TrainDebug(me, "Max: %dmm", max);
+  //TrainDebug(me, "Max: %dmm", max);
 }
 
 static int interpolateStoppingDistance(Driver* me, int velocity) {
@@ -118,8 +118,8 @@ static void trySetSwitch_and_getNextSwitch(Driver* me) {
   Send(me->trackManager, (char*)&setSwitch, sizeof(TrackMsg), &reply, 1);
 
   if (reply == SET_SWITCH_SUCCESS) {
-    TrainDebug(me, "Set Switch Success");
-    printLandmark(me, &setSwitch.landmark1);
+    //TrainDebug(me, "Set Switch Success");
+    //printLandmark(me, &setSwitch.landmark1);
     int haveNextSwitch = 0;
     for (int i = me->nextSetSwitchNode + 1; i < me->stopNode; i++) {
       if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
@@ -168,15 +168,19 @@ static int reserveMoreTrack(Driver* me, int stationary, int stoppingDistance) {
     qMsg.numPredSensor = 0;
   }
 
-
-  me->reserveFailedLandmark.type = LANDMARK_BAD;
+  int previousLandmarkState = me->reserveFailedLandmark.type;
   int len = Send(
       me->trackManager, (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
       (char*)&(me->reserveFailedLandmark), sizeof(TrackLandmark));
   if (len > 0) {
     //TrainDebug(me, "Failed cuz couldn't get landmark");
-    //printLandmark(me, &me->reserveFailedLandmark);
+    printLandmark(me, &me->reserveFailedLandmark);
     return RESERVE_FAIL;
+  } else if (!stationary &&
+      previousLandmarkState != LANDMARK_BAD &&
+      me->reserveFailedLandmark.type != LANDMARK_BAD){
+    //TrainDebug(me, "Got landmark bad.");
+    me->reserveFailedLandmark.type = LANDMARK_BAD;
   }
   return RESERVE_SUCESS;
 }
@@ -213,29 +217,29 @@ static void updatePrediction(Driver* me) {
       now + me->distanceToNextSensor*100000 /
       getVelocity(me) - 50; // 50 ms delay for sensor query.
   } else {
-    TrainDebug(me, "No prediction.. has position");
-    printLandmark(me, &qMsg.position1.landmark1);
-    printLandmark(me, &qMsg.position1.landmark2);
-    TrainDebug(me, "Offset %d", qMsg.position1.offset);
+    //TrainDebug(me, "No prediction.. has position");
+    //printLandmark(me, &qMsg.position1.landmark1);
+    //printLandmark(me, &qMsg.position1.landmark2);
+    //TrainDebug(me, "Offset %d", qMsg.position1.offset);
   }
   setDistanceToLongestSecondary(me);
   sendUiReport(me);
 }
 
 static void getRoute(Driver* me, DriverMsg* msg) {
-  TrainDebug(me, "Getting Route.");
+  //TrainDebug(me, "Getting Route.");
   TrackMsg trackmsg;
   if (me->testMode) {
-    TrainDebug(me, "Test Mode");
+    //TrainDebug(me, "Test Mode");
     trackmsg.type = GET_PRESET_ROUTE;
     trackmsg.data = msg->data3; // an index to a preset route
   } else {
     trackmsg.type = ROUTE_PLANNING;
     trackmsg.landmark1 = me->reserveFailedLandmark;
     toPosition(me, &trackmsg.position1);
-    printLandmark(me, &trackmsg.position1.landmark1);
-    printLandmark(me, &trackmsg.position1.landmark2);
-    TrainDebug(me, "Offset %d", trackmsg.position1.offset);
+    //printLandmark(me, &trackmsg.position1.landmark1);
+    //printLandmark(me, &trackmsg.position1.landmark2);
+    //TrainDebug(me, "Offset %d", trackmsg.position1.offset);
 
     trackmsg.position2 = msg->pos;
     trackmsg.data = (char)me->trainNum;
@@ -271,7 +275,7 @@ static int shouldStopNow(Driver* me) {
 
     me->CC &= 15;
     if (me->CC++ == 0) {
-      TrainDebug(me, "Navi Nagger. %d", d);
+      //TrainDebug(me, "Navi Nagger. %d", d);
     }
     if (d < 0) {
       // Shit, stopping too late.
@@ -398,8 +402,8 @@ static void updateSetSwitch(Driver* me) {
   for (int i = me->routeRemaining; i < me->stopNode; i++) {
     if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
         me->route.nodes[i].landmark.num1 == BR && me->nextSetSwitchNode == -1) {
-      TrainDebug(me, "Will try to set:");
-      printLandmark(me, &(me->route.nodes[i].landmark));
+      //TrainDebug(me, "Will try to set:");
+      //printLandmark(me, &(me->route.nodes[i].landmark));
       me->nextSetSwitchNode = i;
       //TrainDebug(me, "At: %d", i);
     }
@@ -454,7 +458,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     }
   }
 
-  //TrainDebug(me, "Train Setting Speed %d", speed);
+  TrainDebug(me, "Train Setting Speed %d", speed);
 
   if (speed >= 0) {
     if (delayer) {
@@ -465,12 +469,12 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
       msg[3] = (char)me->trainNum;
       Putstr(me->com1, msg, 4);
 
-      TrainDebug(me, "Next Sensor: %d %d", me->nextSensorIsTerminal, me->lastSensorIsTerminal);
+      //TrainDebug(me, "Next Sensor: %d %d", me->nextSensorIsTerminal, me->lastSensorIsTerminal);
       // Update prediction
       if (me->nextSensorIsTerminal) {
         me->nextSensorBox = me->nextSensorBox == EX ? EN : EX;
 
-        TrainDebug(me, "LAst Sensor: %d ", me->lastSensorVal);
+        //TrainDebug(me, "LAst Sensor: %d ", me->lastSensorVal);
       } else {
         int action = me->nextSensorVal%2 == 1 ? 1 : -1;
         me->nextSensorVal = me->nextSensorVal + action;
@@ -523,7 +527,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     }
     me->speed = speed;
   } else {
-    TrainDebug(me, "Reverse... %d ", me->speed);
+    //TrainDebug(me, "Reverse... %d ", me->speed);
     DriverMsg delayMsg;
     delayMsg.type = SET_SPEED;
     delayMsg.timestamp = stopTime + 500;
@@ -532,7 +536,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     } else {
       delayMsg.data2 = (signed char)me->speedAfterReverse;
     }
-    TrainDebug(me, "Using delayer: %d for %d", me->delayer, stopTime);
+    //TrainDebug(me, "Using delayer: %d for %d", me->delayer, stopTime);
 
     Reply(me->delayer, (char*)&delayMsg, sizeof(DriverMsg));
 
@@ -657,7 +661,7 @@ void driver() {
         break;
       }
       case SET_SPEED: {
-        TrainDebug(&me, "Set speed from msg");
+        //TrainDebug(&me, "Set speed from msg");
         trainSetSpeed(msg.data2,
                       getStoppingTime(&me),
                       (msg.data3 == DELAYER),
@@ -683,7 +687,7 @@ void driver() {
         }
       }
       case DELAYER: {
-        TrainDebug(&me, "delayer come back.");
+        //TrainDebug(&me, "delayer come back.");
         break;
       }
       case STOP_DELAYER: {
@@ -709,11 +713,14 @@ void driver() {
           me.lastSensorUnexpected = 1;
           FinishPositionFinding(me.trainNum, me.trainController);
         } else if (isSensorReserved) {
+          //TrainDebug(&me, "Predictions.");
           for (int i = 0; i < me.numPredictions; i ++) {
             TrackLandmark predictedSensor = me.predictions[i].sensor;
+            //printLandmark(&me, &predictedSensor);
             if (predictedSensor.type == LANDMARK_SENSOR && predictedSensor.num1 == msg.data2 && predictedSensor.num2 == msg.data3) {
               sensorReportValid = 1;
               if (i != 0) {
+                TrainDebug(&me, "Trigger Secondary");
                 // secondary prediction, need to do something about them
                 conditionLandmark = me.predictions[i].conditionLandmark;
                 condition = me.predictions[i].condition;
@@ -799,12 +806,12 @@ void driver() {
           if (!me.stopCommited) {
             if (shouldStopNow(&me)) {
               if (me.route.nodes[me.stopNode].num == REVERSE) {
-                TrainDebug(&me, "Navi reversing.");
+                //TrainDebug(&me, "Navi reversing.");
                 const int speed = -1;
                 trainSetSpeed(speed, getStoppingTime(&me), 0, &me);
               }
               else {
-                TrainDebug(&me, "Navi Nagger stopping.");
+                //TrainDebug(&me, "Navi Nagger stopping.");
                 const int speed = 0;  // Set speed zero.
                 trainSetSpeed(speed, getStoppingTime(&me), 0, &me);
                 me.route.length = 0; // Finished the route.
@@ -868,7 +875,7 @@ void driver() {
         break;
       }
       default: {
-        ASSERT(FALSE, "Not suppported train message type.");
+        TrainDebug(&me, "Not suppported train message type.");
       }
     }
   }

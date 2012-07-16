@@ -12,20 +12,29 @@
 #include <Sensor.h>
 #include <CalibrationTask.h>
 
-int CALIBRATION = 1;
-
 void task1() {
   startNameServerTask();
-  int id = startTimeServerTask();
+  int time = startTimeServerTask();
   startIoServerTask();
   startSensorServerTask();
-  startUserInterfaceTask();
-  startDriverControllerTask();
-  startTrackManagerTask();
+  int ui = startUserInterfaceTask();
+  int trainController = startDriverControllerTask();
+  int trackController = startTrackManagerTask();
+  int randomController = startRandomTrainControllerTask();
   startCommandDecoderTask();
+
+  TrackMsg msg;
+  msg.type = SET_TRACK;
+  msg.data = 'b';
+  Send(trackController, (char *)&msg, sizeof(TrackMsg), (char *)1, 0);
+
+  PrintDebug(ui, "initing... waiting for other stuff to settle");
+  Delay(500, time);
   startCalibrationTask();
+  PrintDebug(ui, "Calibration");
 
   Exit();
+
 }
 
 int main(int argc, char* argv[]) {

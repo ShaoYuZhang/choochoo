@@ -20,6 +20,23 @@ static void delayer_task() {
   }
 }
 
+static void printLandmark(int ui, TrackLandmark* l) {
+  if (l->type == LANDMARK_SENSOR) {
+    PrintDebug(ui, "Landmark Sn  %c%d",
+        'A' +l->num1, l->num2);
+  } else if (l->type == LANDMARK_END) {
+    PrintDebug(ui, "Landmark %s %d",
+        l->num1 == EN ? "EN" : "EX",
+        l->num2);
+  } else if (l->type == LANDMARK_FAKE) {
+    PrintDebug(ui, "Landmark Fake %d %d",
+        l->num1, l->num2);
+  } else if (l->type == LANDMARK_SWITCH) {
+    PrintDebug(ui, "Landmark Switch Num:%d Type:%s",
+        l->num2, l->num1 == MR ? "MR" : "BR");
+  }
+}
+
 static void sendRandom(int trainNum) {
   DriverMsg driveMsg;
   driveMsg.type = SET_ROUTE;
@@ -31,14 +48,12 @@ static void sendRandom(int trainNum) {
   Send(trackController,
       (char*)&trackMsg, sizeof(TrackMsg), (char*)&driveMsg.pos,
       sizeof(Position));
-  driveMsg.pos.offset = 0;
+  driveMsg.pos.offset = 100;
 
-  PrintDebug(ui, "Random Route %d %d %d %d %d %d %d %d %d",
-      trainNum, driveMsg.data2,
-      driveMsg.pos.landmark1.type, driveMsg.pos.landmark1.num1,
-      driveMsg.pos.landmark1.num2, driveMsg.pos.landmark2.type,
-      driveMsg.pos.landmark2.num1, driveMsg.pos.landmark2.num2,
-      driveMsg.pos.offset);
+  PrintDebug(ui, "Random Route #%d Sp:%d.", trainNum, 9);
+  printLandmark(ui, &driveMsg.pos.landmark1);
+  printLandmark(ui, &driveMsg.pos.landmark2);
+      //driveMsg.pos.offset);
   Send(trainController, (char*)&driveMsg, sizeof(DriverMsg),
       (char*)NULL, 0);
 }

@@ -11,7 +11,6 @@
 
 //#define DEBUG_RESERVATION
 
-extern int CALIBRATION;
 static int switchStatus[NUM_SWITCHES];
 static int com1;
 static int ui;
@@ -49,8 +48,8 @@ static int canReserve(track_edge* edge, int trainNum){
   edge->reserved_train_num == UNRESERVED ||
     edge->reserved_train_num == trainNum);
   if (!success) {
-    PrintDebug(ui, "RS Fail %d want (%s,%s) owned by %d",
-                       trainNum, edge->src->name, edge->dest->name, edge->reserved_train_num);
+      PrintDebug(ui, "RS Fail %d want (%s,%s) owned by %d",
+          trainNum, edge->src->name, edge->dest->name, edge->reserved_train_num);
     reserveFailNode = edge->src;
   }
   return success;
@@ -95,10 +94,6 @@ static int reserveEdges(
         e2->reserved_train_num = origE2;
       }
     } else {
-#ifdef DEBUG_RESERVATION
-      PrintDebug(ui, "%d Reserved sensor edge %s",
-          e1->reserved_train_num, node->name);
-#endif
       return RESERVE_FAIL;
     }
   } else if (node->type == NODE_BRANCH) {
@@ -147,10 +142,6 @@ static int reserveEdges(
         e4->reserved_train_num = origE4;
       }
     } else {
-#ifdef DEBUG_RESERVATION
-      PrintDebug(ui, "%d Reserved switch edge Fail %s",
-          e1->reserved_train_num, node->name);
-#endif
       return RESERVE_FAIL;
     }
   } else if (node->type == NODE_MERGE) {
@@ -240,16 +231,10 @@ static int reserveEdges(
         }
       }
     } else {
-#ifdef DEBUG_RESERVATION
-      PrintDebug(ui, "%d Reserved switch edge %s FAIL",
-          e1->reserved_train_num, node->name);
-#endif
       return RESERVE_FAIL;
     }
   } else {
-#ifdef DEBUG_RESERVATION
     PrintDebug(ui, "Canot reserve edge type: %d %d", node->type, node->name);
-#endif
     return RESERVE_FAIL;
   }
   return status;
@@ -418,7 +403,9 @@ static void computeSafeReverseDist(track_node* track) {
 }
 
 // Dijkstra's algorithm, currently slow, need a heap for efficiency
-static void findRoute(track_node* track, Position from, Position to, Route* result, int trainNum) {
+static void findRoute(
+    track_node* track, Position from, Position to,
+    Route* result, int trainNum, TrackLandmark* avoidThisLandmark) {
   // fake position into graph
   track_edge* fromEdge = (track_edge*)NULL;
   int offsetFrom = locateNode(track, from, &fromEdge);
@@ -432,6 +419,13 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
         from.landmark1.num2, from.landmark2.type, from.landmark2.num1, from.landmark2.num2,
         from.offset);
     return;
+  }
+
+  track_node* failReserveNode = (track_node*) -1;
+  if (avoidThisLandmark->type != LANDMARK_BAD) {
+    PrintDebug(ui, "Got a avoiding sensor %d %d %d.", avoidThisLandmark->type,
+        avoidThisLandmark->num1, avoidThisLandmark->num2);
+    failReserveNode = findNode(track, *avoidThisLandmark);
   }
 
   track_node* fromNodeSrcPointer = fromEdge->src;
@@ -482,9 +476,7 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
   fromNode->curr_dist = 0;
   char uiName[] = UI_TASK_NAME;
   int ui = -1;
-  if (!CALIBRATION) {
-    ui = WhoIs(uiName);
-  }
+  ui = WhoIs(uiName);
 
   // Dijkstra's
   while (1) {
@@ -536,7 +528,9 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
       // in queue and unreserved
       if (tempEdge->dest->in_queue &&
           (tempEdge->reserved_train_num == -1 ||
-           tempEdge->reserved_train_num == trainNum)
+           tempEdge->reserved_train_num == trainNum) &&
+          (failReserveNode == (track_node*)-1 ||
+           tempEdge->src != failReserveNode)
          ) {
         neighbours[neighbour_count] = tempEdge->dest;
         neighbours_dist[neighbour_count++] = tempEdge->dist;
@@ -544,7 +538,9 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
       tempEdge = &curr_node->edge[DIR_CURVED];
       if (tempEdge->dest->in_queue &&
           (tempEdge->reserved_train_num == -1 ||
-           tempEdge->reserved_train_num == trainNum)
+           tempEdge->reserved_train_num == trainNum) &&
+          (failReserveNode == (track_node*)-1 ||
+           tempEdge->src != failReserveNode)
          ) {
         neighbours[neighbour_count] = tempEdge->dest;
         neighbours_dist[neighbour_count++] = tempEdge->dist;
@@ -553,7 +549,9 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
       track_edge *tempEdge = &curr_node->edge[DIR_AHEAD];
       if (tempEdge->dest->in_queue &&
           (tempEdge->reserved_train_num == -1 ||
-           tempEdge->reserved_train_num == trainNum)
+           tempEdge->reserved_train_num == trainNum) &&
+          (failReserveNode == (track_node*)-1 ||
+           tempEdge->src != failReserveNode)
          ) {
         neighbours[neighbour_count] = curr_node->edge[DIR_AHEAD].dest;
         neighbours_dist[neighbour_count++] = curr_node->edge[DIR_AHEAD].dist;
@@ -657,19 +655,15 @@ static void trackController() {
   com1 = WhoIs(com1Name);
 
   char uiName[] = UI_TASK_NAME;
-  if (!CALIBRATION) {
-    ui = WhoIs(uiName);
-  }
+  ui = WhoIs(uiName);
   char timeServerName[] = TIMESERVER_NAME;
   timeServer = WhoIs(timeServerName);
 
-  if (!CALIBRATION) {
-    for (int i = 1; i < 19; i++) {
-      trackSetSwitch(i, SWITCH_CURVED);
-    }
-    for (int i = 153; i< 157; i++) {
-      trackSetSwitch(i, SWITCH_CURVED);
-    }
+  for (int i = 1; i < 19; i++) {
+    trackSetSwitch(i, SWITCH_CURVED);
+  }
+  for (int i = 153; i< 157; i++) {
+    trackSetSwitch(i, SWITCH_CURVED);
   }
 
   track_node track[TRACK_MAX + 4]; // four fake nodes for route finding
@@ -768,12 +762,10 @@ static void trackController() {
         } else {
           PrintDebug(ui, "Invalid SetSwitch msg from %d", tid);
         }
-        if (!CALIBRATION) {
-          uimsg.type = UPDATE_SWITCH;
-          uimsg.data1 = sw.num2;
-          uimsg.data2 = msg->data;
-          Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
-        }
+        uimsg.type = UPDATE_SWITCH;
+        uimsg.data1 = sw.num2;
+        uimsg.data2 = msg->data;
+        Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
         Reply(tid, &reply, 1);
         break;
       }
@@ -782,12 +774,10 @@ static void trackController() {
 
         trackUpdateSwtichState((int)sw.num2, (int)msg->data);
 
-        if (!CALIBRATION) {
-          uimsg.type = UPDATE_SWITCH;
-          uimsg.data1 = sw.num2;
-          uimsg.data2 = msg->data;
-          Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
-        }
+        uimsg.type = UPDATE_SWITCH;
+        uimsg.data1 = sw.num2;
+        uimsg.data2 = msg->data;
+        Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
         Reply(tid, (char *)1, 0);
         break;
       }
@@ -824,13 +814,9 @@ static void trackController() {
       case ROUTE_PLANNING: {
         Position from = msg->position1;
         Position to = msg->position2;
-        TrackLandmark failedLandmark = msg->landmark1;
-        if (failedLandmark.type == LANDMARK_BAD){
-          // Don't use.
-        }
         int trainNum = (int)msg->data;
         Route route;
-        findRoute(track, from, to , &route, trainNum);
+        findRoute(track, from, to , &route, trainNum, &(msg->landmark1));
 
         Reply(tid, (char *)&route, 8 + sizeof(RouteNode) * route.length);
         break;
@@ -848,6 +834,7 @@ static void trackController() {
       }
       case QUERY_EDGES_RESERVED: {
         int trainNum = (int)msg->data;
+        PrintDebug(ui, "Edges Reserved for %d", trainNum);
         // Clear the train's previous reservation
         for (int j = 0; j < TRACK_MAX +4; j++) {
           track_node* node = &track[j];
@@ -906,7 +893,7 @@ static void trackController() {
         break;
       }
       default: {
-        ASSERT(FALSE, "Not suppported track message type.");
+        PrintDebug(ui, "Not suppported track message type.");
       }
     }
   }

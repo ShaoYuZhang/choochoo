@@ -1,5 +1,5 @@
 static int get_node_type(TrackLandmark landmark) {
-  int type;
+  int type = NODE_NONE;
   switch(landmark.type) {
     case LANDMARK_SENSOR: {
       type = NODE_SENSOR;
@@ -23,14 +23,14 @@ static int get_node_type(TrackLandmark landmark) {
       break;
     }
     default: {
-      ASSERT(FALSE, "Not suppported Landmark type.");
+      PrintDebug(ui, "Not suppported Landmark type.");
     }
   }
   return type;
 }
 
 static int get_node_num(TrackLandmark landmark) {
-  int num;
+  int num = -1;
   switch(landmark.type) {
     case LANDMARK_SENSOR: {
       num = (landmark.num1) * 16 + landmark.num2 - 1;
@@ -45,7 +45,7 @@ static int get_node_num(TrackLandmark landmark) {
       break;
     }
     default: {
-      ASSERT(FALSE, "Not suppported Landmark type.");
+      PrintDebug(ui, "Not suppported Landmark type.");
     }
   }
   return num;
@@ -78,7 +78,10 @@ static TrackLandmark getLandmark(track_node* node) {
     landmark.num1 = 0;
     landmark.num2 = 0;
   } else {
-    ASSERT(FALSE, "invalid track node");
+    PrintDebug(ui, "invalid track node__________getLandmark");
+    landmark.type = 0;
+    landmark.num1 = 0;
+    landmark.num2 = 0;
   }
   return landmark;
 }

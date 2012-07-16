@@ -6,7 +6,6 @@
 #include <IoServer.h>
 
 #if 0
-extern int CALIBRATION;
 
 void worker() {
   char uiName[] = UI_TASK_NAME;
@@ -35,7 +34,6 @@ void idle() {
     //unsigned int currentTime = *currentTimePtr;
     //totalIdleTime += currentTime - idleTimeStart;
 
-    //if ((currentTime - lastReportTime) > 1000000 && !CALIBRATION) {
       //if (!createdWorker) {
       //  createdWorker = Create(1, worker);
       //}

@@ -12,7 +12,7 @@
 static int v[15][2];
 static int d[15][2][2];
 
-#define AVG_COUNT 3
+#define AVG_COUNT 2
 static int trainController;
 static int trackController;
 static int timeserver;
@@ -22,7 +22,7 @@ static DriverMsg setSpeed;
 static int ui;
 
 void calibrateAccel(int accending, char startBox, char startVal, char endBox, char endVal, int distance) {
-  char speed = 9;
+  char speed = 8;
   while (1) {
     setSpeed.data2 = 10;
     setSpeed.data3 = -1;
@@ -76,7 +76,7 @@ void calibrateAccel(int accending, char startBox, char startVal, char endBox, ch
     }
 
     speed += 1;
-    if (speed == 13) {
+    if (speed == 10) {
       break;
     }
   }
@@ -87,7 +87,7 @@ void calibrateVelocity(int accending, char startBox, char startVal, char endBox,
   if (accending) {
     speed = 5;
   } else {
-    speed = 14;
+    speed = 10;
   }
   while (1) {
     int startTime = -1;
@@ -113,7 +113,7 @@ void calibrateVelocity(int accending, char startBox, char startVal, char endBox,
     }
     if (accending) {
       speed += 1;
-      if (speed == 15) {
+      if (speed == 11) {
         break;
       }
     } else {
@@ -129,7 +129,7 @@ void calibrateStopping(int accending, char startBox, char startVal) {
   PrintDebug(ui, "STOP DISTANCE CALI  \n");
   char speed = 0;
   if (accending) {
-    speed = 5;
+    speed = 3;
   } else {
     speed = 10;
   }
@@ -171,7 +171,7 @@ void calibrateStopping(int accending, char startBox, char startVal) {
       }
     } else {
       speed -= 1;
-      if (speed == 4) {
+      if (speed == 2) {
         break;
       }
     }
@@ -185,10 +185,9 @@ void go(char train,
         char cEndBox, char cEndVal, int cDistance) {
 
   PrintDebug(ui, "Calibrating start \n");
-  Delay(500, timeserver);
   // Change track for velocity calibration
   TrackMsg setSwitch;
-  setSwitch.type = SET_SWITCH;
+  setSwitch.type = SUDO_SET_SWITCH;
   setSwitch.data = SWITCH_STRAIGHT;
 
   TrackLandmark sw;
@@ -213,10 +212,10 @@ void go(char train,
 
   calibrateAccel(1, sStartBox, sStartVal, sEndBox, sEndVal, sDistance);
 #if 0
-  calibrateVelocity(1, sStartBox, sStartVal, sEndBox, sEndVal, sDistance);
-  calibrateVelocity(0, sStartBox, sStartVal, sEndBox, sEndVal, sDistance);
+  //calibrateVelocity(1, sStartBox, sStartVal, sEndBox, sEndVal, sDistance);
+  //calibrateVelocity(0, sStartBox, sStartVal, sEndBox, sEndVal, sDistance);
 
-  calibrateStopping(1, sStartBox, sStartVal);
+  //calibrateStopping(1, sStartBox, sStartVal);
   calibrateStopping(0, sStartBox, sStartVal);
 #endif
 
