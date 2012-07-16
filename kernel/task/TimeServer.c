@@ -4,7 +4,7 @@
 #include <NameServer.h>
 #include <IoHelper.h>
 
-#define TIMER_SERVER_SIZE 8      // WARNING: must be power of 2
+#define TIMER_SERVER_SIZE 16      // WARNING: must be power of 2
 #define TIMER_SERVER_SIZE_MOD (TIMER_SERVER_SIZE-1)
 
 static void timernotifier_task();
