@@ -43,9 +43,15 @@ static void clearNodeReservation(track_node* node, int trainNum) {
   }
 }
 
+static track_node* reserveFailNode;
 static int canReserve(track_edge* edge, int trainNum){
-  return edge->reserved_train_num == UNRESERVED ||
-    edge->reserved_train_num == trainNum;
+  int success = (
+  edge->reserved_train_num == UNRESERVED ||
+    edge->reserved_train_num == trainNum);
+  if (!success) {
+    reserveFailNode = edge->src;
+  }
+  return success;
 }
 
 static int reserveEdges(
@@ -629,6 +635,7 @@ static void trackController() {
     Receive(&tid, (char*)msg, sizeof(ReleaseOldAndReserveNewTrackMsg));
     switch (msg->type) {
       case RELEASE_OLD_N_RESERVE_NEW: {
+        track_node* reserveFailNode = (track_node*)-1;
         track_node* start = findNode(track, actualMsg.lastSensor);
         char canReserve =
         reserveEdges(start, actualMsg.trainNum, actualMsg.stoppingDistance, 1); // Dryrun
@@ -656,7 +663,6 @@ static void trackController() {
             clearNodeReservation(&track[j], actualMsg.trainNum);
           }
 
-#if 1
           // Make current reservation
           reserveEdges(start,
             actualMsg.trainNum, actualMsg.stoppingDistance, 0);
@@ -665,9 +671,13 @@ static void trackController() {
             reserveEdges(n,
                 actualMsg.trainNum, actualMsg.stoppingDistance, 0);
           }
-#endif
         }
-        Reply(tid, &canReserve, 1);
+        if (reserveFailNode != (track_node*)-1) {
+          TrackLandmark failedLandmark = getLandmark(reserveFailNode);
+          Reply(tid, (char*)&failedLandmark, sizeof(TrackLandmark));
+        } else {
+          Reply(tid, (char*)1, 0);
+        }
         break;
       }
       case QUERY_SENSOR_RESERVED: {

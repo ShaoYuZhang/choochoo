@@ -48,9 +48,9 @@ static int isLost(Driver* me) {
       me->positionFinding == 0 &&
       me->distanceFromLastSensor > me->distanceToLongestSecondary+100) {
     TrainDebug(me, "I'm Lost... ");
-    me->positionFinding = 1;
-    me->routeRemaining = -1; // No more route following
-    BroadcastLost(me->trainController);
+    //me->positionFinding = 1;
+    //me->routeRemaining = -1; // No more route following
+    //BroadcastLost(me->trainController);
     me->currentlyLost = 1;
     return 0;
   }
@@ -163,11 +163,17 @@ static int reserveMoreTrack(Driver* me, int stationary) {
     qMsg.numPredSensor = 0;
   }
 
-  char status = RESERVE_FAIL;
-  Send(me->trackManager, (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
-      &status, 1);
 
-  return status;
+  TrackLandmark failedLandmark;
+  int len = Send(
+      me->trackManager, (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
+      (char*)&failedLandmark, sizeof(TrackLandmark));
+  if (len > 0) {
+    TrainDebug(me, "Failed cuz couldn't get landmark");
+    printLandmark(me, &failedLandmark);
+    return RESERVE_FAIL;
+  }
+  return RESERVE_SUCESS;
 }
 
 static void updatePrediction(Driver* me) {
