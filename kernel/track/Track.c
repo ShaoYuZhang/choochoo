@@ -11,7 +11,6 @@
 
 //#define DEBUG_RESERVATION
 
-extern int CALIBRATION;
 static int switchStatus[NUM_SWITCHES];
 static int com1;
 static int ui;
@@ -426,9 +425,7 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
   fromNode->curr_dist = 0;
   char uiName[] = UI_TASK_NAME;
   int ui = -1;
-  if (!CALIBRATION) {
-    ui = WhoIs(uiName);
-  }
+  ui = WhoIs(uiName);
 
   // Dijkstra's
   while (1) {
@@ -601,19 +598,15 @@ static void trackController() {
   com1 = WhoIs(com1Name);
 
   char uiName[] = UI_TASK_NAME;
-  if (!CALIBRATION) {
-    ui = WhoIs(uiName);
-  }
+  ui = WhoIs(uiName);
   char timeServerName[] = TIMESERVER_NAME;
   timeServer = WhoIs(timeServerName);
 
-  if (!CALIBRATION) {
-    for (int i = 1; i < 19; i++) {
-      trackSetSwitch(i, SWITCH_CURVED);
-    }
-    for (int i = 153; i< 157; i++) {
-      trackSetSwitch(i, SWITCH_CURVED);
-    }
+  for (int i = 1; i < 19; i++) {
+    trackSetSwitch(i, SWITCH_CURVED);
+  }
+  for (int i = 153; i< 157; i++) {
+    trackSetSwitch(i, SWITCH_CURVED);
   }
 
   track_node track[TRACK_MAX + 4]; // four fake nodes for route finding
@@ -708,12 +701,10 @@ static void trackController() {
         } else {
           PrintDebug(ui, "Invalid SetSwitch msg from %d", tid);
         }
-        if (!CALIBRATION) {
-          uimsg.type = UPDATE_SWITCH;
-          uimsg.data1 = sw.num2;
-          uimsg.data2 = msg->data;
-          Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
-        }
+        uimsg.type = UPDATE_SWITCH;
+        uimsg.data1 = sw.num2;
+        uimsg.data2 = msg->data;
+        Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
         Reply(tid, &reply, 1);
         break;
       }
@@ -722,12 +713,10 @@ static void trackController() {
 
         trackUpdateSwtichState((int)sw.num2, (int)msg->data);
 
-        if (!CALIBRATION) {
-          uimsg.type = UPDATE_SWITCH;
-          uimsg.data1 = sw.num2;
-          uimsg.data2 = msg->data;
-          Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
-        }
+        uimsg.type = UPDATE_SWITCH;
+        uimsg.data1 = sw.num2;
+        uimsg.data2 = msg->data;
+        Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
         Reply(tid, (char *)1, 0);
         break;
       }

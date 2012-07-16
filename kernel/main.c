@@ -13,8 +13,6 @@
 #include <IoHelper.h>
 #include <RandomController.h>
 
-int CALIBRATION;
-
 void test_track() {
 #if 0
   char trainControllerName[] = TRAIN_CONTROLLER_NAME;
@@ -189,7 +187,6 @@ void task1() {
 }
 
 int main(int argc, char* argv[]) {
-  CALIBRATION = 0;
   kernel_init();
 
   int returnVal;
