@@ -17,6 +17,7 @@
 #define LOST_TRAIN     11
 #define BROADCAST_LOST 12
 #define STOP_DELAYER 13
+#define BROADCAST_TEST_MODE 14
 
 #include <UserInterface.h>
 #include <Track.h>

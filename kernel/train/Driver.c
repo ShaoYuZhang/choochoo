@@ -121,9 +121,10 @@ static void trySetSwitch_and_getNextSwitch(Driver* me) {
     int haveNextSwitch = 0;
     for (int i = me->nextSetSwitchNode + 1; i < me->stopNode; i++) {
       if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
-          me->route.nodes[i].landmark.num1 == BR && me->nextSetSwitchNode != -1) {
+          me->route.nodes[i].landmark.num1 == BR ) {
         haveNextSwitch = 1;
         me->nextSetSwitchNode = i;
+        break;
       }
     }
     updatePrediction(me);
@@ -142,7 +143,7 @@ static int reserveMoreTrack(Driver* me, int stationary) {
   qMsg.type = RELEASE_OLD_N_RESERVE_NEW;
   qMsg.trainNum = me->trainNum;
   qMsg.stoppingDistance = getStoppingDistance(me);
-  qMsg.lastSensor.type = LANDMARK_SENSOR;
+  qMsg.lastSensor.type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
   qMsg.lastSensor.num1 = me->lastSensorBox;
   qMsg.lastSensor.num2 = me->lastSensorVal;
 
@@ -213,15 +214,21 @@ static void updatePrediction(Driver* me) {
 static void getRoute(Driver* me, DriverMsg* msg) {
   TrainDebug(me, "Getting Route.");
   TrackMsg trackmsg;
-  trackmsg.type = ROUTE_PLANNING;
+  if (me->testMode) {
+    TrainDebug(me, "Test Mode");
+    trackmsg.type = GET_PRESET_ROUTE;
+    trackmsg.data = msg->data3; // an index to a preset route
+  } else {
+    trackmsg.type = ROUTE_PLANNING;
 
-  toPosition(me, &trackmsg.position1);
-  printLandmark(me, &trackmsg.position1.landmark1);
-  printLandmark(me, &trackmsg.position1.landmark2);
-  TrainDebug(me, "Offset %d", trackmsg.position1.offset);
+    toPosition(me, &trackmsg.position1);
+    printLandmark(me, &trackmsg.position1.landmark1);
+    printLandmark(me, &trackmsg.position1.landmark2);
+    TrainDebug(me, "Offset %d", trackmsg.position1.offset);
 
-  trackmsg.position2 = msg->pos;
-  trackmsg.data = (char)me->trainNum;
+    trackmsg.position2 = msg->pos;
+    trackmsg.data = (char)me->trainNum;
+  }
 
   Send(me->trackManager, (char*)&trackmsg,
       sizeof(TrackMsg), (char*)&(me->route), sizeof(Route));
@@ -230,7 +237,9 @@ static void getRoute(Driver* me, DriverMsg* msg) {
   me->distanceFromLastSensorAtPreviousStopNode = me->distanceFromLastSensor;
   me->stopSensorVal = -1;
   me->stopSensorBox = -1;
-  printRoute(me);
+  if (!me->testMode) {
+    printRoute(me);
+  }
 }
 
 static int shouldStopNow(Driver* me) {
@@ -324,6 +333,7 @@ static void updateStopNode(Driver* me) {
         //          |______ distanceFromLastSensor
         me->useLastSensorNow = 1;
         previousStop += (int)me->distanceFromLastSensorAtPreviousStopNode;
+        //TrainDebug(me, "Use Last sensor now");
       }
       // Else..
       //     |---stopSensorBox
@@ -346,8 +356,8 @@ static void updateStopNode(Driver* me) {
       me->stopNow = 1;
   }
 
-  TrainDebug(me, "Finish update stop %d %d %d", me->stopNode,
-  (me->stopNode == (me->route.length-1)), (me->route.nodes[me->stopNode].num == REVERSE));
+  //TrainDebug(me, "Finish update stop %d %d %d", me->stopNode,
+  //(me->stopNode == (me->route.length-1)), (me->route.nodes[me->stopNode].num == REVERSE));
   int stopAfterReverse =
       ((me->stopNode == (me->route.length-2)) &&
        (me->route.nodes[me->stopNode].num == REVERSE));
@@ -380,6 +390,7 @@ static void updateSetSwitch(Driver* me) {
       //TrainDebug(me, "Will try to set:");
       //printLandmark(me, &(me->route.nodes[i].landmark));
       me->nextSetSwitchNode = i;
+      //TrainDebug(me, "At: %d", i);
     }
   }
 }
@@ -539,6 +550,7 @@ static void initDriver(Driver* me, int firstTime) {
   me->stopNow = 0;
   me->positionFinding = 0;
   me->currentlyLost = 0;
+  me->testMode = 0;
   me->stopSensorHit = 0;
   me->nextSensorIsTerminal = 0;
   me->lastSensorIsTerminal = 0;
@@ -633,6 +645,7 @@ void driver() {
         break;
       }
       case SET_SPEED: {
+        TrainDebug(&me, "Set speed from msg");
         trainSetSpeed(msg.data2,
                       getStoppingTime(&me),
                       (msg.data3 == DELAYER),
@@ -668,11 +681,11 @@ void driver() {
           if (reserveStatus == RESERVE_FAIL) {
             TrainDebug(&me, "WARNING: unable to reserve during init");
           }
+          me.testMode = 0;
         }
         break;
       }
       case SENSOR_TRIGGER: {
-        me.lastSensorIsTerminal = 0;
 
         // only handle sensor reports in primary + secondary prediction if not position finding
         int sensorReportValid = 0;
@@ -715,6 +728,7 @@ void driver() {
           updateRoute(&me, msg.data2, msg.data3);
           me.lastSensorBox = msg.data2; // Box
           me.lastSensorVal = msg.data3; // Val
+          me.lastSensorIsTerminal = 0;
           me.lastSensorActualTime = msg.timestamp;
           dynamicCalibration(&me);
           me.lastSensorPredictedTime = me.nextSensorPredictedTime;
@@ -796,7 +810,7 @@ void driver() {
         if (me.nextSetSwitchNode != -1 && (++me.setSwitchNaggerCount & 3) == 0) {
           trySetSwitch_and_getNextSwitch(&me);
         }
-        if (me.rerouteCountdown-- == 0) setRoute(&me, &(me.routeMsg));
+        if (me.rerouteCountdown-- == 0 && !me.testMode) setRoute(&me, &(me.routeMsg));
         if ((++naggCount & 15) == 0) sendUiReport(&me);
         break;
       }
@@ -813,6 +827,11 @@ void driver() {
           trainSetSpeed(0, 0, 0, &me);
           me.rerouteCountdown = 200; // wait 2 seconds then reroute.
         }
+        break;
+      }
+      case BROADCAST_TEST_MODE: {
+        me.testMode = 1;
+        setRoute(&me, &msg);
         break;
       }
       case FIND_POSITION: {

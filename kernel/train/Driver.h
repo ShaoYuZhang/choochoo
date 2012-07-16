@@ -38,6 +38,7 @@ typedef struct Driver {
   int nextSetSwitchNode;
   int setSwitchNaggerCount;
   int currentlyLost;
+  int testMode;
 
   TrainUiMsg uiMsg;
   Route route;

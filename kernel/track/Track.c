@@ -24,6 +24,8 @@ static track_node* findNode(track_node* track, TrackLandmark landmakr);
 static int traverse(track_node* currentNode, track_node* targetNode, int depth, int max_depth, track_edge** edges);
 static int locateNode(track_node* track, Position pos, track_edge** edge);
 static int edgeType(track_edge* edge);
+static void initPresetRoute1(Route *route);
+static void initPresetRoute2(Route *route);
 
 static void clearNodeReservation(track_node* node, int trainNum) {
   if (node->type == NODE_SENSOR || node->type == NODE_ENTER ||
@@ -512,8 +514,8 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
   }
 
   // construct path
-  RouteNode tempRoute[150];
-  int index = 150;
+  RouteNode tempRoute[MAX_ROUTE_NODE];
+  int index = MAX_ROUTE_NODE;
   result->dist = toNode->curr_dist;
 
   // construct backwards on temp
@@ -550,10 +552,10 @@ static void findRoute(track_node* track, Position from, Position to, Route* resu
   }
 
   // copy to output
-  for (int i = index; i < 150; i++) {
+  for (int i = index; i < MAX_ROUTE_NODE; i++) {
     result->nodes[i-index] = tempRoute[i];
   }
-  result->length = 150 - index;
+  result->length = MAX_ROUTE_NODE - index;
 
   // a route of length 1 is actually not a route
   if (result->length == 1) {
@@ -619,6 +621,9 @@ static void trackController() {
   ReleaseOldAndReserveNewTrackMsg actualMsg;
   TrackMsg* msg = (TrackMsg*) &actualMsg;
 
+  Route presetRoute[2];
+  initPresetRoute1(&presetRoute[0]);
+  initPresetRoute2(&presetRoute[1]);
   for ( ;; ) {
     int tid = -1;
     Receive(&tid, (char*)msg, sizeof(ReleaseOldAndReserveNewTrackMsg));
@@ -823,6 +828,19 @@ static void trackController() {
         }
         break;
       }
+      case GET_PRESET_ROUTE: {
+        PrintDebug(ui, "Getting preset route");
+        Route route;
+        if (msg->data < 2) {
+          route = presetRoute[(int)msg->data];
+        } else {
+          PrintDebug(ui, "WARNING: invalid preset route number %d", msg->data);
+          route.length = 0;
+          route.dist = 0;
+        }
+        Reply(tid, (char *)&route, 8 + sizeof(RouteNode) * route.length);
+        break;
+      }
       default: {
         ASSERT(FALSE, "Not suppported track message type.");
       }
@@ -835,3 +853,4 @@ int startTrackManagerTask() {
 }
 
 #include <TrackHelper.c>
+#include <TrackPresetRoute.c>

@@ -131,8 +131,11 @@ static void trainController() {
     if (msg.trainNum == 255) {
       // Broadcast, can't receive replies
       Reply(tid, (char*)1, 0);
+      int count = 0;
       for (int i = 0; i < 80; i++) {
         if (trainTid[i] != -1) {
+          msg.data3 = count;
+          count++;
           Send(trainTid[i], (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
         }
       }

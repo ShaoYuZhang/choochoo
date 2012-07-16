@@ -57,7 +57,7 @@ static void decodeCommand() {
   if (decoderCurrBufferPos == 1 && decoderBuffer[0] == 'q') {
     kernel_quit();
   }
-  unsigned int shortEvalulation = (decoderCurrBufferPos <= 3);
+  unsigned int shortEvalulation = (decoderCurrBufferPos <= 1);
   decoderCurrBufferPos = 0;
   if (shortEvalulation) return;
   if (decoderBuffer[0] == 'i' && decoderBuffer[1] == 'n') {
@@ -234,6 +234,15 @@ static void decodeCommand() {
     char *temp = (char*)decoderBuffer + 3;
     int train_number = strgetui(&temp);
     Send(randomController, (char*)&train_number, 4, (char *)1, 0);
+  } else if (decoderBuffer[0] == 't' && decoderBuffer[1] == 'm') {
+    int train_number = 255;
+    PrintDebug(ui, "Trains going in test mode");
+    PrintDebug(ui, "Make sure first train is at A4, second train at D5");
+    DriverMsg msg;
+    msg.type = BROADCAST_TEST_MODE;
+    msg.trainNum = 255;
+    msg.data2 = 9;
+    Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
   } else {
     PrintDebug(ui, "Bad: %s", decoderBuffer);
   }

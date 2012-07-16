@@ -28,6 +28,7 @@
 #define QUERY_EDGES_RESERVED 9
 #define UPDATE_SWITCH_STATE 10
 #define GET_RANDOM_POSITION 11
+#define GET_PRESET_ROUTE 12
 
 typedef enum {
   LANDMARK_SENSOR,
@@ -90,13 +91,13 @@ typedef struct RouteNode {
   int dist;
 } RouteNode;
 
-#define MAX_ROUTE_NODE 150
+#define MAX_ROUTE_NODE 400
 #define SAFE_REVERSE_DIST 280
 
 typedef struct Route {
   int dist;
   int length;
-  RouteNode nodes[150];
+  RouteNode nodes[MAX_ROUTE_NODE];
 } Route;
 
 int startTrackManagerTask();
