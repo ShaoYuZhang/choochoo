@@ -80,10 +80,8 @@ static int reserveEdges(
         e2->reserved_train_num = UNRESERVED;
       }
     } else {
-#ifdef DEBUG_RESERVATION
-      PrintDebug(ui, "%d Reserved sensor edge %s",
+      PrintDebug(ui, "RS Fail %d need edge %s",
           e1->reserved_train_num, node->name);
-#endif
       return RESERVE_FAIL;
     }
   } else if (node->type == NODE_BRANCH) {
@@ -122,10 +120,8 @@ static int reserveEdges(
         e4->reserved_train_num = UNRESERVED;
       }
     } else {
-#ifdef DEBUG_RESERVATION
-      PrintDebug(ui, "%d Reserved switch edge Fail %s",
+      PrintDebug(ui, "RS Fail %d need edge %s",
           e1->reserved_train_num, node->name);
-#endif
       return RESERVE_FAIL;
     }
   } else if (node->type == NODE_MERGE) {
@@ -183,16 +179,12 @@ static int reserveEdges(
         }
       }
     } else {
-#ifdef DEBUG_RESERVATION
-      PrintDebug(ui, "%d Reserved switch edge %s FAIL",
+      PrintDebug(ui, "RS Fail %d need edge %s",
           e1->reserved_train_num, node->name);
-#endif
       return RESERVE_FAIL;
     }
   } else {
-#ifdef DEBUG_RESERVATION
     PrintDebug(ui, "Canot reserve edge type: %d %d", node->type, node->name);
-#endif
     return RESERVE_FAIL;
   }
   return status;

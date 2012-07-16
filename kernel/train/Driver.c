@@ -63,7 +63,7 @@ static void setDistanceToLongestSecondary(Driver* me) {
     max = MAX(me->predictions[i].dist, max);
   }
   me->distanceToLongestSecondary = max;
-  TrainDebug(me, "Max: %dmm", max);
+  //TrainDebug(me, "Max: %dmm", max);
 }
 
 static int interpolateStoppingDistance(Driver* me, int velocity) {
@@ -151,11 +151,11 @@ static int reserveMoreTrack(Driver* me, int stationary) {
     if (me->numPredictions > 10) {
       TrainDebug(me, "__Can't reserve >10 predictions");
     } else {
-      TrainDebug(me, "Reserving track");
+      //TrainDebug(me, "Reserving track");
       qMsg.numPredSensor = me->numPredictions;
       for(int i = 0; i < me->numPredictions; i++) {
         qMsg.predSensor[i] = me->predictions[i].sensor;
-        printLandmark(me, &qMsg.predSensor[i]);
+        //printLandmark(me, &qMsg.predSensor[i]);
       }
     }
   } else {
@@ -203,8 +203,8 @@ static void updatePrediction(Driver* me) {
       getVelocity(me) - 50; // 50 ms delay for sensor query.
   } else {
     TrainDebug(me, "No prediction.. has position");
-    printLandmark(me, &qMsg.position1.landmark1);
-    printLandmark(me, &qMsg.position1.landmark2);
+    //printLandmark(me, &qMsg.position1.landmark1);
+    //printLandmark(me, &qMsg.position1.landmark2);
     TrainDebug(me, "Offset %d", qMsg.position1.offset);
   }
   setDistanceToLongestSecondary(me);
@@ -212,7 +212,7 @@ static void updatePrediction(Driver* me) {
 }
 
 static void getRoute(Driver* me, DriverMsg* msg) {
-  TrainDebug(me, "Getting Route.");
+  //TrainDebug(me, "Getting Route.");
   TrackMsg trackmsg;
   if (me->testMode) {
     TrainDebug(me, "Test Mode");
@@ -222,9 +222,9 @@ static void getRoute(Driver* me, DriverMsg* msg) {
     trackmsg.type = ROUTE_PLANNING;
 
     toPosition(me, &trackmsg.position1);
-    printLandmark(me, &trackmsg.position1.landmark1);
-    printLandmark(me, &trackmsg.position1.landmark2);
-    TrainDebug(me, "Offset %d", trackmsg.position1.offset);
+    //printLandmark(me, &trackmsg.position1.landmark1);
+    //printLandmark(me, &trackmsg.position1.landmark2);
+    //TrainDebug(me, "Offset %d", trackmsg.position1.offset);
 
     trackmsg.position2 = msg->pos;
     trackmsg.data = (char)me->trainNum;
@@ -260,7 +260,7 @@ static int shouldStopNow(Driver* me) {
 
     me->CC &= 15;
     if (me->CC++ == 0) {
-      TrainDebug(me, "Navi Nagger. %d", d);
+      //TrainDebug(me, "Navi Nagger. %d", d);
     }
     if (d < 0) {
       // Shit, stopping too late.
@@ -374,7 +374,7 @@ static void updateRoute(Driver* me, char box, char val) {
         me->route.nodes[i].landmark.num1 == box &&
         me->route.nodes[i].landmark.num2 == val)
     {
-      TrainDebug(me, "Triggered expected sensor!! %d", val);
+      //TrainDebug(me, "Triggered expected sensor!! %d", val);
       me->routeRemaining = i;
       break;
     }
@@ -454,12 +454,12 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
       msg[3] = (char)me->trainNum;
       Putstr(me->com1, msg, 4);
 
-      TrainDebug(me, "Next Sensor: %d %d", me->nextSensorIsTerminal, me->lastSensorIsTerminal);
+      //TrainDebug(me, "Next Sensor: %d %d", me->nextSensorIsTerminal, me->lastSensorIsTerminal);
       // Update prediction
       if (me->nextSensorIsTerminal) {
         me->nextSensorBox = me->nextSensorBox == EX ? EN : EX;
 
-        TrainDebug(me, "LAst Sensor: %d ", me->lastSensorVal);
+        //TrainDebug(me, "LAst Sensor: %d ", me->lastSensorVal);
       } else {
         int action = me->nextSensorVal%2 == 1 ? 1 : -1;
         me->nextSensorVal = me->nextSensorVal + action;
@@ -497,7 +497,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
         reroute(me);
       }
     } else {
-      TrainDebug(me, "Set speed. %d %d", speed, me->trainNum);
+      //TrainDebug(me, "Set speed. %d %d", speed, me->trainNum);
       msg[0] = (char)speed;
       Putstr(me->com1, msg, 2);
       if (speed == 0) {
@@ -512,7 +512,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     }
     me->speed = speed;
   } else {
-    TrainDebug(me, "Reverse... %d ", me->speed);
+    //TrainDebug(me, "Reverse... %d ", me->speed);
     DriverMsg delayMsg;
     delayMsg.type = SET_SPEED;
     delayMsg.timestamp = stopTime + 500;
@@ -521,7 +521,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     } else {
       delayMsg.data2 = (signed char)me->speedAfterReverse;
     }
-    TrainDebug(me, "Using delayer: %d for %d", me->delayer, stopTime);
+    //TrainDebug(me, "Using delayer: %d for %d", me->delayer, stopTime);
 
     Reply(me->delayer, (char*)&delayMsg, sizeof(DriverMsg));
 
@@ -671,7 +671,7 @@ void driver() {
         }
       }
       case DELAYER: {
-        TrainDebug(&me, "delayer come back.");
+        //TrainDebug(&me, "delayer come back.");
         break;
       }
       case STOP_DELAYER: {
@@ -786,7 +786,7 @@ void driver() {
           if (!me.stopCommited) {
             if (shouldStopNow(&me)) {
               if (me.route.nodes[me.stopNode].num == REVERSE) {
-                TrainDebug(&me, "Navi reversing.");
+                //TrainDebug(&me, "Navi reversing.");
                 const int speed = -1;
                 trainSetSpeed(speed, getStoppingTime(&me), 0, &me);
               }
