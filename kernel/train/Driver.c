@@ -10,6 +10,8 @@
 #include <Sensor.h>
 #include <Track.h>
 
+#define NAGGER_TICK 2
+
 static void trainSetSpeed(const int speed, const int stopTime, const int delayer, Driver* me);
 static void printLandmark(Driver* me, TrackLandmark* l);
 static void trainDelayer();
@@ -92,9 +94,8 @@ static int getStoppingTime(Driver* me) {
 
 static void reroute(Driver* me) {
   trainSetSpeed(0, getStoppingTime(me), 0, me);
-  me->rerouteCountdown = 100; // wait 2 seconds then reroute.
+  me->rerouteCountdown = 100 + getStoppingTime(me) / 10 / NAGGER_TICK; // wait 2 seconds then reroute.
 }
-
 
 static void toPosition(Driver* me, Position* pos) {
   pos->landmark1.type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
@@ -170,8 +171,8 @@ static int reserveMoreTrack(Driver* me, int stationary) {
       me->trackManager, (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
       (char*)&(me->reserveFailedLandmark), sizeof(TrackLandmark));
   if (len > 0) {
-    TrainDebug(me, "Failed cuz couldn't get landmark");
-    printLandmark(me, &me->reserveFailedLandmark);
+    //TrainDebug(me, "Failed cuz couldn't get landmark");
+    //printLandmark(me, &me->reserveFailedLandmark);
     return RESERVE_FAIL;
   }
   return RESERVE_SUCESS;
@@ -691,7 +692,7 @@ void driver() {
       }
       case STOP_DELAYER: {
         // To prevent the first receive from this delayer
-        if (me.lastSensorActualTime > 0) {
+        if (me.lastSensorActualTime > 0 && me.speed == 0) {
           int reserveStatus = reserveMoreTrack(&me, 1);
           if (reserveStatus == RESERVE_FAIL) {
             TrainDebug(&me, "WARNING: unable to reserve during init");
@@ -831,9 +832,7 @@ void driver() {
             updateSetSwitch(&me);
           } else {
             // reroute
-            trainSetSpeed(9, 0, 0, &me);
-            updateSetSwitch(&me);
-            //setRoute(&me, &(me.routeMsg));
+            setRoute(&me, &(me.routeMsg));
           }
         }
         if ((++naggCount & 15) == 0) sendUiReport(&me);

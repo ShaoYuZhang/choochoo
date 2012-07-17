@@ -635,7 +635,7 @@ static void trackController() {
     Receive(&tid, (char*)msg, sizeof(ReleaseOldAndReserveNewTrackMsg));
     switch (msg->type) {
       case RELEASE_OLD_N_RESERVE_NEW: {
-        track_node* reserveFailNode = (track_node*)-1;
+        reserveFailNode = (track_node*)-1;
         track_node* start = findNode(track, actualMsg.lastSensor);
         char canReserve =
         reserveEdges(start, actualMsg.trainNum, actualMsg.stoppingDistance, 1); // Dryrun
