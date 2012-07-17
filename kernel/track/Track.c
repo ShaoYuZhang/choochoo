@@ -49,6 +49,8 @@ static int canReserve(track_edge* edge, int trainNum){
   edge->reserved_train_num == UNRESERVED ||
     edge->reserved_train_num == trainNum);
   if (!success) {
+    PrintDebug(ui, "RS Fail %d want (%s,%s) owned by %d",
+                       trainNum, edge->src->name, edge->dest->name, edge->reserved_train_num);
     reserveFailNode = edge->src;
   }
   return success;

@@ -182,7 +182,7 @@ static void setRoute(Driver* me, DriverMsg* msg) {
 
   getRoute(me, msg);
   if (me->route.length != 0) {
-    int reserveStatus = reserveMoreTrack(me, 0); // Moving
+    int reserveStatus = reserveMoreTrack(me, 0, me->d[(int)msg->data2][ACCELERATE][MAX_VAL]); // Moving
     if (reserveStatus == RESERVE_SUCESS) {
       trainSetSpeed(msg->data2, 0, 0, me);
       updateStopNode(me);

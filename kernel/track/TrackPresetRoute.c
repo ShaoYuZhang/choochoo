@@ -9,7 +9,7 @@ static void initPresetRoute1(Route *route) {
     route->nodes[index++] = node;
   }
   // go in loops for n times
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 10; i++) {
     {
       RouteNode node;
       node.landmark.type = LANDMARK_SENSOR;
@@ -203,7 +203,7 @@ static void initPresetRoute2(Route *route) {
     route->nodes[index++] = node;
   }
   // go in loops for n times
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 10; i++) {
     {
       RouteNode node;
       node.landmark.type = LANDMARK_SWITCH;
@@ -352,15 +352,15 @@ static void initPresetRoute2(Route *route) {
     node.landmark.type = LANDMARK_SWITCH;
     node.landmark.num1 = BR;
     node.landmark.num2 = 8;
-    node.num = SWITCH_STRAIGHT;
-    node.dist = 316;
+    node.num = SWITCH_CURVED;
+    node.dist = 239;
     route->nodes[index++] = node;
   }
   {
     RouteNode node;
     node.landmark.type = LANDMARK_SENSOR;
-    node.landmark.num1 = 3;
-    node.landmark.num2 = 9;
+    node.landmark.num1 = 4;
+    node.landmark.num2 = 10;
     node.dist = 282;
     route->nodes[index++] = node;
   }
@@ -368,25 +368,42 @@ static void initPresetRoute2(Route *route) {
     RouteNode node;
     node.landmark.type = LANDMARK_SENSOR;
     node.landmark.num1 = 4;
-    node.landmark.num2 = 12;
+    node.landmark.num2 = 13;
     node.dist = 43;
     route->nodes[index++] = node;
   }
+
   {
     RouteNode node;
     node.landmark.type = LANDMARK_SWITCH;
     node.landmark.num1 = BR;
-    node.landmark.num2 = 7;
+    node.landmark.num2 = 17;
     node.num = SWITCH_STRAIGHT;
-    node.dist = 231;
+    node.dist = 239;
     route->nodes[index++] = node;
   }
   {
     RouteNode node;
     node.landmark.type = LANDMARK_SENSOR;
     node.landmark.num1 = 3;
-    node.landmark.num2 = 11;
-    node.dist = 200;
+    node.landmark.num2 = 13;
+    node.dist = 404;
+    route->nodes[index++] = node;
+  }
+  {
+    RouteNode node;
+    node.landmark.type = LANDMARK_SENSOR;
+    node.landmark.num1 = 1;
+    node.landmark.num2 = 2;
+    node.dist = 50;
+    route->nodes[index++] = node;
+  }
+  {
+    RouteNode node;
+    node.landmark.type = LANDMARK_FAKE;
+    node.landmark.num1 = 0;
+    node.landmark.num2 = 0;
+    node.dist = 0;
     route->nodes[index++] = node;
   }
   route->length = index;
