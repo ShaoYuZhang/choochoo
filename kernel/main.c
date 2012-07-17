@@ -134,31 +134,34 @@ void task1() {
     rmsg.type = RELEASE_OLD_N_RESERVE_NEW;
     rmsg.trainNum = 44; // train num
     rmsg.stoppingDistance = 10;
+    rmsg.lastSensor.type = LANDMARK_SENSOR;
+    rmsg.lastSensor.num1 = 3;
+    rmsg.lastSensor.num2 = 6;
     rmsg.numPredSensor = 0;
 
     char reply;
-    rmsg.lastSensor.type = LANDMARK_SENSOR;
-    rmsg.lastSensor.num1 = 2;
-    rmsg.lastSensor.num2 = 14;
-    rmsg.predSensor[0].type = LANDMARK_SENSOR;
-    rmsg.predSensor[0].num1 = 0;
-    rmsg.predSensor[0].num2 = 15;
-    rmsg.predSensor[1].type = LANDMARK_SENSOR;
-    rmsg.predSensor[1].num1 = 0;
-    rmsg.predSensor[1].num2 = 4;
-    rmsg.predSensor[2].type = LANDMARK_SENSOR;
-    rmsg.predSensor[2].num1 = 0;
-    rmsg.predSensor[2].num2 = 2;
-    rmsg.predSensor[3].type = LANDMARK_SENSOR;
-    rmsg.predSensor[3].num1 = 0;
-    rmsg.predSensor[3].num2 = 14;
-    rmsg.predSensor[4].type = LANDMARK_SENSOR;
-    rmsg.predSensor[4].num1 = 0;
-    rmsg.predSensor[4].num2 = 11;
-    rmsg.numPredSensor = 5;
-    rmsg.stoppingDistance = 485;
+    int len =Send(trackController, (char*)&rmsg, sizeof(ReleaseOldAndReserveNewTrackMsg), &reply, 1);
+    PrintDebug(ui, "Haha %d", len);
 
-    Send(trackController, (char*)&rmsg, sizeof(ReleaseOldAndReserveNewTrackMsg), &reply, 1);
+    ReleaseOldAndReserveNewTrackMsg cmsg;
+    cmsg.type = RELEASE_OLD_N_RESERVE_NEW;
+    cmsg.trainNum = 43; // train num
+    cmsg.stoppingDistance = 10;
+    cmsg.lastSensor.type = LANDMARK_SENSOR;
+    cmsg.lastSensor.num1 = 0;
+    cmsg.lastSensor.num2 = 4;
+    cmsg.numPredSensor = 0;
+
+    len = Send(trackController, (char*)&cmsg, sizeof(ReleaseOldAndReserveNewTrackMsg), &reply, 1);
+    PrintDebug(ui, "Haha %d", len);
+
+    cmsg.lastSensor.num1 = 3;
+    cmsg.lastSensor.num2 = 6;
+    len = Send(trackController, (char*)&cmsg, sizeof(ReleaseOldAndReserveNewTrackMsg), &reply, 1);
+    PrintDebug(ui, "Haha %d", len);
+
+
+
 #endif
 
 #if 0

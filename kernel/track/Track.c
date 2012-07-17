@@ -74,6 +74,8 @@ static int reserveEdges(
     track_edge* e2 = e1->reverse;
 
     if (canReserve(e1, trainNum) && canReserve(e2, trainNum)) {
+      int origE1 = e1->reserved_train_num;
+      int origE2 = e2->reserved_train_num;
       e1->reserved_train_num = trainNum;
       e2->reserved_train_num = trainNum;
       stoppingDistance -= e1->dist;
@@ -84,9 +86,13 @@ static int reserveEdges(
       if (stoppingDistance > 0 || e1->dest->type == NODE_BRANCH || e1->dest->type == NODE_MERGE) {
         status = reserveEdges(e1->dest, trainNum, stoppingDistance, dryrun);
       }
-      if (status == RESERVE_FAIL || dryrun) {
+      if (status == RESERVE_FAIL) {
         e1->reserved_train_num = UNRESERVED;
         e2->reserved_train_num = UNRESERVED;
+      }
+      if (dryrun){
+        e1->reserved_train_num = origE1;
+        e2->reserved_train_num = origE2;
       }
     } else {
 #ifdef DEBUG_RESERVATION
@@ -107,6 +113,10 @@ static int reserveEdges(
 #ifdef DEBUG_RESERVATION
       PrintDebug(ui, "Reserve branch switch edge %s", node->name);
 #endif
+      int origE1 = e1->reserved_train_num;
+      int origE2 = e2->reserved_train_num;
+      int origE3 = e3->reserved_train_num;
+      int origE4 = e4->reserved_train_num;
       e1->reserved_train_num = trainNum;
       e2->reserved_train_num = trainNum;
       e3->reserved_train_num = trainNum;
@@ -124,11 +134,17 @@ static int reserveEdges(
           tmpStopping > 0)) {
         status = reserveEdges(e2->dest, trainNum, tmpStopping, dryrun);
       }
-      if (status == RESERVE_FAIL || dryrun) {
+      if (status == RESERVE_FAIL) {
         e1->reserved_train_num = UNRESERVED;
         e2->reserved_train_num = UNRESERVED;
         e3->reserved_train_num = UNRESERVED;
         e4->reserved_train_num = UNRESERVED;
+      }
+      if (dryrun){
+        e1->reserved_train_num = origE1;
+        e2->reserved_train_num = origE2;
+        e3->reserved_train_num = origE3;
+        e4->reserved_train_num = origE4;
       }
     } else {
 #ifdef DEBUG_RESERVATION
@@ -156,9 +172,27 @@ static int reserveEdges(
           e3->dest->name, e4->src->name, e4->dest->name, e5->src->name, e5->dest->name,
           e6->src->name, e6->dest->name);
 #endif
+
+      int origE1 = e1->reserved_train_num;
+      int origE2 = e2->reserved_train_num;
+      int origE3 = e3->reserved_train_num;
+      int origE4 = e4->reserved_train_num;
+      int origE5 = e5->reserved_train_num;
+      int origE6 = e6->reserved_train_num;
+      int origE7 = -1;
+      int origE8 = -1;
+      int origE9 = -1;
+      int origE10 = -1;
+
       // Center stuff, dont support EX1, EX2
       if (e3->dest->num > 100 &&
           canReserve(&(e3->dest->edge[DIR_CURVED]), trainNum)) {
+        origE7 = e3->dest->edge[DIR_CURVED].reserved_train_num;
+        origE8 = e3->dest->edge[DIR_STRAIGHT].reserved_train_num;
+        origE9 = e3->dest->edge[DIR_CURVED].reverse->reserved_train_num;
+        origE10 = e3->dest->edge[DIR_STRAIGHT].reverse->reserved_train_num;
+
+
         e3->dest->edge[DIR_CURVED].reserved_train_num = trainNum;
         e3->dest->edge[DIR_STRAIGHT].reserved_train_num = trainNum;
         e3->dest->edge[DIR_CURVED].reverse->reserved_train_num = trainNum;
@@ -177,7 +211,7 @@ static int reserveEdges(
           || tmpStopping > 0) {
         status = reserveEdges(e1->dest, trainNum, tmpStopping, dryrun);
       }
-      if (status == RESERVE_FAIL || dryrun) {
+      if (status == RESERVE_FAIL) {
         e1->reserved_train_num = UNRESERVED;
         e2->reserved_train_num = UNRESERVED;
         e3->reserved_train_num = UNRESERVED;
@@ -189,6 +223,20 @@ static int reserveEdges(
           e3->dest->edge[DIR_STRAIGHT].reserved_train_num = UNRESERVED;
           e3->dest->edge[DIR_CURVED].reverse->reserved_train_num = UNRESERVED;
           e3->dest->edge[DIR_STRAIGHT].reverse->reserved_train_num = UNRESERVED;
+        }
+      }
+      if (dryrun) {
+        e1->reserved_train_num = origE1;
+        e2->reserved_train_num = origE2;
+        e3->reserved_train_num = origE3;
+        e4->reserved_train_num = origE4;
+        e5->reserved_train_num = origE5;
+        e6->reserved_train_num = origE6;
+        if (e3->dest->num > 100) {
+          e3->dest->edge[DIR_CURVED].reserved_train_num = origE7;
+          e3->dest->edge[DIR_STRAIGHT].reserved_train_num = origE8;
+          e3->dest->edge[DIR_CURVED].reverse->reserved_train_num = origE9;
+          e3->dest->edge[DIR_STRAIGHT].reverse->reserved_train_num = origE10;
         }
       }
     } else {
@@ -647,7 +695,7 @@ static void trackController() {
           }
           track_node* n = findNode(track, actualMsg.predSensor[j]);
           canReserve = reserveEdges(n,
-              actualMsg.trainNum, actualMsg.stoppingDistance, 0);
+              actualMsg.trainNum, actualMsg.stoppingDistance, 1);
         }
 
         if (canReserve == RESERVE_FAIL) {

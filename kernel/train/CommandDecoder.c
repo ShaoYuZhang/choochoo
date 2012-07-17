@@ -241,7 +241,7 @@ static void decodeCommand() {
     DriverMsg msg;
     msg.type = BROADCAST_TEST_MODE;
     msg.trainNum = 255;
-    msg.data2 = 9;
+    msg.data2 = 8;
     Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
   } else {
     PrintDebug(ui, "Bad: %s", decoderBuffer);

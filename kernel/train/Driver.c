@@ -94,7 +94,7 @@ static int getStoppingTime(Driver* me) {
 
 static void reroute(Driver* me) {
   trainSetSpeed(0, getStoppingTime(me), 0, me);
-  me->rerouteCountdown = (GET_TIMER4() % 2 == 0 ? 70 : 100) + (getStoppingTime(me) + 500) / 10 / NAGGER_TICK; // wait 2 seconds then reroute.
+  me->rerouteCountdown = GET_TIMER4() % 2 == 0 ? 45 : 55; // wait ~1 seconds then reroute.
 }
 
 static void toPosition(Driver* me, Position* pos) {
@@ -156,11 +156,11 @@ static int reserveMoreTrack(Driver* me, int stationary, int stoppingDistance) {
     if (me->numPredictions > 10) {
       TrainDebug(me, "__Can't reserve >10 predictions");
     } else {
-      TrainDebug(me, "Reserving track");
+      //TrainDebug(me, "Reserving track");
       qMsg.numPredSensor = me->numPredictions;
       for(int i = 0; i < me->numPredictions; i++) {
         qMsg.predSensor[i] = me->predictions[i].sensor;
-        printLandmark(me, &qMsg.predSensor[i]);
+        //printLandmark(me, &qMsg.predSensor[i]);
       }
     }
   } else {
@@ -385,7 +385,7 @@ static void updateRoute(Driver* me, char box, char val) {
         me->route.nodes[i].landmark.num1 == box &&
         me->route.nodes[i].landmark.num2 == val)
     {
-      TrainDebug(me, "Triggered expected sensor!! %d", val);
+      //TrainDebug(me, "Triggered expected sensor!! %d", val);
       me->routeRemaining = i;
       break;
     }
@@ -454,7 +454,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
     }
   }
 
-  TrainDebug(me, "Train Setting Speed %d", speed);
+  //TrainDebug(me, "Train Setting Speed %d", speed);
 
   if (speed >= 0) {
     if (delayer) {
@@ -508,7 +508,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
         reroute(me);
       }
     } else {
-      TrainDebug(me, "Set speed. %d %d", speed, me->trainNum);
+      //TrainDebug(me, "Set speed. %d %d", speed, me->trainNum);
       msg[0] = (char)speed;
       Putstr(me->com1, msg, 2);
       if (speed == 0) {
@@ -687,9 +687,9 @@ void driver() {
         break;
       }
       case STOP_DELAYER: {
-        //TrainDebug(&me, "releasing reserveration");
         // To prevent the first receive from this delayer
-        if (me.lastSensorActualTime > 0 && me.speed == 0) {
+        if (me.lastSensorActualTime > 0 && me.speed == 0 && !me.isAding) {
+          TrainDebug(&me, "releasing reserveration");
           int reserveStatus = reserveMoreTrack(&me, 1, 0);
           if (reserveStatus == RESERVE_FAIL) {
             TrainDebug(&me, "WARNING: unable to reserve during init");
@@ -825,12 +825,12 @@ void driver() {
         }
         if (me.rerouteCountdown-- == 0) {
           if (me.testMode) {
-            int reserveStatus = reserveMoreTrack(&me, 0, me.d[9][ACCELERATE][MAX_VAL]); // moving
+            int reserveStatus = reserveMoreTrack(&me, 0, me.d[8][ACCELERATE][MAX_VAL]); // moving
             if (reserveStatus == RESERVE_FAIL) {
               reroute(&me);
             } else {
               updateSetSwitch(&me);
-              trainSetSpeed(9, 0, 0, &me);
+              trainSetSpeed(8, 0, 0, &me);
             }
           } else {
             // reroute
