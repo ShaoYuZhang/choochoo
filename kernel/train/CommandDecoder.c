@@ -237,7 +237,7 @@ static void decodeCommand() {
   } else if (decoderBuffer[0] == 't' && decoderBuffer[1] == 'm') {
     int train_number = 255;
     PrintDebug(ui, "Trains going in test mode");
-    PrintDebug(ui, "Make sure first train is at A4, second train at D6");
+    PrintDebug(ui, "Make sure smaller numbered train is at A4, larger numbered train at D6");
     DriverMsg msg;
     msg.type = BROADCAST_TEST_MODE;
     msg.trainNum = 255;

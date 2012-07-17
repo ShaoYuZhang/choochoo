@@ -24,11 +24,6 @@ static void setRoute(Driver* me, DriverMsg* msg);
 static void updatePrediction(Driver* me);
 static int reserveMoreTrack(Driver* me, int stopped);
 
-static void reroute(Driver* me) {
-  trainSetSpeed(0, 0, 0, me);
-  me->rerouteCountdown = 200; // wait 2 seconds then reroute.
-}
-
 static int getStoppingDistance(Driver* me) {
   return me->d[(int)me->speed][(int)me->speedDir][MAX_VAL];
 }
@@ -95,6 +90,12 @@ static int getStoppingTime(Driver* me) {
     getVelocity(me);
 }
 
+static void reroute(Driver* me) {
+  trainSetSpeed(0, getStoppingTime(me), 0, me);
+  me->rerouteCountdown = 100; // wait 2 seconds then reroute.
+}
+
+
 static void toPosition(Driver* me, Position* pos) {
   pos->landmark1.type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
   pos->landmark1.num1 = me->lastSensorBox;
@@ -116,8 +117,8 @@ static void trySetSwitch_and_getNextSwitch(Driver* me) {
   Send(me->trackManager, (char*)&setSwitch, sizeof(TrackMsg), &reply, 1);
 
   if (reply == SET_SWITCH_SUCCESS) {
-    //TrainDebug(me, "Set Switch Success");
-    //printLandmark(me, &setSwitch.landmark1);
+    TrainDebug(me, "Set Switch Success");
+    printLandmark(me, &setSwitch.landmark1);
     int haveNextSwitch = 0;
     for (int i = me->nextSetSwitchNode + 1; i < me->stopNode; i++) {
       if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
@@ -393,8 +394,8 @@ static void updateSetSwitch(Driver* me) {
   for (int i = me->routeRemaining; i < me->stopNode; i++) {
     if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
         me->route.nodes[i].landmark.num1 == BR && me->nextSetSwitchNode == -1) {
-      //TrainDebug(me, "Will try to set:");
-      //printLandmark(me, &(me->route.nodes[i].landmark));
+      TrainDebug(me, "Will try to set:");
+      printLandmark(me, &(me->route.nodes[i].landmark));
       me->nextSetSwitchNode = i;
       //TrainDebug(me, "At: %d", i);
     }
@@ -517,6 +518,13 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
       me->speedDir = DECELERATE;
     }
     me->speed = speed;
+        // changing speed require new reservations cuz stopping distance changed
+    if (speed > 0 && !me->positionFinding) {
+      int reserveStatus = reserveMoreTrack(me, 0); // moving
+      if (reserveStatus == RESERVE_FAIL) {
+        reroute(me);
+      }
+    }
   } else {
     TrainDebug(me, "Reverse... %d ", me->speed);
     DriverMsg delayMsg;
@@ -780,7 +788,7 @@ void driver() {
           updatePosition(&me, msg.timestamp);
           sendUiReport(&me);
           if (me.positionFinding) {
-            trainSetSpeed(0, 0, 0, &me); // Found position, stop.
+            trainSetSpeed(0, getStoppingTime(&me), 0, &me); // Found position, stop.
             me.positionFinding = 0;
             me.currentlyLost = 0;
           }
@@ -819,18 +827,13 @@ void driver() {
         }
         if (me.rerouteCountdown-- == 0) {
           if (me.testMode) {
-            //test mode should just keep following the same route
-            updatePrediction(&me);
-            int reserveStatus = reserveMoreTrack(&me, 0); // moving
-            if (reserveStatus == RESERVE_FAIL) {
-              me.rerouteCountdown = 200; // wait 2 seconds then reroute.
-            } else {
-              updateSetSwitch(&me);
-              trainSetSpeed(9, 0, 0, &me);
-            }
+            trainSetSpeed(9, 0, 0, &me);
+            updateSetSwitch(&me);
           } else {
             // reroute
-            setRoute(&me, &(me.routeMsg));
+            trainSetSpeed(9, 0, 0, &me);
+            updateSetSwitch(&me);
+            //setRoute(&me, &(me.routeMsg));
           }
         }
         if ((++naggCount & 15) == 0) sendUiReport(&me);
@@ -846,7 +849,7 @@ void driver() {
         updatePrediction(&me);
         int reserveStatus = reserveMoreTrack(&me, 0); // moving
         if (reserveStatus == RESERVE_FAIL) {
-          trainSetSpeed(0, 0, 0, &me);
+          trainSetSpeed(0, getStoppingTime(&me), 0, &me);
           me.rerouteCountdown = 200; // wait 2 seconds then reroute.
         }
         break;
@@ -857,8 +860,8 @@ void driver() {
         break;
       }
       case FIND_POSITION: {
-        trainSetSpeed(5, 0, 0, &me);
         me.positionFinding = 1;
+        trainSetSpeed(5, 0, 0, &me);
         break;
       }
       default: {

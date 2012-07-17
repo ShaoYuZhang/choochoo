@@ -9,7 +9,7 @@ static void initPresetRoute1(Route *route) {
     route->nodes[index++] = node;
   }
   // go in loops for n times
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 3; i++) {
     {
       RouteNode node;
       node.landmark.type = LANDMARK_SENSOR;
@@ -203,7 +203,7 @@ static void initPresetRoute2(Route *route) {
     route->nodes[index++] = node;
   }
   // go in loops for n times
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 3; i++) {
     {
       RouteNode node;
       node.landmark.type = LANDMARK_SWITCH;
