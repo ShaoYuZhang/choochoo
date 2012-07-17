@@ -829,12 +829,15 @@ void driver() {
             if (reserveStatus == RESERVE_FAIL) {
               reroute(&me);
             } else {
+              me.nextSetSwitchNode = -1;
               updateSetSwitch(&me);
               trainSetSpeed(8, 0, 0, &me);
             }
           } else {
             // reroute
-            setRoute(&me, &(me.routeMsg));
+            if (me.route.length != 0) {
+              setRoute(&me, &(me.routeMsg));
+            }
           }
         }
         if ((++naggCount & 15) == 0) sendUiReport(&me);
