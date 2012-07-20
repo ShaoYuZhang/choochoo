@@ -2,6 +2,7 @@
 #define USER_INTERFACE_H_
 
 #include <Track.h>
+#include <IoHelper.h>
 
 #define UI_TASK_NAME "UI_TASK_NA\0"
 #define PROMPT_CHAR  2
@@ -62,12 +63,11 @@ int startUserInterfaceTask();
 
 #define TrainDebug(me, fmt, ...) \
 { \
-  Driver* moi = me; \
   char DebugBuffer[128]; \
   DebugBuffer[0] = DEBUG_TRAIN_MSG; \
-  DebugBuffer[1] = moi->uiMsg.nth;  \
+  DebugBuffer[1] = (me)->uiMsg.nth;  \
   int DebugLen = sprintff(DebugBuffer+2, fmt, ##__VA_ARGS__ ); \
-  Send(moi->ui, DebugBuffer, DebugLen + 2, (char*)1, 0);  \
+  Send((me)->ui, DebugBuffer, DebugLen + 2, (char*)1, 0);  \
 }
 
 #endif // USER_INTERFACE_H_

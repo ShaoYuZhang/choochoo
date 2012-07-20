@@ -10,8 +10,6 @@
 #include <Sensor.h>
 #include <Track.h>
 
-#define NAGGER_TICK 2
-
 static void trainSetSpeed(const int speed, const int stopTime, const int delayer, Driver* me);
 static void printLandmark(Driver* me, TrackLandmark* l);
 static void trainDelayer();
@@ -52,15 +50,6 @@ static int isLost(Driver* me) {
     return 0;
   }
   return 1;
-}
-
-static void setDistanceToLongestSecondary(Driver* me) {
-  int max = -1;
-  for (int i = 0; i < me->numPredictions; i++) {
-    max = MAX(me->predictions[i].dist, max);
-  }
-  me->distanceToLongestSecondary = max;
-  //TrainDebug(me, "Max: %dmm", max);
 }
 
 static int interpolateStoppingDistance(Driver* me, int velocity) {
@@ -222,7 +211,6 @@ static void updatePrediction(Driver* me) {
     //printLandmark(me, &qMsg.position1.landmark2);
     //TrainDebug(me, "Offset %d", qMsg.position1.offset);
   }
-  setDistanceToLongestSecondary(me);
   sendUiReport(me);
 }
 
@@ -783,7 +771,6 @@ void driver() {
             msg.timestamp + me.distanceToNextSensor*100000 /
             getVelocity(&me);
 
-          setDistanceToLongestSecondary(&me);
           updatePosition(&me, msg.timestamp);
           sendUiReport(&me);
           if (me.positionFinding) {
