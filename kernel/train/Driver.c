@@ -631,8 +631,6 @@ static void updatePosition(Driver* me, int time){
     me->lastPosUpdateTime = time;
     me->distanceFromLastSensor += dPosition;
     me->distanceToNextSensor -= dPosition;
-
-    //isLost(me);
   }
 }
 
@@ -656,10 +654,6 @@ void driver() {
     const int replyTid = msg.replyTid;
 
     switch (msg.type) {
-      case GET_SPEED: {
-        Reply(replyTid, (char*)&me.speed, 4);
-        break;
-      }
       case SET_SPEED: {
         //TrainDebug(&me, "Set speed from msg");
         trainSetSpeed(msg.data2,
