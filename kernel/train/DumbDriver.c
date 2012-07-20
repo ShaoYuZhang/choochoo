@@ -14,6 +14,16 @@
 #include "DriverHelperTask.c"
 static int getVelocity(DumbDriver* me);
 
+static void toPosition(DumbDriver* me, Position* pos) {
+  pos->landmark1.type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
+  pos->landmark1.num1 = me->lastSensorBox;
+  pos->landmark1.num2 = me->lastSensorVal;
+  pos->landmark2.type = me->nextSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
+  pos->landmark2.num1 = me->nextSensorBox;
+  pos->landmark2.num2 = me->nextSensorVal;
+  pos->offset = (int)me->distanceFromLastSensor;
+}
+
 static void initDriver(DumbDriver* me) {
   char uiName[] = UI_TASK_NAME;
   me->ui = WhoIs(uiName);
@@ -75,6 +85,10 @@ static void updatePosition(DumbDriver* me, int time){
     me->distanceFromLastSensor += dPosition;
     me->distanceToNextSensor -= dPosition;
   }
+}
+
+static int getStoppingDistance(DumbDriver* me) {
+  return me->d[(int)me->speed][(int)me->speedDir][MAX_VAL];
 }
 
 // mm/s
@@ -264,10 +278,6 @@ void dumb_driver() {
     msg.data3 = -1;
     msg.replyTid = -1;
     Receive(&tid, (char*)&msg, sizeof(DriverMsg));
-    if (tid != me.delayer){ // && tid != me.stopDelayer) {
-      Reply(tid, (char*)1, 0);
-    }
-    const int replyTid = msg.replyTid;
 
     switch (msg.type) {
       case SET_SPEED: {
@@ -276,11 +286,8 @@ void dumb_driver() {
                       getStoppingTime(&me),
                       (msg.data3 == DELAYER),
                       &me);
-        if (msg.data3 != DELAYER) {
-          //TrainDebug(&me, "Replied to %d", replyTid);
-          Reply(replyTid, (char*)1, 0);
-          break;
-        }
+        Reply(tid, (char*)1, 0);
+        break;
       }
       case DELAYER: {
         //TrainDebug(&me, "delayer come back.");
@@ -292,6 +299,7 @@ void dumb_driver() {
         // A sensor has been triggered;
         dynamicCalibration(&me);
         updatePosition(&me, msg.timestamp);
+        Reply(tid, (char*)1, 0);
         break;
       }
       case NAVIGATE_NAGGER: {
@@ -302,6 +310,17 @@ void dumb_driver() {
       }
       case FIND_POSITION: {
         trainSetSpeed(5, 0, 0, &me);
+        Reply(tid, (char*)1, 0);
+        break;
+      }
+      case REPORT_INFO: {
+        DumbDriverInfo info;
+        info.trainSpeed = me.speed;
+        info.velocity = getVelocity(&me);
+        info.maxStoppingDistance = getStoppingDistance(&me);
+        info.currentStoppingDistance = interpolateStoppingDistance(&me, getVelocity(&me));
+        toPosition(&me, &info.pos);
+        Reply(tid, (char*)&info, sizeof(DumbDriverInfo));
         break;
       }
       default: {

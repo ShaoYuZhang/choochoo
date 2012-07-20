@@ -139,6 +139,20 @@ static void trainController() {
           Send(trainTid[i], (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
         }
       }
+    } else if (msg.type == MERGE) {
+      // TODO two trains only currently
+      MultiTrainInitMsg init;
+      init.nth = nth;
+      init.trainNum[0] = (int)msg.trainNum;
+      init.trainNum[1] = (int)msg.data2;
+      init.numTrain = 2;
+      init.com1 = com1;
+      // Create train task
+      // TODO doesn't generalize if train is already inited
+      trainTid[(int)msg.trainNum] = Create(4, multitrain_driver);
+      Send(trainTid[(int)msg.trainNum],
+          (char*)&init, sizeof(MultiTrainInitMsg), (char*)1, 0);
+      nth+=2; //TODO, generalize
     } else {
       if (msg.trainNum >= 35 && msg.trainNum <= 44) {
         if (trainTid[(int)msg.trainNum] == -1) {

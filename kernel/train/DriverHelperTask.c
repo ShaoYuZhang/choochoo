@@ -46,5 +46,3 @@ static void trainNavigateNagger() {
     Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
   }
 }
-
-

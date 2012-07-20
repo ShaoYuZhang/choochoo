@@ -18,6 +18,8 @@
 #define BROADCAST_LOST 12
 #define STOP_DELAYER 13
 #define BROADCAST_TEST_MODE 14
+#define MERGE 15
+#define REPORT_INFO 16
 
 #include <UserInterface.h>
 #include <Track.h>
@@ -38,11 +40,19 @@ typedef struct DriverInitMsg {
   int com1;
 } DriverInitMsg;
 
+typedef struct MultiTrainInitMsg {
+  int nth;
+  int trainNum[10];
+  int numTrain;
+  int com1;
+} MultiTrainInitMsg;
+
 int startDriverControllerTask();
 
 void BroadcastLost(int controllerTid);
 void FinishPositionFinding(int trainNum, int controllerTid);
 
 void driver();
+void multitrain_driver();
 
 #endif // DRIVER_CONTROLLER_

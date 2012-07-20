@@ -51,5 +51,12 @@ typedef struct DumbDriver {
   int a[15]; // TODO should be 15 * 15 later
 } DumbDriver;
 
+typedef struct DumbDriverInfo {
+  int trainSpeed;
+  int velocity;
+  int maxStoppingDistance;
+  int currentStoppingDistance;
+  Position pos;
+} DumbDriverInfo;
 
 #endif // DUMB_DRIVER_H_

@@ -243,6 +243,21 @@ static void decodeCommand() {
     msg.trainNum = 255;
     msg.data2 = 8;
     Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
+  } else if (decoderBuffer[0] == 'm' && decoderBuffer[1] == 'r') {
+    PrintDebug(ui, "For testing purpose");
+    PrintDebug(ui, "Make sure first number is head, second number is tail");
+    PrintDebug(ui, "Also make sure they are sufficiently close to each other");
+    char *temp = (char *)decoderBuffer + 3;
+    int train_number = strgetui(&temp);
+    temp++;
+    int train_number2 = strgetui(&temp);
+    temp++;
+
+    DriverMsg msg;
+    msg.type = MERGE;
+    msg.trainNum = train_number;
+    msg.data2 = train_number2;
+    Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
   } else {
     PrintDebug(ui, "Bad: %s", decoderBuffer);
   }
