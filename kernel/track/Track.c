@@ -405,7 +405,7 @@ static void computeSafeReverseDist(track_node* track) {
 // Dijkstra's algorithm, currently slow, need a heap for efficiency
 static void findRoute(
     track_node* track, Position from, Position to,
-    Route* result, int trainNum, TrackLandmark* avoidThisLandmark) {
+    Route* result, int trainNum) {
   // fake position into graph
   track_edge* fromEdge = (track_edge*)NULL;
   int offsetFrom = locateNode(track, from, &fromEdge);
@@ -419,13 +419,6 @@ static void findRoute(
         from.landmark1.num2, from.landmark2.type, from.landmark2.num1, from.landmark2.num2,
         from.offset);
     return;
-  }
-
-  track_node* failReserveNode = (track_node*) -1;
-  if (avoidThisLandmark->type != LANDMARK_BAD) {
-    PrintDebug(ui, "Got a avoiding sensor %d %d %d.", avoidThisLandmark->type,
-        avoidThisLandmark->num1, avoidThisLandmark->num2);
-    failReserveNode = findNode(track, *avoidThisLandmark);
   }
 
   track_node* fromNodeSrcPointer = fromEdge->src;
@@ -528,9 +521,7 @@ static void findRoute(
       // in queue and unreserved
       if (tempEdge->dest->in_queue &&
           (tempEdge->reserved_train_num == -1 ||
-           tempEdge->reserved_train_num == trainNum) &&
-          (failReserveNode == (track_node*)-1 ||
-           tempEdge->src != failReserveNode)
+           tempEdge->reserved_train_num == trainNum)
          ) {
         neighbours[neighbour_count] = tempEdge->dest;
         neighbours_dist[neighbour_count++] = tempEdge->dist;
@@ -538,9 +529,7 @@ static void findRoute(
       tempEdge = &curr_node->edge[DIR_CURVED];
       if (tempEdge->dest->in_queue &&
           (tempEdge->reserved_train_num == -1 ||
-           tempEdge->reserved_train_num == trainNum) &&
-          (failReserveNode == (track_node*)-1 ||
-           tempEdge->src != failReserveNode)
+           tempEdge->reserved_train_num == trainNum)
          ) {
         neighbours[neighbour_count] = tempEdge->dest;
         neighbours_dist[neighbour_count++] = tempEdge->dist;
@@ -549,9 +538,7 @@ static void findRoute(
       track_edge *tempEdge = &curr_node->edge[DIR_AHEAD];
       if (tempEdge->dest->in_queue &&
           (tempEdge->reserved_train_num == -1 ||
-           tempEdge->reserved_train_num == trainNum) &&
-          (failReserveNode == (track_node*)-1 ||
-           tempEdge->src != failReserveNode)
+           tempEdge->reserved_train_num == trainNum)
          ) {
         neighbours[neighbour_count] = curr_node->edge[DIR_AHEAD].dest;
         neighbours_dist[neighbour_count++] = curr_node->edge[DIR_AHEAD].dist;
@@ -816,7 +803,7 @@ static void trackController() {
         Position to = msg->position2;
         int trainNum = (int)msg->data;
         Route route;
-        findRoute(track, from, to , &route, trainNum, &(msg->landmark1));
+        findRoute(track, from, to , &route, trainNum);
 
         Reply(tid, (char *)&route, 8 + sizeof(RouteNode) * route.length);
         break;
