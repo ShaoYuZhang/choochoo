@@ -153,8 +153,9 @@ static void trainController() {
       Send(trainTid[(int)msg.trainNum],
           (char*)&init, sizeof(MultiTrainInitMsg), (char*)1, 0);
       nth+=2; //TODO, generalize
+      Reply(tid, (char*)1, 0);
     } else {
-      if (msg.trainNum >= 35 && msg.trainNum <= 44) {
+      if (msg.trainNum >= 35 && msg.trainNum <= 45) {
         if (trainTid[(int)msg.trainNum] == -1) {
           DriverInitMsg init;
           init.nth = nth;

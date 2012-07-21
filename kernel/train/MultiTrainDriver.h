@@ -4,8 +4,11 @@
 #include <Driver.h>
 #include <DumbDriver.h>
 
-#define NUM_PREVIOUS_SENSOR 2
-#define MAX_TRAIN_IN_GROUP 2
+#define NUM_PREVIOUS_SENSOR 5
+#define MAX_TRAIN_IN_GROUP 5
+
+//Multi train driver msg types, start from 100
+#define INFO_UPDATE_NAGGER 100
 
 typedef struct MultiTrainDriver {
   // the single train driver side of multi-train driver,

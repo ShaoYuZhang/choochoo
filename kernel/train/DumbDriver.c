@@ -22,6 +22,7 @@ static void toPosition(DumbDriver* me, Position* pos) {
   pos->landmark2.num1 = me->nextSensorBox;
   pos->landmark2.num2 = me->nextSensorVal;
   pos->offset = (int)me->distanceFromLastSensor;
+  TrainDebug((Driver *)me, "%d %d %d %d %d %d %d", pos->landmark1.type, pos->landmark1.num1, pos->landmark1.num2, pos->landmark2.type, pos->landmark2.num1, pos->landmark2.num2, pos->offset);
 }
 
 static void initDriver(DumbDriver* me) {

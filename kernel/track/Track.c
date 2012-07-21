@@ -275,18 +275,56 @@ static void fakeNode(track_edge* edge, track_node* fake1, track_node* fake2, int
   edge->src->edge[dirType].dist = offset;
 }
 
-static int calculateDistance(track_node* currentNode, track_node* targetNode) {
-  track_edge* edges[7];
-  int len = traverse(currentNode, targetNode, 0, 7, edges);
-  if (len == -1) {
+static int calculateDistance(track_node* track, Position from, Position to) {
+  track_edge* fromEdge = (track_edge*)NULL;
+  int offsetFrom = locateNode(track, from, &fromEdge);
+  if (offsetFrom == -1) {
     return -1;
-  } else {
-    int dist = 0;
+  }
+
+  track_node* fromNodeSrcPointer = fromEdge->src;
+  track_node fromNodeSrc = *fromEdge->src;
+  track_node* fromNodeReverseSrcPointer = fromEdge->reverse->src;
+  track_node fromNodeReverseSrc = *fromEdge->reverse->src;
+
+  fakeNode(fromEdge, &track[TRACK_MAX], &track[TRACK_MAX + 1], offsetFrom);
+
+  track_edge* toEdge = (track_edge*)NULL;
+  int offsetTo = locateNode(track, to, &toEdge);
+
+  if (offsetTo == -1) {
+    *fromNodeSrcPointer = fromNodeSrc;
+    *fromNodeReverseSrcPointer = fromNodeReverseSrc;
+    return -1;
+  }
+
+  track_node* toNodeSrcPointer = toEdge->src;
+  track_node toNodeSrc = *toEdge->src;
+  track_node* toNodeReverseSrcPointer = toEdge->reverse->src;
+  track_node toNodeReverseSrc = *toEdge->reverse->src;
+
+  fakeNode(toEdge, &track[TRACK_MAX + 2], &track[TRACK_MAX + 3], offsetTo);
+
+  track_node *fromNode = &track[TRACK_MAX];
+  track_node *toNode = &track[TRACK_MAX + 2];
+
+  track_edge* edges[7];
+  int len = traverse(fromNode, toNode, 0, 7, edges);
+  int dist = -1;
+  if (len != -1) {
+    dist = 0;
     for (int i = 0; i < len; i++) {
       dist += edges[i]->dist;
     }
-    return dist;
   }
+
+  // restore graph
+  *toNodeSrcPointer = toNodeSrc;
+  *toNodeReverseSrcPointer = toNodeReverseSrc;
+
+  *fromNodeSrcPointer = fromNodeSrc;
+  *fromNodeReverseSrcPointer = fromNodeReverseSrc;
+  return dist;
 }
 
 // bad use of globals
@@ -768,15 +806,11 @@ static void trackController() {
         Reply(tid, (char *)1, 0);
         break;
       }
-      //case QUERY_DISTANCE: {
-      //  // TODO
-      //  //track_node* from = findNode(track, msg.landmark1);
-      //  //track_node* to = findNode(track, msg.landmark2);
-      //  //int distance = calculateDistance(from, to, 0);
-      //  int distance = 0;
-      //  Reply(tid, (char *)&distance, sizeof(int));
-      //  break;
-      //}
+      case QUERY_DISTANCE: {
+        int distance = calculateDistance(track, msg->position1, msg->position2);
+        Reply(tid, (char *)&distance, sizeof(int));
+        break;
+      }
       case QUERY_NEXT_SENSOR_FROM_SENSOR: {
         TrackLandmark sensor =  msg->landmark1;
         track_node* from = findNode(track, sensor);
