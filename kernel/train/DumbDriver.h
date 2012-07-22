@@ -33,6 +33,7 @@ typedef struct DumbDriver {
   int speedDir;
   float distanceFromLastSensor;
   float distanceToNextSensor;
+  int lastSensorDistanceError;
 
   char nextSensorIsTerminal;
   char nextSensorBox;
@@ -58,5 +59,17 @@ typedef struct DumbDriverInfo {
   int currentStoppingDistance;
   Position pos;
 } DumbDriverInfo;
+
+void SendDumbSensorTrigger(int tid,
+    int primaryPredType,
+    int primaryPredBox,
+    int primaryPredVal,
+    int primarydist,
+    int lastSensorType,
+    int lastSensorBox,
+    int lastSensorVal,
+    int timestamp);
+
+
 
 #endif // DUMB_DRIVER_H_

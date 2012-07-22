@@ -14,6 +14,30 @@
 #include "DriverHelperTask.c"
 static int getVelocity(DumbDriver* me);
 
+static void sendUiReport(DumbDriver* me) {
+  me->uiMsg.velocity = getVelocity(me) / 100;
+  me->uiMsg.lastSensorUnexpected     = me->lastSensorUnexpected;
+  me->uiMsg.lastSensorBox            = me->lastSensorBox;
+  me->uiMsg.lastSensorVal            = me->lastSensorVal;
+  me->uiMsg.lastSensorActualTime     = me->lastSensorActualTime;
+  me->uiMsg.lastSensorIsTerminal     = me->lastSensorIsTerminal;
+
+  me->uiMsg.speed                    = me->speed;      // 0 - 14
+  me->uiMsg.speedDir                 = me->speedDir;
+  me->uiMsg.distanceFromLastSensor   = (int)me->distanceFromLastSensor;
+  me->uiMsg.distanceToNextSensor     = (int)me->distanceToNextSensor;
+
+  me->uiMsg.nextSensorBox            = me->nextSensorBox;
+  me->uiMsg.nextSensorVal            = me->nextSensorVal;
+  me->uiMsg.nextSensorIsTerminal     = me->nextSensorIsTerminal;
+
+  me->uiMsg.lastSensorDistanceError  = me->lastSensorDistanceError;
+
+  Send(me->ui, (char*)&(me->uiMsg), sizeof(TrainUiMsg), (char*)1, 0);
+}
+
+
+
 static void toPosition(DumbDriver* me, Position* pos) {
   pos->landmark1.type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
   pos->landmark1.num1 = me->lastSensorBox;
@@ -51,6 +75,7 @@ static void initDriver(DumbDriver* me) {
   me->distanceToNextSensor = 0;
   me->distanceFromLastSensor = 0;
   me->lastSensorActualTime = 0;
+  me->lastSensorDistanceError = 0;
 
   me->delayer = Create(1, trainDelayer);
   me->navigateNagger = Create(2, trainNavigateNagger);
@@ -295,8 +320,19 @@ void dumb_driver() {
         break;
       }
       case SENSOR_TRIGGER: {
-        // TODO, update self with sensor name etc from the message.
+
+        me.lastSensorPredictedTime = me.nextSensorPredictedTime;
         me.lastPosUpdateTime = msg.timestamp;
+
+        int dPos = 50 * getVelocity(&me) / 100000.0;
+        me.lastSensorDistanceError =  -(int)me.distanceToNextSensor - dPos;
+        me.distanceFromLastSensor = dPos;
+        me.distanceToNextSensor = msg.pos.offset/*distance to next sensor*/ - dPos;
+        me.lastPosUpdateTime = msg.timestamp;
+        me.nextSensorPredictedTime =
+            msg.timestamp + me.distanceToNextSensor*100000 /
+            getVelocity(&me);
+
         // A sensor has been triggered;
         dynamicCalibration(&me);
         updatePosition(&me, msg.timestamp);
@@ -305,8 +341,8 @@ void dumb_driver() {
       }
       case NAVIGATE_NAGGER: {
         updatePosition(&me, msg.timestamp);
+        if ((++naggCount & 15) == 0) sendUiReport(&me);
 
-        //if ((++naggCount & 15) == 0) sendUiReport(&me);
         break;
       }
       case FIND_POSITION: {
@@ -329,4 +365,30 @@ void dumb_driver() {
       }
     }
   }
+}
+
+
+void SendDumbSensorTrigger(int tid,
+    int primaryPredType,
+    int primaryPredBox,
+    int primaryPredVal,
+    int primarydist,
+    int lastSensorType,
+    int lastSensorBox,
+    int lastSensorVal,
+    int timestamp) {
+  DriverMsg msg;
+  msg.type = SENSOR_TRIGGER;
+  msg.timestamp = timestamp;
+
+  // The triggered sensor
+  msg.pos.landmark1.type = lastSensorType;
+  msg.pos.landmark1.num1 = lastSensorBox;
+  msg.pos.landmark1.num2 = lastSensorVal;
+
+  // The primary predicted next sensor
+  msg.pos.landmark2.type = primaryPredType;
+  msg.pos.landmark2.num1 = primaryPredBox;
+  msg.pos.landmark2.num2 = primaryPredVal;
+  msg.pos.offset = primarydist;
 }

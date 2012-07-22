@@ -9,6 +9,7 @@
 #include <Sensor.h>
 #include <Track.h>
 #include <MultiTrainDriver.h>
+#include <DumbDriver.h>
 
 static void printLandmark(Driver* me, TrackLandmark* l);
 static void trainDelayer();
@@ -219,7 +220,7 @@ void multitrain_driver() {
             me.driver.lastSensorVal = msg->data3; // Val
             me.driver.lastSensorIsTerminal = 0;
             me.driver.lastSensorActualTime = msg->timestamp;
-            me.driver.lastSensorPredictedTime = me.driver.nextSensorPredictedTime;
+            //me.driver.lastSensorPredictedTime = me.driver.nextSensorPredictedTime;
 
             TrackNextSensorMsg trackMsg;
             QueryNextSensor(&me.driver, &trackMsg);
@@ -240,7 +241,7 @@ void multitrain_driver() {
             //me.driver.lastSensorDistanceError =  -(int)me.driver.distanceToNextSensor - dPos; // TODO
             //me.driver.distanceFromLastSensor = dPos;
             //me.driver.distanceToNextSensor = primaryPrediction.dist - dPos;
-            me.driver.lastPosUpdateTime = msg->timestamp;
+            //me.driver.lastPosUpdateTime = msg->timestamp;
             if (primaryPrediction.sensor.type != LANDMARK_SENSOR &&
                 primaryPrediction.sensor.type != LANDMARK_END) {
               PrintDebug(me.driver.ui, "QUERY_NEXT_SENSOR_FROM_SENSOR ..bad");
@@ -260,9 +261,21 @@ void multitrain_driver() {
               }
             }
 
-            Send(me.trainId[0], (char *)msg, sizeof(DriverMsg), (char*)1, 0);
+            SendDumbSensorTrigger(me.trainId[0],
+                primaryPrediction.sensor.type,
+                primaryPrediction.sensor.num1,
+                primaryPrediction.sensor.num2,
+                primaryPrediction.dist,
+                LANDMARK_SENSOR,
+                msg->data2,
+                msg->data3,
+                msg->timestamp);
           } else {
-            Send(me.trainId[me.numTrainInGroup - me.previousSensorCount[previousSensorIndex]], (char *)msg, sizeof(DriverMsg), (char*)1, 0);
+            // TODO, use SendDumbSensorTrigger(me.trainId[0],... see above.
+            // Copy in primary prediction?
+            Send(me.trainId[
+                me.numTrainInGroup - me.previousSensorCount[previousSensorIndex]],
+                (char *)msg, sizeof(DriverMsg), (char*)1, 0);
             me.previousSensorCount[previousSensorIndex]--;
             // sensor is done, shift things foward
             if (me.previousSensorCount[previousSensorIndex] == 0) {
