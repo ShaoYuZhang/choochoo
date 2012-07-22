@@ -98,7 +98,8 @@ void task1() {
   int trainController = startDriverControllerTask();
   int trackController = startTrackManagerTask();
   int randomController = startRandomTrainControllerTask();
-  startCommandDecoderTask();
+  int decoder = startCommandDecoderTask();
+  PrintDebug(ui, "%d", decoder);
 
   //Create(20, test_track);
 

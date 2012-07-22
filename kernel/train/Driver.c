@@ -22,7 +22,7 @@ static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg);
 static int QueryIsSensorReserved(Driver* me, int box, int val);
 static void setRoute(Driver* me, DriverMsg* msg);
 static void updatePrediction(Driver* me);
-static int reserveMoreTrack(Driver* me, int stopped, int stoppingDistance);
+static int reserveMoreTrack(Driver* me, int stopped, int stoppingDistance, TrackLandmark* extraSensors, int numExtraSensor);
 static void toPosition(Driver* me, Position* pos);
 static void trySetSwitch_and_getNextSwitch(Driver* me);
 static void updatePrediction(Driver* me);
@@ -191,7 +191,7 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
 
       // Update prediction
       updatePrediction(me);
-      int reserveStatus = reserveMoreTrack(me, 0, me->d[speed][ACCELERATE][MAX_VAL]); // moving
+      int reserveStatus = reserveMoreTrack(me, 0, me->d[speed][ACCELERATE][MAX_VAL], (TrackLandmark *)NULL, 0); // moving
       if (reserveStatus == RESERVE_FAIL) {
         reroute(me);
       }
@@ -396,7 +396,7 @@ void driver() {
         // To prevent the first receive from this delayer
         if (me.lastSensorActualTime > 0 && me.speed == 0 && !me.isAding) {
           TrainDebug(&me, "releasing reserveration");
-          int reserveStatus = reserveMoreTrack(&me, 1, 0);
+          int reserveStatus = reserveMoreTrack(&me, 1, 0, (TrackLandmark *)NULL, 0);
           if (reserveStatus == RESERVE_FAIL) {
             TrainDebug(&me, "WARNING: unable to reserve during init");
           }
@@ -463,7 +463,7 @@ void driver() {
           }
           me.numPredictions = trackMsg.numPred;
 
-          int reserveStatus = reserveMoreTrack(&me, me.positionFinding, getStoppingDistance(&me));
+          int reserveStatus = reserveMoreTrack(&me, me.positionFinding, getStoppingDistance(&me), (TrackLandmark *)NULL, 0);
           if (reserveStatus == RESERVE_FAIL) {
             if (!me.positionFinding) {
               reroute(&me);
@@ -533,7 +533,7 @@ void driver() {
         }
         if (me.rerouteCountdown-- == 0) {
           if (me.testMode) {
-            int reserveStatus = reserveMoreTrack(&me, 0, me.d[8][ACCELERATE][MAX_VAL]); // moving
+            int reserveStatus = reserveMoreTrack(&me, 0, me.d[8][ACCELERATE][MAX_VAL], (TrackLandmark *)NULL, 0); // moving
             if (reserveStatus == RESERVE_FAIL) {
               reroute(&me);
             } else {
@@ -559,7 +559,7 @@ void driver() {
       }
       case BROADCAST_UPDATE_PREDICTION: {
         updatePrediction(&me);
-        int reserveStatus = reserveMoreTrack(&me, 0, getStoppingDistance(&me)); // moving
+        int reserveStatus = reserveMoreTrack(&me, 0, getStoppingDistance(&me), (TrackLandmark *)NULL, 0); // moving
         if (reserveStatus == RESERVE_FAIL) {
           reroute(&me);
         }

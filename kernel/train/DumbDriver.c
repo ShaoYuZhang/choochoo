@@ -342,6 +342,7 @@ void dumb_driver() {
       case NAVIGATE_NAGGER: {
         updatePosition(&me, msg.timestamp);
         if ((++naggCount & 15) == 0) sendUiReport(&me);
+        Reply(tid, (char*)1, 0);
 
         break;
       }
@@ -391,4 +392,6 @@ void SendDumbSensorTrigger(int tid,
   msg.pos.landmark2.num1 = primaryPredBox;
   msg.pos.landmark2.num2 = primaryPredVal;
   msg.pos.offset = primarydist;
+
+  Send(tid, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
 }

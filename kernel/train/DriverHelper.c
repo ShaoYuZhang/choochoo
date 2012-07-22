@@ -31,7 +31,7 @@ static void trySetSwitch_and_getNextSwitch(Driver* me) {
       }
     }
     updatePrediction(me);
-    int reserveStatus = reserveMoreTrack(me, 0, getStoppingDistance(me)); // moving
+    int reserveStatus = reserveMoreTrack(me, 0, getStoppingDistance(me), (TrackLandmark *)NULL, 0); // moving
     if (reserveStatus == RESERVE_FAIL) {
       reroute(me);
     }
@@ -41,7 +41,7 @@ static void trySetSwitch_and_getNextSwitch(Driver* me) {
   }
 }
 
-static int reserveMoreTrack(Driver* me, int stationary, int stoppingDistance) {
+static int reserveMoreTrack(Driver* me, int stationary, int stoppingDistance, TrackLandmark* extraSensors, int numExtraSensor) {
   // Note on passing in stopping distance:
   // if a trainSetSpeed command follows immediately after reserveMoretrack then
   // pass in the stoppingDistance of the newSpeed, else use getStoppingDistance(me)
@@ -424,7 +424,7 @@ static void setRoute(Driver* me, DriverMsg* msg) {
       me->nextSetSwitchNode = -1;
       updateSetSwitch(me);
     } else {
-      int reserveStatus = reserveMoreTrack(me, 0, me->d[(int)msg->data2][ACCELERATE][MAX_VAL]); // Moving
+      int reserveStatus = reserveMoreTrack(me, 0, me->d[(int)msg->data2][ACCELERATE][MAX_VAL], (TrackLandmark *)NULL, 0); // Moving
       if (reserveStatus == RESERVE_SUCESS) {
         trainSetSpeed(msg->data2, 0, 0, me);
         updateStopNode(me);

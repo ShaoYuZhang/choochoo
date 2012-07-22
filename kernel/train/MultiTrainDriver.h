@@ -4,7 +4,7 @@
 #include <Driver.h>
 #include <DumbDriver.h>
 
-#define NUM_PREVIOUS_SENSOR 5
+#define MAX_PREVIOUS_SENSOR 5
 #define MAX_TRAIN_IN_GROUP 5
 
 //Multi train driver msg types, start from 100
@@ -20,8 +20,9 @@ typedef struct MultiTrainDriver {
   int trainId[MAX_TRAIN_IN_GROUP];
   DumbDriverInfo info[MAX_TRAIN_IN_GROUP];
 
-  TrackLandmark previousSensor[NUM_PREVIOUS_SENSOR];
-  int previousSensorCount[NUM_PREVIOUS_SENSOR];
+  TrackLandmark previousSensor[MAX_PREVIOUS_SENSOR];
+  int previousSensorCount[MAX_PREVIOUS_SENSOR];
+  int numPreviousSensor;
 } MultiTrainDriver;
 
 typedef struct MultiTrainDriverMsg {

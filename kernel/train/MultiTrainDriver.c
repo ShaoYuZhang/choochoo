@@ -21,7 +21,7 @@ static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg);
 static int QueryIsSensorReserved(Driver* me, int box, int val);
 static void setRoute(Driver* me, DriverMsg* msg);
 static void updatePrediction(Driver* me);
-static int reserveMoreTrack(Driver* me, int stopped, int stoppingDistance);
+static int reserveMoreTrack(Driver* me, int stopped, int stoppingDistance, TrackLandmark *extraSensors, int numExtraSensor);
 
 static void reroute(Driver* me) {
   //TODO
@@ -129,33 +129,30 @@ void multitrain_driver() {
 
   initDriver(&me);
   int initCounter = 0; // TODO, hack, train need to be properly inited
+  for (int i = 0; i < MAX_PREVIOUS_SENSOR; i++) {
+    me.previousSensorCount[i] = 0;
+  }
+  me.numPreviousSensor = 0;
   for (;;) {
     int tid = -1;
-    MultiTrainDriverMsg actualMsg;
+    DriverMsg actualMsg;
     DriverMsg *msg = (DriverMsg *)&actualMsg;
-    Receive(&tid, (char *)msg, MAX(sizeof(DriverMsg), sizeof(MultiTrainDriverMsg)));
+    Receive(&tid, (char *)msg, sizeof(DriverMsg));
     if (tid != me.driver.delayer && tid != me.driver.stopDelayer) {
       Reply(tid, (char*)1, 0);
-    }
-    for (int i = 0; i < NUM_PREVIOUS_SENSOR; i++) {
-      me.previousSensorCount[i] = 0;
     }
 
     const int replyTid = msg->replyTid;
     switch( msg->type) {
       case SET_SPEED: {
+        Reply(replyTid, (char*)1, 0);
         // TODO(rcao) may only want to send to head train and tail trains coorperate
         for (int i = 0; i < me.numTrainInGroup; i++) {
           Send(me.trainId[i], (char *)msg, sizeof(DriverMsg), (char*)1, 0);
         }
-        Reply(replyTid, (char*)1, 0);
         break;
       }
       case SENSOR_TRIGGER: {
-        if (initCounter == 2) {
-          Create(3, dumbDriverInfoUpdater);
-          initCounter++; // hacks
-        }
         int sensorReportValid = 0;
         int sensorReportForFirstTrain = 0;
         int previousSensorIndex = -1;
@@ -203,7 +200,7 @@ void multitrain_driver() {
               }
             }
             if (!sensorReportForFirstTrain) {
-              for (int i = 0 ;i < NUM_PREVIOUS_SENSOR; i++) {
+              for (int i = 0 ;i < MAX_PREVIOUS_SENSOR; i++) {
                 if (me.previousSensor[i].type == LANDMARK_SENSOR && me.previousSensor[i].num1 == msg->data2 && me.previousSensor[i].num2 == msg->data3) {
                   sensorReportValid = 1;
                   previousSensorIndex = i;
@@ -231,7 +228,7 @@ void multitrain_driver() {
             }
             me.driver.numPredictions = trackMsg.numPred;
 
-            int reserveStatus = reserveMoreTrack(&me.driver, 0, getStoppingDistance(&me.driver)); //TODO
+            int reserveStatus = reserveMoreTrack(&me.driver, 0, getStoppingDistance(&me.driver), (TrackLandmark*)me.previousSensor, me.numPreviousSensor); //TODO
             if (reserveStatus == RESERVE_FAIL) {
               //reroute(&me); // TODO
             }
@@ -254,12 +251,9 @@ void multitrain_driver() {
             //  getVelocity(&me.driver);
 
             TrackLandmark sensor = {LANDMARK_SENSOR, msg->data2, msg->data3};
-            for (int i = 0; i < NUM_PREVIOUS_SENSOR; i++) {
-              if (me.previousSensorCount[i] == 0) {
-                me.previousSensor[i] = sensor;
-                me.previousSensorCount[i] = me.numTrainInGroup - 1;
-              }
-            }
+            me.previousSensor[me.numPreviousSensor] = sensor;
+            me.previousSensorCount[me.numPreviousSensor] = me.numTrainInGroup - 1;
+            me.numPreviousSensor++;
 
             SendDumbSensorTrigger(me.trainId[0],
                 primaryPrediction.sensor.type,
@@ -283,9 +277,14 @@ void multitrain_driver() {
                 me.previousSensor[i - 1] = me.previousSensor[i];
                 me.previousSensorCount[i - 1]  = me.previousSensorCount[i];
               }
-              me.previousSensorCount[NUM_PREVIOUS_SENSOR - 1] = 0;
+              me.previousSensorCount[MAX_PREVIOUS_SENSOR - 1] = 0;
             }
+            me.numPreviousSensor--;
           }
+        }
+        if (initCounter == 2) {
+          Create(3, dumbDriverInfoUpdater);
+          initCounter++; // hacks
         }
         break;
       } // case
@@ -305,6 +304,7 @@ void multitrain_driver() {
           tMsg.position2 = me.info[i].pos;
           Send(me.driver.trackManager, (char*)&tMsg, sizeof(TrackMsg), (char *)&distance, sizeof(int));
 
+          PrintDebug(me.driver.ui, "Updating");
           // This is pretty arbitrary now and needs tuning
           if (distance > 2 * 16 + 5) {
             PrintDebug(me.driver.ui, "Speeding up");
