@@ -13,7 +13,9 @@ typedef struct DumbDriver {
   int delayer;
   int ui;
   int com1;
+  int trackManager;
   int navigateNagger;
+  int courier;
 
   int lastPosUpdateTime;
   int calibrationStart;
@@ -41,6 +43,10 @@ typedef struct DumbDriver {
   int nextSensorPredictedTime;
   TrainUiMsg uiMsg;
 
+  // prediction stuff
+  TrackSensorPrediction predictions[20];
+  int numPredictions;
+
   // A/D stuff
   int isAding;
   float lastReportDist;
@@ -59,17 +65,5 @@ typedef struct DumbDriverInfo {
   int currentStoppingDistance;
   Position pos;
 } DumbDriverInfo;
-
-void SendDumbSensorTrigger(int tid,
-    int primaryPredType,
-    int primaryPredBox,
-    int primaryPredVal,
-    int primarydist,
-    int lastSensorType,
-    int lastSensorBox,
-    int lastSensorVal,
-    int timestamp);
-
-
 
 #endif // DUMB_DRIVER_H_

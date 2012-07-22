@@ -10,6 +10,7 @@
 #include <syscall.h>
 #include <CalibrationData.h>
 #include <Poly.h>
+#include <MultiTrainDriver.h>
 
 #include "DriverHelperTask.c"
 static int getVelocity(DumbDriver* me);
@@ -36,7 +37,28 @@ static void sendUiReport(DumbDriver* me) {
   Send(me->ui, (char*)&(me->uiMsg), sizeof(TrainUiMsg), (char*)1, 0);
 }
 
+static void updateParentAboutPrediction(DumbDriver* me) {
+  MultiTrainDriverMsg msg;
+  msg.type = UPDATE_PREDICTION;
+  msg.numSensors = me->numPredictions + 1;
+  msg.sensors[0].type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
+  msg.sensors[0].num1 = me->lastSensorBox;
+  msg.sensors[0].num2 = me->lastSensorVal;
+  for (int i = 0; i < me->numPredictions; i++) {
+    msg.sensors[i+1] = me->predictions[i].sensor;
+  }
+  Reply(me->courier, (char *)&msg, sizeof(MultiTrainDriverMsg));
+}
 
+static void QueryNextSensor(DumbDriver* me, TrackNextSensorMsg* trackMsg) {
+  TrackMsg qMsg;
+  qMsg.type = QUERY_NEXT_SENSOR_FROM_SENSOR;
+  qMsg.landmark1.type = LANDMARK_SENSOR;
+  qMsg.landmark1.num1 = me->lastSensorBox;
+  qMsg.landmark1.num2 = me->lastSensorVal;
+  Send(me->trackManager, (char*)&qMsg, sizeof(TrackMsg),
+      (char*)trackMsg, sizeof(TrackNextSensorMsg));
+}
 
 static void toPosition(DumbDriver* me, Position* pos) {
   pos->landmark1.type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
@@ -46,13 +68,31 @@ static void toPosition(DumbDriver* me, Position* pos) {
   pos->landmark2.num1 = me->nextSensorBox;
   pos->landmark2.num2 = me->nextSensorVal;
   pos->offset = (int)me->distanceFromLastSensor;
-  TrainDebug((Driver *)me, "%d %d %d %d %d %d %d", pos->landmark1.type, pos->landmark1.num1, pos->landmark1.num2, pos->landmark2.type, pos->landmark2.num1, pos->landmark2.num2, pos->offset);
 }
+
+static void dumbDriverCourier() {
+  int parent = MyParentsTid();
+
+  DriverMsg msg;
+  msg.type = DRIVER_COURIER_INIT;
+  int controllerId = 0;
+  Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)&controllerId, sizeof(int));
+  msg.type = DRIVER_COURIER;
+  for (;;) {
+    MultiTrainDriverMsg mMsg;
+    Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)&mMsg, sizeof(mMsg));
+    mMsg.data = parent;
+    Send(controllerId, (char*)&mMsg, sizeof(MultiTrainDriverMsg), (char *)1, 0);
+  }
+}
+
 
 static void initDriver(DumbDriver* me) {
   char uiName[] = UI_TASK_NAME;
   me->ui = WhoIs(uiName);
   me->speedAfterReverse = -1;
+  char trackName[] = TRACK_NAME;
+  me->trackManager = WhoIs(trackName);
 
   me->nextSensorIsTerminal = 0;
   me->lastSensorIsTerminal = 0;
@@ -79,6 +119,7 @@ static void initDriver(DumbDriver* me) {
 
   me->delayer = Create(1, trainDelayer);
   me->navigateNagger = Create(2, trainNavigateNagger);
+  me->courier = Create(2, dumbDriverCourier);
 
   me->isAding = 0;
   initStoppingDistance((int*)me->d);
@@ -320,23 +361,86 @@ void dumb_driver() {
         break;
       }
       case SENSOR_TRIGGER: {
+        TrainDebug(&me, "sensor reports");
+        int sensorReportValid = 0;
+        TrackLandmark conditionLandmark;
+        int condition;
+        if (me.lastSensorActualTime > 0) {
+          for (int i = 0; i < me.numPredictions; i ++) {
+            TrackLandmark predictedSensor = me.predictions[i].sensor;
+            //printLandmark(&me, &predictedSensor);
+            if (predictedSensor.type == LANDMARK_SENSOR && predictedSensor.num1 == msg.data2 && predictedSensor.num2 == msg.data3) {
+              sensorReportValid = 1;
+              if (i != 0) {
+                TrainDebug(&me, "Trigger Secondary");
+                // secondary prediction, need to do something about them
+                conditionLandmark = me.predictions[i].conditionLandmark;
+                condition = me.predictions[i].condition;
+                me.lastSensorUnexpected = 1;
+                if (conditionLandmark.type == LANDMARK_SWITCH) {
+                  TrackMsg setSwitch;
+                  setSwitch.type = UPDATE_SWITCH_STATE;
+                  TrainDebug(&me, "UPDATE SWITCH STATE");
+                  setSwitch.landmark1 = conditionLandmark;
+                  setSwitch.data = condition;
 
-        me.lastSensorPredictedTime = me.nextSensorPredictedTime;
-        me.lastPosUpdateTime = msg.timestamp;
+                  Send(me.trackManager, (char*)&setSwitch, sizeof(TrackMsg), (char *)1, 0);
+                }
+                //reroute(&me); // TODO, what TODO
+              } else {
+                me.lastSensorUnexpected = 0;
+              }
+            }
+          }
+        } else {
+          sensorReportValid = 1;
+        }
 
-        int dPos = 50 * getVelocity(&me) / 100000.0;
-        me.lastSensorDistanceError =  -(int)me.distanceToNextSensor - dPos;
-        me.distanceFromLastSensor = dPos;
-        me.distanceToNextSensor = msg.pos.offset/*distance to next sensor*/ - dPos;
-        me.lastPosUpdateTime = msg.timestamp;
-        me.nextSensorPredictedTime =
+        if (sensorReportValid) {
+          me.lastSensorBox = msg.data2; // Box
+          me.lastSensorVal = msg.data3; // Val
+          me.lastSensorIsTerminal = 0;
+          me.lastSensorActualTime = msg.timestamp;
+          dynamicCalibration(&me);
+          me.lastSensorPredictedTime = me.nextSensorPredictedTime;
+
+          TrackNextSensorMsg trackMsg;
+          QueryNextSensor(&me, &trackMsg);
+          // Reserve the track above train and future (covers case of init)
+
+          for (int i = 0; i < trackMsg.numPred; i++) {
+            me.predictions[i] = trackMsg.predictions[i];
+          }
+          me.numPredictions = trackMsg.numPred;
+          updateParentAboutPrediction(&me);
+
+          TrackSensorPrediction primaryPrediction = me.predictions[0];
+          me.calibrationStart = msg.timestamp;
+          me.calibrationDistance = primaryPrediction.dist;
+          int dPos = 50 * getVelocity(&me) / 100000.0;
+          me.lastSensorDistanceError =  -(int)me.distanceToNextSensor - dPos;
+          me.distanceFromLastSensor = dPos;
+          me.distanceToNextSensor = primaryPrediction.dist - dPos;
+          me.lastPosUpdateTime = msg.timestamp;
+          if (primaryPrediction.sensor.type != LANDMARK_SENSOR &&
+              primaryPrediction.sensor.type != LANDMARK_END) {
+            TrainDebug(&me, "QUERY_NEXT_SENSOR_FROM_SENSOR ..bad");
+          }
+          me.nextSensorIsTerminal = (primaryPrediction.sensor.type == LANDMARK_END);
+          me.nextSensorBox = primaryPrediction.sensor.num1;
+          me.nextSensorVal = primaryPrediction.sensor.num2;
+          me.nextSensorPredictedTime =
             msg.timestamp + me.distanceToNextSensor*100000 /
             getVelocity(&me);
 
-        // A sensor has been triggered;
-        dynamicCalibration(&me);
-        updatePosition(&me, msg.timestamp);
-        Reply(tid, (char*)1, 0);
+          updatePosition(&me, msg.timestamp);
+          sendUiReport(&me);
+          int reportHandled = 1;
+          Reply(tid, (char*)&reportHandled, sizeof(int));
+        } else {
+          int reportHandled = 0;
+          Reply(tid, (char*)&reportHandled, sizeof(int));
+        }
         break;
       }
       case NAVIGATE_NAGGER: {
@@ -361,37 +465,17 @@ void dumb_driver() {
         Reply(tid, (char*)&info, sizeof(DumbDriverInfo));
         break;
       }
+      case DRIVER_COURIER_INIT: {
+        Reply(tid, (char*)&me.multiTrainController, sizeof(int));
+        break;
+      }
+      case DRIVER_COURIER: {
+        // nothing
+        break;
+      }
       default: {
         TrainDebug(&me, "Not suppported train message type.");
       }
     }
   }
-}
-
-
-void SendDumbSensorTrigger(int tid,
-    int primaryPredType,
-    int primaryPredBox,
-    int primaryPredVal,
-    int primarydist,
-    int lastSensorType,
-    int lastSensorBox,
-    int lastSensorVal,
-    int timestamp) {
-  DriverMsg msg;
-  msg.type = SENSOR_TRIGGER;
-  msg.timestamp = timestamp;
-
-  // The triggered sensor
-  msg.pos.landmark1.type = lastSensorType;
-  msg.pos.landmark1.num1 = lastSensorBox;
-  msg.pos.landmark1.num2 = lastSensorVal;
-
-  // The primary predicted next sensor
-  msg.pos.landmark2.type = primaryPredType;
-  msg.pos.landmark2.num1 = primaryPredBox;
-  msg.pos.landmark2.num2 = primaryPredVal;
-  msg.pos.offset = primarydist;
-
-  Send(tid, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
 }

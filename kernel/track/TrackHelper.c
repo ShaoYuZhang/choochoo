@@ -104,7 +104,7 @@ static track_node* findNode(track_node* track, TrackLandmark landmark) {
 
 // non-generic,only support landmarks that are relatively close
 // also can't have sensors in between because that cause ambiguity
-static int traverse(track_node* currentNode, track_node* targetNode, int depth, int max_depth, track_edge** edges) {
+static int traverse(track_node* currentNode, track_node* targetNode, int depth, int max_depth, track_edge** edges, int ignoreSensor) {
   if (currentNode == targetNode) {
     return depth;
   }
@@ -114,11 +114,11 @@ static int traverse(track_node* currentNode, track_node* targetNode, int depth, 
 
   if (currentNode->type == NODE_EXIT) {
     return -1;
-  } else if (currentNode->type == NODE_SENSOR && depth != 0) {
+  } else if (currentNode->type == NODE_SENSOR && depth != 0 && ignoreSensor) {
     return -1;
   } else if (currentNode->type != NODE_BRANCH) {
     track_edge* edge = &currentNode->edge[DIR_AHEAD];
-    int len = traverse(edge->dest, targetNode, depth + 1, max_depth, edges+1);
+    int len = traverse(edge->dest, targetNode, depth + 1, max_depth, edges+1, ignoreSensor);
     if (len != -1) {
       *edges = edge;
       return len;
@@ -128,8 +128,8 @@ static int traverse(track_node* currentNode, track_node* targetNode, int depth, 
   } else {
     track_edge* edge1 = &currentNode->edge[DIR_STRAIGHT];
     track_edge* edge2 = &currentNode->edge[DIR_CURVED];
-    int len1 = traverse(edge1->dest, targetNode, depth + 1, max_depth, edges+1);
-    int len2 = traverse(edge2->dest, targetNode, depth + 1, max_depth, edges+1);
+    int len1 = traverse(edge1->dest, targetNode, depth + 1, max_depth, edges+1, ignoreSensor);
+    int len2 = traverse(edge2->dest, targetNode, depth + 1, max_depth, edges+1, ignoreSensor);
     if (len1 != -1) {
       *edges = edge1;
       return len1;
@@ -147,7 +147,7 @@ static int locateNode(track_node* track, Position pos, track_edge** edge) {
   track_node* sensor2 = findNode(track, pos.landmark2);
 
   track_edge* edges[7];
-  int len = traverse(sensor1, sensor2, 0, 7, edges);
+  int len = traverse(sensor1, sensor2, 0, 7, edges, 1);
   if (len > 0) {
     int dist = pos.offset;
     // for robusteness, when offset less than zero, assume position is on top of landmark1

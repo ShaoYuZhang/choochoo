@@ -20,6 +20,8 @@
 #define BROADCAST_TEST_MODE 14
 #define MERGE 15
 #define REPORT_INFO 16
+#define DRIVER_COURIER_INIT 17
+#define DRIVER_COURIER 18
 
 #include <UserInterface.h>
 #include <Track.h>
@@ -27,9 +29,9 @@
 typedef struct DriverMsg {
   char trainNum; // DONT USE IN DRIVER.c use me->trainNum
   char type;           // As defined above
+  char replyTid;       // The user that first send the message.
   signed char data2;   // Speed (-1 for reverse)
   unsigned char data3; // Delay num, or msg came from worker
-  char replyTid;       // The user that first send the message.
   int timestamp;
   Position pos;
 } DriverMsg;

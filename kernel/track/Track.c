@@ -20,7 +20,7 @@ static int get_node_type(TrackLandmark landmark);
 static int get_node_num(TrackLandmark landmark);
 static TrackLandmark getLandmark(track_node* node);
 static track_node* findNode(track_node* track, TrackLandmark landmakr);
-static int traverse(track_node* currentNode, track_node* targetNode, int depth, int max_depth, track_edge** edges);
+static int traverse(track_node* currentNode, track_node* targetNode, int depth, int max_depth, track_edge** edges, int ignoreSensor);
 static int locateNode(track_node* track, Position pos, track_edge** edge);
 static int edgeType(track_edge* edge);
 static void initPresetRoute1(Route *route);
@@ -309,7 +309,7 @@ static int calculateDistance(track_node* track, Position from, Position to) {
   track_node *toNode = &track[TRACK_MAX + 2];
 
   track_edge* edges[7];
-  int len = traverse(fromNode, toNode, 0, 7, edges);
+  int len = traverse(fromNode, toNode, 0, 7, edges, 0);
   int dist = -1;
   if (len != -1) {
     dist = 0;

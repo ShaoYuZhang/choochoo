@@ -21,7 +21,7 @@ static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg);
 static int QueryIsSensorReserved(Driver* me, int box, int val);
 static void setRoute(Driver* me, DriverMsg* msg);
 static void updatePrediction(Driver* me);
-static int reserveMoreTrack(Driver* me, int stopped, int stoppingDistance, TrackLandmark *extraSensors, int numExtraSensor);
+static int reserveMoreTrack(Driver* me, int stopped, int stoppingDistance);
 
 static void reroute(Driver* me) {
   //TODO
@@ -46,6 +46,50 @@ static int getVelocity(Driver* me) {
 static void trainSetSpeed(const int speed, const int stopTime, const int delayer, Driver* me) {
 
 }
+
+static int makeReservation(MultiTrainDriver* me) {
+  TrackLandmark sensors[MAX_TRAIN_IN_GROUP * 10];
+  int sensorIndex = 0;
+  // bad merging code here
+  for (int i = 0; i < me->numTrainInGroup; i++) {
+    for (int j = 0; j < me->numSensorToReserve[i]; j++) {
+      int isInQueue = 1;
+      for (int k = 0; k < sensorIndex; k++) {
+        if (sensors[k].type == me->sensorToReserve[i][j].type &&
+            sensors[k].num2 == me->sensorToReserve[i][j].num1 &&
+            sensors[k].num2 == me->sensorToReserve[i][j].num2) {
+          isInQueue = 0;
+          break;
+        }
+      }
+      sensors[sensorIndex++] = me->sensorToReserve[i][j];
+    }
+  }
+
+  ReleaseOldAndReserveNewTrackMsg qMsg;
+  qMsg.type = RELEASE_OLD_N_RESERVE_NEW;
+  qMsg.trainNum = me->driver.trainNum;
+  qMsg.stoppingDistance = getStoppingDistance(&me->driver);
+  qMsg.lastSensor = sensors[0];
+
+  //TrainDebug(me, "Reserving track");
+  qMsg.numPredSensor = sensorIndex - 1;
+  for(int i = 1; i < sensorIndex; i++) {
+    qMsg.predSensor[i-1] = sensors[i];
+    //printLandmark(me, &qMsg.predSensor[i]);
+  }
+
+  // reserveFailedlandmark is not really being used right now
+  int len = Send(
+      me->driver.trackManager, (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
+      (char*)&(me->driver.reserveFailedLandmark), sizeof(TrackLandmark));
+  if (len > 0) {
+    return RESERVE_FAIL;
+  } else {
+    return RESERVE_SUCESS;
+  }
+}
+
 
 // copied from driver......
 // TODO, clean up of things this doesn't need
@@ -119,7 +163,7 @@ void dumbDriverInfoUpdater() {
   msg.type = INFO_UPDATE_NAGGER;
 
   for (;;) {
-    Delay(2, timeserver);
+    Delay(5, timeserver);
     Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
   }
 }
@@ -129,15 +173,11 @@ void multitrain_driver() {
 
   initDriver(&me);
   int initCounter = 0; // TODO, hack, train need to be properly inited
-  for (int i = 0; i < MAX_PREVIOUS_SENSOR; i++) {
-    me.previousSensorCount[i] = 0;
-  }
-  me.numPreviousSensor = 0;
   for (;;) {
     int tid = -1;
-    DriverMsg actualMsg;
+    MultiTrainDriverMsg actualMsg;
     DriverMsg *msg = (DriverMsg *)&actualMsg;
-    Receive(&tid, (char *)msg, sizeof(DriverMsg));
+    Receive(&tid, (char *)msg, sizeof(MultiTrainDriverMsg));
     if (tid != me.driver.delayer && tid != me.driver.stopDelayer) {
       Reply(tid, (char*)1, 0);
     }
@@ -153,133 +193,20 @@ void multitrain_driver() {
         break;
       }
       case SENSOR_TRIGGER: {
-        int sensorReportValid = 0;
-        int sensorReportForFirstTrain = 0;
-        int previousSensorIndex = -1;
-        TrackLandmark conditionLandmark;
-        int condition;
-        int isSensorReserved = QueryIsSensorReserved(&me.driver, msg->data2, msg->data3);
-        if (initCounter == 0) {
-          sensorReportValid = 1;
-          sensorReportForFirstTrain = 1;
-          initCounter++;
-        } else if (initCounter ==1) {
-          sensorReportValid = 1;
-          sensorReportForFirstTrain = 0;
-          previousSensorIndex = 0;
+        if (initCounter < 2) {
+          Send(me.trainId[initCounter], (char*)msg, sizeof(DriverMsg), (char *)NULL, 0);
           initCounter++;
         } else {
+          int isSensorReserved = QueryIsSensorReserved(&me.driver, msg->data2, msg->data3);
           if (isSensorReserved) {
-            PrintDebug(me.driver.ui, "Predictions.");
-            for (int i = 0; i < me.driver.numPredictions; i ++) {
-              TrackLandmark predictedSensor = me.driver.predictions[i].sensor;
-              //printLandmark(&me, &predictedSensor);
-              if (predictedSensor.type == LANDMARK_SENSOR && predictedSensor.num1 == msg->data2 && predictedSensor.num2 == msg->data3) {
-                sensorReportValid = 1;
-                sensorReportForFirstTrain = 1;
-                if (i != 0) {
-                  PrintDebug(me.driver.ui, "Trigger Secondary");
-                  // secondary prediction, need to do something about them
-                  conditionLandmark = me.driver.predictions[i].conditionLandmark;
-                  condition = me.driver.predictions[i].condition;
-                  me.driver.lastSensorUnexpected = 1;
-                  if (conditionLandmark.type == LANDMARK_SWITCH) {
-                    TrackMsg setSwitch;
-                    setSwitch.type = UPDATE_SWITCH_STATE; PrintDebug(me.driver.ui, "UPDATE SWITCH STATE");
-                    setSwitch.landmark1 = conditionLandmark;
-                    setSwitch.data = condition;
-
-                    Send(me.driver.trackManager, (char*)&setSwitch, sizeof(TrackMsg), (char *)1, 0);
-                  }
-
-                  // Stop and then try to reroute.
-                  //reroute(&me); TODO
-                } else {
-                  me.driver.lastSensorUnexpected = 0;
-                }
+            // sensor is reserved
+            for (int i = 0; i < me.numTrainInGroup; i ++) {
+              int isHandled = 0;
+              Send(me.trainId[i], (char*)msg, sizeof(DriverMsg), (char *)&isHandled, sizeof(int));
+              if (isHandled) {
+                break;
               }
             }
-            if (!sensorReportForFirstTrain) {
-              for (int i = 0 ;i < MAX_PREVIOUS_SENSOR; i++) {
-                if (me.previousSensor[i].type == LANDMARK_SENSOR && me.previousSensor[i].num1 == msg->data2 && me.previousSensor[i].num2 == msg->data3) {
-                  sensorReportValid = 1;
-                  previousSensorIndex = i;
-                  break;
-                }
-              }
-            }
-          }
-        }
-        if (sensorReportValid) {
-          if (sensorReportForFirstTrain) {
-            //updateRoute(&me.driver, msg->data2, msg->data3); // TODO
-            me.driver.lastSensorBox = msg->data2; // Box
-            me.driver.lastSensorVal = msg->data3; // Val
-            me.driver.lastSensorIsTerminal = 0;
-            me.driver.lastSensorActualTime = msg->timestamp;
-            //me.driver.lastSensorPredictedTime = me.driver.nextSensorPredictedTime;
-
-            TrackNextSensorMsg trackMsg;
-            QueryNextSensor(&me.driver, &trackMsg);
-            // Reserve the track above train and future (covers case of init)
-
-            for (int i = 0; i < trackMsg.numPred; i++) {
-              me.driver.predictions[i] = trackMsg.predictions[i];
-            }
-            me.driver.numPredictions = trackMsg.numPred;
-
-            int reserveStatus = reserveMoreTrack(&me.driver, 0, getStoppingDistance(&me.driver), (TrackLandmark*)me.previousSensor, me.numPreviousSensor); //TODO
-            if (reserveStatus == RESERVE_FAIL) {
-              //reroute(&me); // TODO
-            }
-
-            TrackSensorPrediction primaryPrediction = me.driver.predictions[0];
-            //int dPos = 50 * getVelocity(&me) / 100000.0;
-            //me.driver.lastSensorDistanceError =  -(int)me.driver.distanceToNextSensor - dPos; // TODO
-            //me.driver.distanceFromLastSensor = dPos;
-            //me.driver.distanceToNextSensor = primaryPrediction.dist - dPos;
-            //me.driver.lastPosUpdateTime = msg->timestamp;
-            if (primaryPrediction.sensor.type != LANDMARK_SENSOR &&
-                primaryPrediction.sensor.type != LANDMARK_END) {
-              PrintDebug(me.driver.ui, "QUERY_NEXT_SENSOR_FROM_SENSOR ..bad");
-            }
-            me.driver.nextSensorIsTerminal = (primaryPrediction.sensor.type == LANDMARK_END);
-            me.driver.nextSensorBox = primaryPrediction.sensor.num1;
-            me.driver.nextSensorVal = primaryPrediction.sensor.num2;
-            //me.driver.nextSensorPredictedTime =
-            //  msg->timestamp + me.driver.distanceToNextSensor*100000 /
-            //  getVelocity(&me.driver);
-
-            TrackLandmark sensor = {LANDMARK_SENSOR, msg->data2, msg->data3};
-            me.previousSensor[me.numPreviousSensor] = sensor;
-            me.previousSensorCount[me.numPreviousSensor] = me.numTrainInGroup - 1;
-            me.numPreviousSensor++;
-
-            SendDumbSensorTrigger(me.trainId[0],
-                primaryPrediction.sensor.type,
-                primaryPrediction.sensor.num1,
-                primaryPrediction.sensor.num2,
-                primaryPrediction.dist,
-                LANDMARK_SENSOR,
-                msg->data2,
-                msg->data3,
-                msg->timestamp);
-          } else {
-            // TODO, use SendDumbSensorTrigger(me.trainId[0],... see above.
-            // Copy in primary prediction?
-            Send(me.trainId[
-                me.numTrainInGroup - me.previousSensorCount[previousSensorIndex]],
-                (char *)msg, sizeof(DriverMsg), (char*)1, 0);
-            me.previousSensorCount[previousSensorIndex]--;
-            // sensor is done, shift things foward
-            if (me.previousSensorCount[previousSensorIndex] == 0) {
-              for (int i = previousSensorIndex + 1; i < me.numTrainInGroup; i++) {
-                me.previousSensor[i - 1] = me.previousSensor[i];
-                me.previousSensorCount[i - 1]  = me.previousSensorCount[i];
-              }
-              me.previousSensorCount[MAX_PREVIOUS_SENSOR - 1] = 0;
-            }
-            me.numPreviousSensor--;
           }
         }
         if (initCounter == 2) {
@@ -289,10 +216,10 @@ void multitrain_driver() {
         break;
       } // case
       case INFO_UPDATE_NAGGER: {
-        DriverMsg msg;
-        msg.type = REPORT_INFO;
+        DriverMsg dMsg;
+        dMsg.type = REPORT_INFO;
         for (int i = 0; i < me.numTrainInGroup; i++) {
-          Send(me.trainId[i], (char *)&msg, sizeof(DriverMsg), (char*)&me.info[i], sizeof(DumbDriverInfo));
+          Send(me.trainId[i], (char *)&dMsg, sizeof(DriverMsg), (char*)&me.info[i], sizeof(DumbDriverInfo));
         }
 
         // check train's relative position difference
@@ -300,28 +227,41 @@ void multitrain_driver() {
           int distance = 0;
           TrackMsg tMsg;
           tMsg.type = QUERY_DISTANCE;
-          tMsg.position1 = me.info[i-1].pos;
-          tMsg.position2 = me.info[i].pos;
+          tMsg.position1 = me.info[i].pos;
+          tMsg.position2 = me.info[i-1].pos;
           Send(me.driver.trackManager, (char*)&tMsg, sizeof(TrackMsg), (char *)&distance, sizeof(int));
 
-          PrintDebug(me.driver.ui, "Updating");
           // This is pretty arbitrary now and needs tuning
-          if (distance > 2 * 16 + 5) {
-            PrintDebug(me.driver.ui, "Speeding up");
+          if (distance > 2 * 180 + 100 && me.info[i].trainSpeed < me.info[i-1].trainSpeed + 1 && me.info[i].trainSpeed < 14) {
+            PrintDebug(me.driver.ui, "Speeding up Distance: %d", distance);
             // too far, back train need to speed up
-            msg.type = SET_SPEED;
-            msg.data2 = me.info[i].trainSpeed + 1;
-            msg.data3 = -1;
-            Send(me.trainId[i], (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
-          } else if (distance < 2 * 16) {
+            dMsg.type = SET_SPEED;
+            dMsg.data2 = me.info[i].trainSpeed + 1;
+            dMsg.data3 = -1;
+            Send(me.trainId[i], (char*)&dMsg, sizeof(DriverMsg), (char*)1, 0);
+          } else if (distance < 2 * 180 && distance > 0 && me.info[i].trainSpeed > me.info[i-1].trainSpeed - 1 && me.info[i].trainSpeed > 0) {
             // too close, back train need to slow up
-            PrintDebug(me.driver.ui, "Slowing down");
+            PrintDebug(me.driver.ui, "Slowing down Distance %d", distance);
             // too far, back train need to speed up
-            msg.type = SET_SPEED;
-            msg.data2 = me.info[i].trainSpeed- 1;
-            msg.data3 = -1;
-            Send(me.trainId[i], (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
+            dMsg.type = SET_SPEED;
+            dMsg.data2 = me.info[i].trainSpeed - 1;
+            dMsg.data3 = -1;
+            Send(me.trainId[i], (char*)&dMsg, sizeof(DriverMsg), (char*)1, 0);
           }
+        }
+        break;
+      }
+      case UPDATE_PREDICTION: {
+        for (int i = 0; i < MAX_TRAIN_IN_GROUP; i++) {
+          if (actualMsg.data == me.trainId[i]) {
+            for (int j = 0; j < actualMsg.numSensors; j++) {
+              me.sensorToReserve[i][j] = actualMsg.sensors[j];
+            }
+            me.numSensorToReserve[i] = actualMsg.numSensors;
+          }
+        }
+        if (initCounter > 2) {
+          makeReservation(&me);
         }
         break;
       }
@@ -336,5 +276,4 @@ void multitrain_driver() {
   } // for
 }
 
-#include <DriverHelper.c>
-
+#include <DriverHelper.c> // Don't really need everything in there....
