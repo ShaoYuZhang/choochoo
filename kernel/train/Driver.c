@@ -317,7 +317,8 @@ static void initDriver(Driver* me, int firstTime) {
   me->trainNum = init.trainNum;
   me->uiMsg.nth = init.nth;
   me->uiMsg.trainNum = (char)init.trainNum;
-  me->com1 = init.com1;
+  char com1Name[] = IOSERVERCOM1_NAME;
+  me->com1 = WhoIs(com1Name);
   me->uiMsg.type = UPDATE_TRAIN;
 
   me->speed = 0;

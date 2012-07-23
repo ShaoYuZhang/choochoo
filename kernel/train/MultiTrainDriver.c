@@ -127,12 +127,10 @@ static void initDriver(MultiTrainDriver* me) {
   // Create dumb drivers
   me->numTrainInGroup = init.numTrain;
   for (int i = 0; i < me->numTrainInGroup; i++) {
-    me->trainId[i] = CreateDumbTrain(
-        init.nth+i, (int)init.trainNum[i], init.com1);
+    me->trainId[i] = CreateDumbTrain(init.nth+i, (int)init.trainNum[i]);
   }
 
   me->driver.trainNum = init.trainNum[0];
-  me->driver.com1 = init.com1;
 
   me->driver.speed = 0;
   me->driver.speedDir = ACCELERATE;

@@ -39,15 +39,22 @@ typedef struct DriverMsg {
 typedef struct DriverInitMsg {
   int nth;
   int trainNum;
-  int com1;
 } DriverInitMsg;
 
 typedef struct MultiTrainInitMsg {
   int nth;
   int trainNum[10];
   int numTrain;
-  int com1;
 } MultiTrainInitMsg;
+
+typedef struct MultiTrainState {
+  int nth;
+  int trainNum[10];
+  int numTrain;
+} MultiTrainState;
+
+
+
 
 int startDriverControllerTask();
 

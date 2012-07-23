@@ -49,8 +49,6 @@ static void trainController() {
 
   char uiName[] = UI_TASK_NAME;
   ui = WhoIs(uiName);
-  char com1Name[] = IOSERVERCOM1_NAME;
-  int com1 = WhoIs(com1Name);
 
   char timename[] = TIMESERVER_NAME;
   int timeserver = WhoIs(timename);
@@ -146,7 +144,6 @@ static void trainController() {
       init.trainNum[0] = (int)msg.trainNum;
       init.trainNum[1] = (int)msg.data2;
       init.numTrain = 2;
-      init.com1 = com1;
       // Create train task
       // TODO doesn't generalize if train is already inited
       trainTid[(int)msg.trainNum] = Create(4, multitrain_driver);
@@ -160,7 +157,6 @@ static void trainController() {
           DriverInitMsg init;
           init.nth = nth;
           init.trainNum = (int)msg.trainNum;
-          init.com1 = com1;
           // Create train task
           trainTid[(int)msg.trainNum] = Create(4, driver);
           Send(trainTid[(int)msg.trainNum],
