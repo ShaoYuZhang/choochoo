@@ -48,11 +48,13 @@ static void trainSetSpeed(const int speed, const int stopTime, const int delayer
 }
 
 static int makeReservation(MultiTrainDriver* me) {
+  int isStationary = me->stoppedCount == me->numTrainInGroup;
   TrackLandmark sensors[MAX_TRAIN_IN_GROUP * 10];
   int sensorIndex = 0;
   // bad merging code here
   for (int i = 0; i < me->numTrainInGroup; i++) {
-    for (int j = 0; j < me->numSensorToReserve[i]; j++) {
+    int numSensor = isStationary ? 1 : me->numSensorToReserve[i];
+    for (int j = 0; j < numSensor; j++) {
       int isInQueue = 1;
       for (int k = 0; k < sensorIndex; k++) {
         if (sensors[k].type == me->sensorToReserve[i][j].type &&
@@ -143,6 +145,7 @@ static void initDriver(MultiTrainDriver* me) {
   //me->driver.navigateNagger = Create(2, trainNavigateNagger);
 
   me->driver.routeRemaining = -1;
+  me->stoppedCount = 0;
 }
 
 void dumbDriverInfoUpdater() {
@@ -177,6 +180,18 @@ void multitrain_driver() {
     switch( msg->type) {
       case SET_SPEED: {
         Reply(replyTid, (char*)1, 0);
+        if (msg->data2 == -1) {
+          // make every train stop and wait for there stop response
+          msg->data2 = 0;
+          me.isReversing = 1;
+          me.speedAfterReverse = me.info[0].trainSpeed;
+        }
+
+        if (msg->data2 != -1 && msg->data2 != 0) {
+          // everyone is moving again
+          me.stoppedCount = 0;
+        }
+
         // TODO(rcao) may only want to send to head train and tail trains coorperate
         for (int i = 0; i < me.numTrainInGroup; i++) {
           Send(me.trainId[i], (char *)msg, sizeof(DriverMsg), (char*)1, 0);
@@ -253,6 +268,49 @@ void multitrain_driver() {
         }
         if (initCounter > 2) {
           makeReservation(&me);
+        }
+        break;
+      }
+      case STOP_COMPLETED : {
+        me.stoppedCount++;
+        if (me.stoppedCount == me.numTrainInGroup) {
+          makeReservation(&me);
+          if (me.isReversing) {
+            // flip the heads and tails of everythingggg
+            for (int i = 0; i < me.numTrainInGroup / 2; i++) {
+              int tempTrainId = me.trainId[i];
+              DumbDriverInfo tempInfo = me.info[i];
+              TrackLandmark tempSensorToReserve[10];
+              for (int j = 0; j < 10; j++) {
+                tempSensorToReserve[j] = me.sensorToReserve[i][j];
+              }
+              int tempNumSensorToReserve = me.numSensorToReserve[i];
+
+              int dest = me.numTrainInGroup - i - 1;
+              me.trainId[i] = me.trainId[dest];
+              me.info[i] = me.info[dest];
+              for (int j = 0; j < 10; j++) {
+                me.sensorToReserve[i][j] = me.sensorToReserve[dest][j];
+              }
+              me.numSensorToReserve[i] = me.numSensorToReserve[dest];
+
+              me.trainId[dest] = tempTrainId;
+              me.info[dest] = tempInfo;
+              for (int j = 0; j < 10; j++) {
+                me.sensorToReserve[dest][j] = tempSensorToReserve[j];
+              }
+              me.numSensorToReserve[dest] = tempNumSensorToReserve;
+            }
+
+            DriverMsg dMsg;
+            dMsg.type = REVERSE_SPEED;
+            dMsg.data2 = me.speedAfterReverse;
+            // inform everyone to reverse now
+            for (int i = 0; i < me.numTrainInGroup; i++) {
+              Send(me.trainId[i], (char *)&dMsg, sizeof(DriverMsg), (char *)NULL, 0);
+            }
+            me.isReversing = 0;
+          }
         }
         break;
       }

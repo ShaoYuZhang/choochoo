@@ -11,6 +11,7 @@ typedef struct DumbDriver {
   int multiTrainController;
   int timeserver;
   int delayer;
+  int stopDelayer;
   int ui;
   int com1;
   int trackManager;

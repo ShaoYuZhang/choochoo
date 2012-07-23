@@ -86,6 +86,43 @@ static void dumbDriverCourier() {
   }
 }
 
+static void updatePrediction(DumbDriver* me) {
+  int now = Time(me->timeserver) * 10;
+  TrackNextSensorMsg trackMsg;
+  TrackMsg qMsg;
+  qMsg.type = QUERY_NEXT_SENSOR_FROM_POS;
+  toPosition(me, &qMsg.position1);
+  Send(me->trackManager, (char*)&qMsg, sizeof(TrackMsg),
+        (char*)&trackMsg, sizeof(TrackNextSensorMsg));
+
+  for (int i = 0; i < trackMsg.numPred; i++) {
+    me->predictions[i] = trackMsg.predictions[i];
+  }
+  me->numPredictions = trackMsg.numPred;
+  for (int i = 0; i < trackMsg.numPred; i++) {
+    TrackSensorPrediction prediction = trackMsg.predictions[i];
+  }
+
+  TrackSensorPrediction primaryPrediction = trackMsg.predictions[0];
+  me->distanceToNextSensor = primaryPrediction.dist;
+  if (primaryPrediction.sensor.type != LANDMARK_SENSOR &&
+      primaryPrediction.sensor.type != LANDMARK_END) {
+    TrainDebug(me, "QUERY_NEXT_SENSOR_FROM_SENSOR ..bad %d", primaryPrediction.sensor.type);
+  }
+  me->nextSensorIsTerminal = (primaryPrediction.sensor.type == LANDMARK_END);
+
+  if (primaryPrediction.sensor.num2 != 0) {
+    me->nextSensorBox = primaryPrediction.sensor.num1;
+    me->nextSensorVal = primaryPrediction.sensor.num2;
+  } else {
+    //TrainDebug(me, "No prediction.. has position");
+    //printLandmark(me, &qMsg.position1.landmark1);
+    //printLandmark(me, &qMsg.position1.landmark2);
+    //TrainDebug(me, "Offset %d", qMsg.position1.offset);
+  }
+  sendUiReport(me);
+  updateParentAboutPrediction(me);
+}
 
 static void initDriver(DumbDriver* me) {
   char uiName[] = UI_TASK_NAME;
@@ -120,6 +157,7 @@ static void initDriver(DumbDriver* me) {
   me->lastSensorDistanceError = 0;
 
   me->delayer = Create(1, trainDelayer);
+  me->stopDelayer = Create(1, trainStopDelayer);
   me->navigateNagger = Create(2, trainNavigateNagger);
   me->courier = Create(2, dumbDriverCourier);
 
@@ -217,7 +255,7 @@ static void dynamicCalibration(DumbDriver* me) {
 }
 
 static void trainSetSpeed(
-    const int speed, const int stopTime, const int delayer, DumbDriver* me) {
+    const int speed, const int stopTime, const int reverse, DumbDriver* me) {
   char msg[4];
   msg[1] = (char)me->trainNum;
 
@@ -254,7 +292,7 @@ static void trainSetSpeed(
   TrainDebug(me, "Train Setting Speed %d", speed);
 
   if (speed >= 0) {
-    if (delayer) {
+    if (reverse) {
       TrainDebug(me, "Reversing speed.------- %d", speed);
       msg[0] = 0xf;
       msg[1] = (char)me->trainNum;
@@ -296,14 +334,16 @@ static void trainSetSpeed(
         me->nextSensorIsTerminal = me->lastSensorIsTerminal;
         me->lastSensorIsTerminal = isTemp;
       }
+
+      updatePrediction(me);
     } else {
       //TrainDebug(me, "Set speed. %d %d", speed, me->trainNum);
       msg[0] = (char)speed;
       Putstr(me->com1, msg, 2);
-      //if (speed == 0) {
-      //  int delayTime = stopTime + 500;
-      //  Reply(me->stopDelayer, (char*)&delayTime, 4);
-      //}
+      if (speed == 0) {
+        int delayTime = stopTime + 500;
+        Reply(me->stopDelayer, (char*)&delayTime, 4);
+      }
     }
     if (speed > me->speed) {
       me->speedDir = ACCELERATE;
@@ -311,26 +351,6 @@ static void trainSetSpeed(
       me->speedDir = DECELERATE;
     }
     me->speed = speed;
-  } else {
-    //TrainDebug(me, "Reverse... %d ", me->speed);
-    DriverMsg delayMsg;
-    delayMsg.type = SET_SPEED;
-    delayMsg.timestamp = stopTime + 500;
-    if (me->speedAfterReverse == -1) {
-      delayMsg.data2 = (signed char)me->speed;
-    } else {
-      delayMsg.data2 = (signed char)me->speedAfterReverse;
-    }
-    //TrainDebug(me, "Using delayer: %d for %d", me->delayer, stopTime);
-
-    Reply(me->delayer, (char*)&delayMsg, sizeof(DriverMsg));
-
-    msg[0] = 0;
-    msg[1] = (char)me->trainNum;
-
-    Putstr(me->com1, msg, 2);
-    me->speed = 0;
-    me->speedDir = DECELERATE;
   }
 }
 
@@ -353,10 +373,26 @@ void dumb_driver() {
         //TrainDebug(&me, "Set speed from msg");
         trainSetSpeed(msg.data2,
                       getStoppingTime(&me),
-                      (msg.data3 == DELAYER),
+                      0,
                       &me);
-        if (msg.data3 != DELAYER) {
-          Reply(tid, (char*)1, 0);
+        Reply(tid, (char*)1, 0);
+        break;
+      }
+      case REVERSE_SPEED: {
+        // reverse and then set speed to msg.data2
+        trainSetSpeed(msg.data2,
+                      getStoppingTime(&me),
+                      1,
+                      &me);
+        Reply(tid, (char*)1, 0);
+        break;
+      }
+      case STOP_DELAYER: {
+        // To prevent the first receive from this delayer
+        if (me.lastSensorActualTime > 0 && me.speed == 0 && !me.isAding) {
+          MultiTrainDriverMsg msg;
+          msg.type = STOP_COMPLETED;
+          Reply(me.courier, (char *)&msg, sizeof(MultiTrainDriverMsg));
         }
         break;
       }
@@ -401,6 +437,9 @@ void dumb_driver() {
         }
 
         if (sensorReportValid) {
+          int reportHandled = 1;
+          Reply(tid, (char*)&reportHandled, sizeof(int));
+
           me.lastSensorBox = msg.data2; // Box
           me.lastSensorVal = msg.data3; // Val
           me.lastSensorIsTerminal = 0;
@@ -439,8 +478,6 @@ void dumb_driver() {
 
           updatePosition(&me, msg.timestamp);
           sendUiReport(&me);
-          int reportHandled = 1;
-          Reply(tid, (char*)&reportHandled, sizeof(int));
         } else {
           int reportHandled = 0;
           Reply(tid, (char*)&reportHandled, sizeof(int));
@@ -448,10 +485,9 @@ void dumb_driver() {
         break;
       }
       case NAVIGATE_NAGGER: {
+        Reply(tid, (char*)1, 0);
         updatePosition(&me, msg.timestamp);
         if ((++naggCount & 15) == 0) sendUiReport(&me);
-        Reply(tid, (char*)1, 0);
-
         break;
       }
       case FIND_POSITION: {

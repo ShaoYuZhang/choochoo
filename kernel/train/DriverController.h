@@ -22,6 +22,7 @@
 #define REPORT_INFO 16
 #define DRIVER_COURIER_INIT 17
 #define DRIVER_COURIER 18
+#define REVERSE_SPEED 19
 
 #include <UserInterface.h>
 #include <Track.h>

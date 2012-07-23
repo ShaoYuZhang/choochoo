@@ -10,6 +10,7 @@
 //Multi train driver msg types, start from 100
 #define INFO_UPDATE_NAGGER 100
 #define UPDATE_PREDICTION 101
+#define STOP_COMPLETED 102
 
 typedef struct MultiTrainDriver {
   // the single train driver side of multi-train driver,
@@ -18,8 +19,11 @@ typedef struct MultiTrainDriver {
 
   // The multi-train driver side
   int numTrainInGroup;
+  int isReversing;
+  int speedAfterReverse;
   int trainId[MAX_TRAIN_IN_GROUP];
   DumbDriverInfo info[MAX_TRAIN_IN_GROUP];
+  int stoppedCount;
 
   // an array of sensors to reserve for each train in group
   TrackLandmark sensorToReserve[MAX_TRAIN_IN_GROUP][10];
