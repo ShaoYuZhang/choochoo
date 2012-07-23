@@ -3,7 +3,7 @@
 #include <string.h>
 #include <IoHelper.h>
 
-#define NUM_TASK_NAMESERVER 20
+#define NUM_TASK_NAMESERVER 22
 #define MSG_LEN 31
 
 typedef struct Task {
@@ -33,10 +33,8 @@ static void nameserver_task() {
           found = i; break;
         }
       }
-      ASSERT(found != -1, "No task with name found.");
 
-      msg[0] = tasks[found].tid;
-
+      msg[0] = (found == -1) ? 0 : tasks[found].tid;
       Reply(tid, msg, 1);
     } else if (type == REGISTER_AS) {
       //bwprintf(COM2, "Registering %d with name %s \n", tid, msg);

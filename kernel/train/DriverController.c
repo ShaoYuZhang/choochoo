@@ -44,13 +44,13 @@ static void trainController() {
       if (msg.trainNum >= 35 && msg.trainNum <= 45) {
         if (trainTid[(int)msg.trainNum] == -1) {
           trainTid[(int)msg.trainNum] =
-            createMultitrainDriver(nth, msg.trainNum, -1);
+            createMultitrainDriver(nth, msg.trainNum);
           nth++;
         }
 
+        msg.replyTid = (char)tid;
         // Pass the message on.
         Send(trainTid[(int)msg.trainNum], (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
-        Reply(tid, (char*)1, 0);
       }
       else {
         PrintDebug(ui, "Bad train num %d", msg.trainNum);
@@ -68,14 +68,29 @@ void DoPositionFinding(int controllerTid, int trainNum) {
 }
 
 void DoTrainMerge(int controllerTid, int headTrainNum, int tailTrainNum) {
-  // Tell tail train num to pass hkj
+  int headTid = WhoIsMulti(headTrainNum);
+  int tailTid = WhoIsMulti(tailTrainNum);
+  if (headTid == 0) {
+    PrintDebug(ui, "Train %d was not registered.", headTrainNum);
+  } else if (tailTid == 0) {
+    PrintDebug(ui, "Train %d was not registered.", tailTrainNum);
+  }
+  PrintDebug(ui, "Train %d was registered.", headTid);
+  PrintDebug(ui, "Train %d was registered.", tailTid);
+
+  // Tell tail train to enter courier mode between dumb train and multi-train
   DriverMsg msg;
-  msg.type = MERGE;
+  msg.type = MERGE_TAIL;
+  msg.trainNum = tailTrainNum;
+  msg.data2 = headTid;
+  Send(controllerTid, (char*)&msg, sizeof(DriverMsg), (char *)NULL, 0);
+
+  // Notify head train about new tail.
+  msg.type = MERGE_HEAD;
   msg.trainNum = headTrainNum;
-  msg.data2 = tailTrainNum;
+  msg.data2 = tailTid;
   Send(controllerTid, (char*)&msg, sizeof(DriverMsg), (char *)NULL, 0);
 }
-
 
 void BroadcastLost(int controllerTid) {
   PrintDebug(ui, "Broadcast lost DISABLED");

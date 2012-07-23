@@ -25,9 +25,12 @@ typedef struct MultiTrainDriver {
   DumbDriverInfo info[MAX_TRAIN_IN_GROUP];
   int stoppedCount;
 
-  // an array of sensors to reserve for each train in group
+  // An array of sensors to reserve for each train in group
   TrackLandmark sensorToReserve[MAX_TRAIN_IN_GROUP][10];
   int numSensorToReserve[MAX_TRAIN_IN_GROUP];
+
+  int tailMode;
+  int headTid;
 } MultiTrainDriver;
 
 typedef struct MultiTrainDriverMsg {
@@ -41,6 +44,9 @@ typedef struct MultiTrainDriverMsg {
 
 void dumb_driver();
 
-int createMultitrainDriver(int nth, int trainNum, int trainNum2);
+int createMultitrainDriver(int nth, int trainNum);
+
+void RegisterMulti(int trainNum);
+int  WhoIsMulti(int trainNum);
 
 #endif

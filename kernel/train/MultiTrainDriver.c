@@ -45,10 +45,27 @@ static int getVelocity(Driver* me) {
 }
 
 static void trainSetSpeed(const int speed, const int stopTime, const int delayer, Driver* me) {
+}
 
+static void clearReservation(MultiTrainDriver* me) {
+  if (!me->tailMode) {
+    PrintDebug(me->driver.ui, "%d Cannot clear reservation in head mode", me->driver.trainNum);
+    return;
+  }
+  ReleaseOldAndReserveNewTrackMsg qMsg;
+  qMsg.type = RELEASE_ALL_RESERVATION;
+  qMsg.trainNum = me->driver.trainNum;
+
+  Send(me->driver.trackManager,
+      (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
+      (char*)1, 0);
 }
 
 static int makeReservation(MultiTrainDriver* me) {
+  if (me->tailMode) {
+    PrintDebug(me->driver.ui, "Cannot make reservation in tail mode");
+    return 0;
+  }
   int isStationary = me->stoppedCount == me->numTrainInGroup;
   TrackLandmark sensors[MAX_TRAIN_IN_GROUP * 10];
   int sensorIndex = 0;
@@ -84,7 +101,8 @@ static int makeReservation(MultiTrainDriver* me) {
 
   // reserveFailedlandmark is not really being used right now
   int len = Send(
-      me->driver.trackManager, (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
+      me->driver.trackManager,
+      (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
       (char*)&(me->driver.reserveFailedLandmark), sizeof(TrackLandmark));
   if (len > 0) {
     return RESERVE_FAIL;
@@ -97,6 +115,7 @@ static int makeReservation(MultiTrainDriver* me) {
 // copied from driver......
 // TODO, clean up of things this doesn't need
 static void initDriver(MultiTrainDriver* me) {
+
   char uiName[] = UI_TASK_NAME;
   me->driver.ui = WhoIs(uiName);
   me->driver.CC = 0;
@@ -127,9 +146,11 @@ static void initDriver(MultiTrainDriver* me) {
   Reply(me->driver.trainController, (char*)1, 0);
 
   // Create dumb drivers
+  me->tailMode = 0;
   me->numTrainInGroup = 1;
   me->trainId[0] = CreateDumbTrain(init.nth, (int)init.trainNum);
   me->driver.trainNum = init.trainNum;
+  RegisterMulti(init.trainNum);
 
   me->driver.speed = 0;
   me->driver.speedDir = ACCELERATE;
@@ -159,6 +180,12 @@ void dumbDriverInfoUpdater() {
   }
 }
 
+static void groupSetSpeed(MultiTrainDriver* me, DriverMsg* msg) {
+  for (int i = 0; i < me->numTrainInGroup; i++) {
+    Send(me->trainId[i], (char *)msg, sizeof(DriverMsg), (char*)1, 0);
+  }
+}
+
 void multitrain_driver() {
   MultiTrainDriver me;
 
@@ -167,14 +194,17 @@ void multitrain_driver() {
   for (;;) {
     int tid = -1;
     MultiTrainDriverMsg actualMsg;
-    DriverMsg *msg = (DriverMsg *)&actualMsg;
+    DriverMsg* msg = (DriverMsg*)&actualMsg;
     Receive(&tid, (char *)msg, sizeof(MultiTrainDriverMsg));
-    if (tid != me.driver.delayer && tid != me.driver.stopDelayer) {
+    if (tid != me.driver.delayer && tid != me.driver.stopDelayer && msg->type != REPORT_INFO) {
       Reply(tid, (char*)1, 0);
     }
 
     switch (msg->type) {
       case SET_SPEED: {
+        // Head train replies.
+        if (!me.tailMode) Reply(msg->replyTid, (char*)1, 0);
+
         Reply(replyTid, (char*)1, 0);
         if (msg->data2 == -1) {
           // make every train stop and wait for there stop response
@@ -189,12 +219,12 @@ void multitrain_driver() {
         }
 
         // TODO(rcao) may only want to send to head train and tail trains coorperate
-        for (int i = 0; i < me.numTrainInGroup; i++) {
-          Send(me.trainId[i], (char *)msg, sizeof(DriverMsg), (char*)1, 0);
-        }
+        // NOTE:zhang MERGE_TAIL mode should be in sync with here.
+        groupSetSpeed(&me, msg);
         break;
       }
       case SENSOR_TRIGGER: {
+        if (me.tailMode) break;
         int isSensorReserved = QueryIsSensorReserved(&me.driver, msg->data2, msg->data3);
         if (isSensorReserved) {
           // sensor is reserved
@@ -210,10 +240,14 @@ void multitrain_driver() {
         break;
       } // case
       case INFO_UPDATE_NAGGER: {
+        if (me.tailMode) break;
+
         DriverMsg dMsg;
         dMsg.type = REPORT_INFO;
         for (int i = 0; i < me.numTrainInGroup; i++) {
-          Send(me.trainId[i], (char *)&dMsg, sizeof(DriverMsg), (char*)&me.info[i], sizeof(DumbDriverInfo));
+          Send(me.trainId[i],
+              (char *)&dMsg, sizeof(DriverMsg),
+              (char*)&me.info[i], sizeof(DumbDriverInfo));
         }
 
         // check train's relative position difference
@@ -246,6 +280,12 @@ void multitrain_driver() {
         break;
       }
       case UPDATE_PREDICTION: {
+        if (me.tailMode) {
+          Send(me.headTid,
+              (char*)&actualMsg, sizeof(MultiTrainDriverMsg), (char*)1, 0);
+          break;
+        }
+
         for (int i = 0; i < MAX_TRAIN_IN_GROUP; i++) {
           if (actualMsg.data == me.trainId[i]) {
             for (int j = 0; j < actualMsg.numSensors; j++) {
@@ -304,16 +344,21 @@ void multitrain_driver() {
         break;
       }
       case NAVIGATE_NAGGER: {
-
         // TODO
         break;
       }
       case FIND_POSITION: {
+        if (me.tailMode) {
+          PrintDebug(me.driver.ui, "find position while merge????");
+          break;
+        }
+
         PrintDebug(me.driver.ui, "Train locking %d", me.driver.trainNum);
         // Only 1 train can lock at the same time.
         lock(me.driver.timeserver);
         // begin finding position in a slow speed
         DumbTrainSetSpeed(me.trainId[0], 5);
+        int replyTid = msg->replyTid;
         for (;;) {
           Receive(&tid, (char*)msg, sizeof(MultiTrainDriverMsg));
           Reply(tid, (char*)1, 0);
@@ -327,20 +372,60 @@ void multitrain_driver() {
         }
         Create(3, dumbDriverInfoUpdater);
         unlock();
+        Reply(replyTid, (char*)1, 0);
         break;
       }
-      case MERGED: {
-        // Enters courier mode that passes dumb_train msg to 'real' controller
-        // TODO
-        for (;;) {
-          Receive(&tid, (char *)msg, sizeof(MultiTrainDriverMsg));
-          if (tid != me.driver.delayer && tid != me.driver.stopDelayer) {
-            Reply(tid, (char*)1, 0);
-          }
+      case MERGE_HEAD: {
+        PrintDebug(me.driver.ui, "merge head");
+        if (me.tailMode) {
+          PrintDebug(me.driver.ui, "Cannot be a head when in tail mode??");
+          break;
         }
+        // Other train controller's id.
+        me.trainId[me.numTrainInGroup] = msg->data2;
+        me.numTrainInGroup++;
+        Reply(msg->replyTid, (char*)1, 0);
+        PrintDebug(me.driver.ui, "merge head done");
+        break;
+      }
+      case MERGE_TAIL: {
+        PrintDebug(me.driver.ui, "merge tail begin");
+        if (me.tailMode) {
+          PrintDebug(me.driver.ui, "Double merge tail??");
+          break;
+        }
+        // Enters courier mode that passes dumb_train msg to 'real' controller
+        me.tailMode = 1;
+        me.headTid = msg->data2;
+        clearReservation(&me);
+        Reply(msg->replyTid, (char*)1, 0);
+        PrintDebug(me.driver.ui, "merge tail done");
+        break;
+      }
+      case SEPARATE_TAIL: {
+        if (!me.tailMode) {
+          PrintDebug(me.driver.ui, "Not in tail mode..??"); break;
+        }
+        me.tailMode = 0;
+        me.headTid = 0;
+        // TODO, behaviour is not clearly defined yet.
+        // reserve my own track and prediction??
+        break;
+      }
+      case REPORT_INFO: {
+        if (!me.tailMode) {
+          PrintDebug(me.driver.ui, "Report info Not in tail mode..??"); break;
+        }
+
+        // ASSUME ONLY 1 train when in tail mode.
+        Send(me.trainId[0], (char*)msg, sizeof(DriverMsg),
+            (char*)&me.info[0], sizeof(DumbDriverInfo));
+        // Reply the head that made query.
+        Reply(me.headTid, (char*)&me.info[0], sizeof(DumbDriverInfo));
+        break;
       }
       default: {
-        PrintDebug(me.driver.ui, "Not Handled");
+        PrintDebug(me.driver.ui, "Not Handled %d", msg->type);
       }
     } // switch
   } // for
@@ -348,15 +433,28 @@ void multitrain_driver() {
 
 #include <DriverHelper.c> // Don't really need everything in there....
 
-
-int createMultitrainDriver(int nth, int trainNum, int trainNum2) {
+int createMultitrainDriver(int nth, int trainNum) {
   MultiTrainInitMsg init;
   init.nth = nth;
   init.trainNum = trainNum;
 
   // Create train task
-  // TODO doesn't generalize if train is already inited
   int tid = Create(4, multitrain_driver);
   Send(tid, (char*)&init, sizeof(MultiTrainInitMsg), (char*)1, 0);
   return tid;
+}
+
+
+void RegisterMulti(int trainNum){
+  char name[] = MULTI_TRAIN_NAME;
+  name[3] = '0'+trainNum/10;
+  name[4] = '0'+trainNum%10;
+  RegisterAs(name);
+}
+
+int WhoIsMulti(int trainNum) {
+  char name[] = MULTI_TRAIN_NAME;
+  name[3] = '0'+trainNum/10;
+  name[4] = '0'+trainNum%10;
+  return WhoIs(name);
 }

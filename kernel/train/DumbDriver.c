@@ -535,7 +535,7 @@ void dumb_driver() {
         break;
       }
       default: {
-        TrainDebug(&me, "Not suppported train message type.");
+        TrainDebug(&me, "Message type %d to dumb train??", msg.type);
       }
     }
   }

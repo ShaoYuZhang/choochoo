@@ -240,7 +240,6 @@ static void decodeCommand() {
     DoPositionFinding(trainController, train_number2);
     // Train1 is head, train2 is new tail
     DoTrainMerge(trainController, train_number1, train_number2);
-
   } else {
     PrintDebug(ui, "Bad: %s", decoderBuffer);
   }

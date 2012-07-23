@@ -703,6 +703,14 @@ static void trackController() {
     int tid = -1;
     Receive(&tid, (char*)msg, sizeof(ReleaseOldAndReserveNewTrackMsg));
     switch (msg->type) {
+      case RELEASE_ALL_RESERVATION: {
+        // Clear the train's previous reservation
+        for (int j = 0; j < TRACK_MAX +4; j++) {
+          clearNodeReservation(&track[j], actualMsg.trainNum);
+        }
+        Reply(tid, (char*)1, 0);
+        break;
+      }
       case RELEASE_OLD_N_RESERVE_NEW: {
         reserveFailNode = (track_node*)-1;
         track_node* start = findNode(track, actualMsg.lastSensor);
