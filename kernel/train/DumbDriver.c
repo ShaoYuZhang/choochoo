@@ -96,7 +96,8 @@ static void initDriver(DumbDriver* me) {
 
   me->nextSensorIsTerminal = 0;
   me->lastSensorIsTerminal = 0;
-  me->lastSensorVal = 0; // NOte to ui to don't print sensor.
+  me->lastSensorBox = 0;
+  me->lastSensorVal = 0; // Note to ui to don't print sensor.
 
   char timename[] = TIMESERVER_NAME;
   me->timeserver = WhoIs(timename);
@@ -353,7 +354,9 @@ void dumb_driver() {
                       getStoppingTime(&me),
                       (msg.data3 == DELAYER),
                       &me);
-        Reply(tid, (char*)1, 0);
+        if (msg.data3 != DELAYER) {
+          Reply(tid, (char*)1, 0);
+        }
         break;
       }
       case DELAYER: {

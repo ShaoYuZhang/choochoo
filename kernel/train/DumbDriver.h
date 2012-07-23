@@ -20,7 +20,6 @@ typedef struct DumbDriver {
   int lastPosUpdateTime;
   int calibrationStart;
   int calibrationDistance;
-
   int speedAfterReverse;
 
   // Actual Stuf
