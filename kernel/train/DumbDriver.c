@@ -479,3 +479,16 @@ void dumb_driver() {
     }
   }
 }
+
+
+int CreateDumbTrain(int nth, int trainNum, int com1) {
+  DriverInitMsg dumbInit;
+  dumbInit.nth = nth;
+  dumbInit.trainNum = trainNum;
+  dumbInit.com1 = com1;
+
+  // Create train task
+  int tid = Create(4, dumb_driver);
+  Send(tid, (char*)&dumbInit, sizeof(DriverInitMsg), (char*)1, 0);
+  return tid;
+}

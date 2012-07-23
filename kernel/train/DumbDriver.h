@@ -66,4 +66,6 @@ typedef struct DumbDriverInfo {
   Position pos;
 } DumbDriverInfo;
 
+int CreateDumbTrain(int nth, int trainNum, int com1);
+
 #endif // DUMB_DRIVER_H_
