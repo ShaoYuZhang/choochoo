@@ -10,6 +10,7 @@
 #include <Track.h>
 #include <MultiTrainDriver.h>
 #include <DumbDriver.h>
+#include <Lock.h>
 
 static void printLandmark(Driver* me, TrackLandmark* l);
 static void trainDelayer();
@@ -110,7 +111,6 @@ static void initDriver(MultiTrainDriver* me) {
   me->driver.stopCommited = 0; // haven't enabled speed zero yet.
   me->driver.useLastSensorNow = 0;
   me->driver.stopNow = 0;
-  me->driver.positionFinding = 0;
   me->driver.currentlyLost = 0;
   me->driver.testMode = 0;
   me->driver.stopSensorHit = 0;
@@ -127,12 +127,9 @@ static void initDriver(MultiTrainDriver* me) {
   Reply(me->driver.trainController, (char*)1, 0);
 
   // Create dumb drivers
-  me->numTrainInGroup = init.numTrain;
-  for (int i = 0; i < me->numTrainInGroup; i++) {
-    me->trainId[i] = CreateDumbTrain(init.nth+i, (int)init.trainNum[i]);
-  }
-
-  me->driver.trainNum = init.trainNum[0];
+  me->numTrainInGroup = 1;
+  me->trainId[0] = CreateDumbTrain(init.nth, (int)init.trainNum);
+  me->driver.trainNum = init.trainNum;
 
   me->driver.speed = 0;
   me->driver.speedDir = ACCELERATE;
@@ -176,8 +173,7 @@ void multitrain_driver() {
       Reply(tid, (char*)1, 0);
     }
 
-    const int replyTid = msg->replyTid;
-    switch( msg->type) {
+    switch (msg->type) {
       case SET_SPEED: {
         Reply(replyTid, (char*)1, 0);
         if (msg->data2 == -1) {
@@ -199,25 +195,17 @@ void multitrain_driver() {
         break;
       }
       case SENSOR_TRIGGER: {
-        if (initCounter < 2) {
-          Send(me.trainId[initCounter], (char*)msg, sizeof(DriverMsg), (char *)NULL, 0);
-          initCounter++;
-        } else {
-          int isSensorReserved = QueryIsSensorReserved(&me.driver, msg->data2, msg->data3);
-          if (isSensorReserved) {
-            // sensor is reserved
-            for (int i = 0; i < me.numTrainInGroup; i ++) {
-              int isHandled = 0;
-              Send(me.trainId[i], (char*)msg, sizeof(DriverMsg), (char *)&isHandled, sizeof(int));
-              if (isHandled) {
-                break;
-              }
+        int isSensorReserved = QueryIsSensorReserved(&me.driver, msg->data2, msg->data3);
+        if (isSensorReserved) {
+          // sensor is reserved
+          for (int i = 0; i < me.numTrainInGroup; i ++) {
+            int isHandled = 0;
+            Send(me.trainId[i],
+                (char*)msg, sizeof(DriverMsg), (char *)&isHandled, sizeof(int));
+            if (isHandled) {
+              break;
             }
           }
-        }
-        if (initCounter == 2) {
-          Create(3, dumbDriverInfoUpdater);
-          initCounter++; // hacks
         }
         break;
       } // case
@@ -266,9 +254,7 @@ void multitrain_driver() {
             me.numSensorToReserve[i] = actualMsg.numSensors;
           }
         }
-        if (initCounter > 2) {
-          makeReservation(&me);
-        }
+        makeReservation(&me);
         break;
       }
       case STOP_COMPLETED : {
@@ -318,14 +304,59 @@ void multitrain_driver() {
         break;
       }
       case NAVIGATE_NAGGER: {
+
         // TODO
         break;
       }
+      case FIND_POSITION: {
+        PrintDebug(me.driver.ui, "Train locking %d", me.driver.trainNum);
+        // Only 1 train can lock at the same time.
+        lock(me.driver.timeserver);
+        // begin finding position in a slow speed
+        DumbTrainSetSpeed(me.trainId[0], 5);
+        for (;;) {
+          Receive(&tid, (char*)msg, sizeof(MultiTrainDriverMsg));
+          Reply(tid, (char*)1, 0);
+          if (msg->type == SENSOR_TRIGGER) {
+            Send(me.trainId[0], (char*)msg,
+                sizeof(DriverMsg), (char*)NULL, 0);
+            DumbTrainSetSpeed(me.trainId[0], 0);
+            break;
+          }
+          PrintDebug(me.driver.ui, "WARNN Drop %d", msg->type);
+        }
+        Create(3, dumbDriverInfoUpdater);
+        unlock();
+        break;
+      }
+      case MERGED: {
+        // Enters courier mode that passes dumb_train msg to 'real' controller
+        // TODO
+        for (;;) {
+          Receive(&tid, (char *)msg, sizeof(MultiTrainDriverMsg));
+          if (tid != me.driver.delayer && tid != me.driver.stopDelayer) {
+            Reply(tid, (char*)1, 0);
+          }
+        }
+      }
       default: {
-        //PrintDebug(me.driver.ui, "Not Handled");
+        PrintDebug(me.driver.ui, "Not Handled");
       }
     } // switch
   } // for
 }
 
 #include <DriverHelper.c> // Don't really need everything in there....
+
+
+int createMultitrainDriver(int nth, int trainNum, int trainNum2) {
+  MultiTrainInitMsg init;
+  init.nth = nth;
+  init.trainNum = trainNum;
+
+  // Create train task
+  // TODO doesn't generalize if train is already inited
+  int tid = Create(4, multitrain_driver);
+  Send(tid, (char*)&init, sizeof(MultiTrainInitMsg), (char*)1, 0);
+  return tid;
+}

@@ -68,4 +68,6 @@ typedef struct DumbDriverInfo {
 
 int CreateDumbTrain(int nth, int trainNum);
 
+void DumbTrainSetSpeed(int tid, int speed);
+
 #endif // DUMB_DRIVER_H_

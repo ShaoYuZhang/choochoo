@@ -15,7 +15,7 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32 -mno-fpu
 	$(CC) $(CFLAGS) $*.c -o $@ $<
 
 OBJECTS = bwio.o memory.o kernel.o syscall.o Scheduler.o TaskQueue.o \
-					task/NameServer.o task/idle.o task/TimeServer.o task/IoServer.o task/IoBuffer.o task/IoHelper.o task/UserInterface.o task/SnakeDirector.o \
+					task/NameServer.o task/idle.o task/TimeServer.o task/IoServer.o task/IoBuffer.o task/IoHelper.o task/UserInterface.o task/SnakeDirector.o  task/Lock.o \
 					train/Driver.o train/CommandDecoder.o train/Sensor.o train/Poly.o train/DriverController.o train/RandomController.o train/DumbDriver.o train/MultiTrainDriver.o \
 					track/Track.o track/track_data.o train/CalibrationData.o 
 

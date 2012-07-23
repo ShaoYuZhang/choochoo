@@ -739,5 +739,5 @@ static void userInterface() {
 int startUserInterfaceTask() {
   numUpdated = 0;
   debugUpdateNum = 0;
-  return Create(11, userInterface);
+  return Create(3, userInterface);
 }

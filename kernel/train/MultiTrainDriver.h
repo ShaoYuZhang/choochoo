@@ -41,4 +41,6 @@ typedef struct MultiTrainDriverMsg {
 
 void dumb_driver();
 
+int createMultitrainDriver(int nth, int trainNum, int trainNum2);
+
 #endif

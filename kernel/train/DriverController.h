@@ -44,8 +44,7 @@ typedef struct DriverInitMsg {
 
 typedef struct MultiTrainInitMsg {
   int nth;
-  int trainNum[10];
-  int numTrain;
+  int trainNum;
 } MultiTrainInitMsg;
 
 typedef struct MultiTrainState {
@@ -64,5 +63,8 @@ void FinishPositionFinding(int trainNum, int controllerTid);
 
 void driver();
 void multitrain_driver();
+
+void DoPositionFinding(int controllerTid, int trianNum);
+void DoTrainMerge(int controllerTid, int headTrainNum, int tailTrainNum);
 
 #endif // DRIVER_CONTROLLER_

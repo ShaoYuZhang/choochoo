@@ -13,6 +13,7 @@
 #include <IoHelper.h>
 #include <RandomController.h>
 #include <SnakeDirector.h>
+#include <Lock.h>
 
 void test_track() {
 #if 0
@@ -101,6 +102,7 @@ void task1() {
   int randomController = startRandomTrainControllerTask();
   int snakeDirector = startSnakeDirectorTask();
   int decoder = startCommandDecoderTask();
+  int lock = startLockServiceTask();
   PrintDebug(ui, "Command Decoder tid:%d", decoder);
   PrintDebug(ui, "Snake tid%d", snakeDirector);
 

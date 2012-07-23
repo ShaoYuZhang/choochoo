@@ -46,20 +46,6 @@ static int getVelocity(Driver* me){
   }
 }
 
-static int isLost(Driver* me) {
-  if (me->currentlyLost != 1 &&
-      me->positionFinding == 0 &&
-      me->distanceFromLastSensor > me->distanceToLongestSecondary+100) {
-    TrainDebug(me, "I'm Lost... ");
-    //me->positionFinding = 1;
-    //me->routeRemaining = -1; // No more route following
-    //BroadcastLost(me->trainController);
-    me->currentlyLost = 1;
-    return 0;
-  }
-  return 1;
-}
-
 static int interpolateStoppingDistance(Driver* me, int velocity) {
   int speed = 14;
   float percentUp = -1.0;
@@ -414,7 +400,7 @@ void driver() {
         if (me.positionFinding) {
           sensorReportValid = 1;
           me.lastSensorUnexpected = 1;
-          FinishPositionFinding(me.trainNum, me.trainController);
+          //FinishPositionFinding(me.trainNum, me.trainController);
         } else if (isSensorReserved) {
           //TrainDebug(&me, "Predictions.");
           for (int i = 0; i < me.numPredictions; i ++) {

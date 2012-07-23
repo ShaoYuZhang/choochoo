@@ -83,13 +83,9 @@ static void decodeCommand() {
   } else if (decoderBuffer[0] == 'i' && decoderBuffer[1] == 'n') {
     char *temp = (char *)decoderBuffer + 5;
     int train_number = strgetui(&temp);
-
-    DriverMsg msg;
-    msg.type = FIND_POSITION;
-    msg.trainNum = train_number;
-    Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
+    DoPositionFinding(trainController, train_number);
   } else if (decoderBuffer[0] == 't' && decoderBuffer[1] == 's') {
-    char *temp = (char *)decoderBuffer + 3;
+    char *temp = (char*)decoderBuffer + 3;
 
     char letter = *temp++;
     int num = strgetui(&temp);
@@ -235,16 +231,16 @@ static void decodeCommand() {
     PrintDebug(ui, "Make sure first number is head, second number is tail");
     PrintDebug(ui, "Also make sure they are sufficiently close to each other");
     char *temp = (char *)decoderBuffer + 3;
-    int train_number = strgetui(&temp);
+    int train_number1 = strgetui(&temp);
     temp++;
     int train_number2 = strgetui(&temp);
     temp++;
 
-    DriverMsg msg;
-    msg.type = MERGE;
-    msg.trainNum = train_number;
-    msg.data2 = train_number2;
-    Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
+    DoPositionFinding(trainController, train_number1);
+    DoPositionFinding(trainController, train_number2);
+    // Train1 is head, train2 is new tail
+    DoTrainMerge(trainController, train_number1, train_number2);
+
   } else {
     PrintDebug(ui, "Bad: %s", decoderBuffer);
   }

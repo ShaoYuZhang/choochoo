@@ -59,6 +59,7 @@ static void printLandmark(DumbDriver* me, TrackLandmark* l) {
 static void updateParentAboutPrediction(DumbDriver* me) {
   MultiTrainDriverMsg msg;
   msg.type = UPDATE_PREDICTION;
+  msg.data = MyTid();
   msg.numSensors = me->numPredictions + 1;
   msg.sensors[0].type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
   msg.sensors[0].num1 = me->lastSensorBox;
@@ -100,7 +101,6 @@ static void dumbDriverCourier() {
   for (;;) {
     MultiTrainDriverMsg mMsg;
     Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)&mMsg, sizeof(mMsg));
-    mMsg.data = parent;
     Send(controllerId, (char*)&mMsg, sizeof(MultiTrainDriverMsg), (char *)1, 0);
   }
 }
@@ -551,4 +551,12 @@ int CreateDumbTrain(int nth, int trainNum) {
   int tid = Create(4, dumb_driver);
   Send(tid, (char*)&dumbInit, sizeof(DriverInitMsg), (char*)1, 0);
   return tid;
+}
+
+void DumbTrainSetSpeed(int tid, int speed) {
+  DriverMsg msg;
+  msg.type = SET_SPEED;
+  msg.data2 = speed;
+  msg.data3 = 0;
+  Send(tid, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
 }
