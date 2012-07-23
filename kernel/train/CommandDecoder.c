@@ -2,6 +2,7 @@
 #include <Driver.h>
 #include <IoHelper.h>
 #include <RandomController.h>
+#include <SnakeDirector.h>
 #include <Track.h>
 #include <IoServer.h>
 #include <NameServer.h>
@@ -23,6 +24,7 @@ static int sensorServer;
 static int timeServer;
 static int com2;
 static int ui;
+static int snakeDirector;
 
 // letter to A-E or X or N, doesn't support switches
 static TrackLandmark formLandmarkFromInput(char letter, int number) {
@@ -60,7 +62,25 @@ static void decodeCommand() {
   unsigned int shortEvalulation = (decoderCurrBufferPos <= 1);
   decoderCurrBufferPos = 0;
   if (shortEvalulation) return;
-  if (decoderBuffer[0] == 'i' && decoderBuffer[1] == 'n') {
+
+  if (decoderBuffer[0] == 'b' && decoderBuffer[1] == 'a') {
+    // Bait command
+    char *temp = (char *)decoderBuffer + 5;
+    int train_number = strgetui(&temp);
+
+    PrintDebug(ui, "Bait commnd for %d", train_number);
+    int ret = RegisterBait(snakeDirector, train_number);
+    PrintDebug(ui, "%d return", ret);
+
+  } else if (decoderBuffer[0] == 's' && decoderBuffer[2] == 'a') {
+    // Snake command
+    char *temp = (char*)decoderBuffer + 6;
+    int train_number = strgetui(&temp);
+
+    PrintDebug(ui, "Snake commnd for %d", train_number);
+    int ret = RegisterSnake(snakeDirector, train_number);
+    PrintDebug(ui, "%d return", ret);
+  } else if (decoderBuffer[0] == 'i' && decoderBuffer[1] == 'n') {
     char *temp = (char *)decoderBuffer + 5;
     int train_number = strgetui(&temp);
 
@@ -189,39 +209,6 @@ static void decodeCommand() {
     } else {
       Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
     }
-  } else if (decoderBuffer[0] == 'r' && decoderBuffer[1] == 'v') {
-    char *temp = (char *)decoderBuffer + 3;
-
-    int train_number = strgetui(&temp);
-    temp++;
-    int train_speed = 9;
-    if (*temp >= '0' && *temp <= '9'){
-      train_speed = strgetui(&temp);
-      temp++;
-    } else {
-      PrintDebug(ui, "Parse fail: %s", decoderBuffer);
-      return;
-    }
-    char letter;
-    int num;
-
-
-#if 0
-    letter = *temp++;
-    num = strgetui(&temp);
-    temp++;
-    Landmark land0 = formLandmarkFromInput(letter, num);
-
-    letter = *temp++;
-    num = strgetui(&temp);
-    temp++;
-    Landmark land1 = formLandmarkFromInput(letter, num);
-
-    ReleaseOldAndReserveNewTrackMsg qMsg;
-    qMsg.type = RELEASE_OLD_N_RESERVE_NEW;
-    qMsg.trainNum = train_number;
-    qMsg.stoppingDistance = 100;
-#endif
   } else if (decoderBuffer[0] == 'r' && decoderBuffer[1] == 's') {
     char *temp = (char*)decoderBuffer + 3;
 
@@ -279,6 +266,8 @@ static void commandDecoder() {
   sensorServer = WhoIs(sensorServerName);
   char timeServerName[] = TIMESERVER_NAME;
   timeServer = WhoIs(timeServerName);
+  char snakeDirectorName[] = SNAKE_DIRECTOR_NAME;
+  snakeDirector = WhoIs(snakeDirectorName);
 
   UiMsg msg;
   msg.type = PROMPT_CHAR;

@@ -12,6 +12,7 @@
 #include <Track.h>
 #include <IoHelper.h>
 #include <RandomController.h>
+#include <SnakeDirector.h>
 
 void test_track() {
 #if 0
@@ -98,8 +99,10 @@ void task1() {
   int trainController = startDriverControllerTask();
   int trackController = startTrackManagerTask();
   int randomController = startRandomTrainControllerTask();
+  int snakeDirector = startSnakeDirectorTask();
   int decoder = startCommandDecoderTask();
-  PrintDebug(ui, "%d", decoder);
+  PrintDebug(ui, "Command Decoder tid:%d", decoder);
+  PrintDebug(ui, "Snake tid%d", snakeDirector);
 
   //Create(20, test_track);
 
