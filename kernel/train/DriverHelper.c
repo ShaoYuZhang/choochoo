@@ -99,8 +99,10 @@ static void updatePrediction(Driver* me) {
     me->predictions[i] = trackMsg.predictions[i];
   }
   me->numPredictions = trackMsg.numPred;
+  TrainDebug(me, "Predictions. %d", trackMsg.numPred);
   for (int i = 0; i < trackMsg.numPred; i++) {
     TrackSensorPrediction prediction = trackMsg.predictions[i];
+    printLandmark(me, &prediction.sensor);
   }
 
   TrackSensorPrediction primaryPrediction = trackMsg.predictions[0];

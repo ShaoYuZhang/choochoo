@@ -310,6 +310,9 @@ void multitrain_driver() {
               Send(me.trainId[i], (char *)&dMsg, sizeof(DriverMsg), (char *)NULL, 0);
             }
             me.isReversing = 0;
+            if (me.speedAfterReverse != 0) {
+              me.stoppedCount = 0;
+            }
           }
         }
         break;

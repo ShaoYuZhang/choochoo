@@ -37,6 +37,25 @@ static void sendUiReport(DumbDriver* me) {
   Send(me->ui, (char*)&(me->uiMsg), sizeof(TrainUiMsg), (char*)1, 0);
 }
 
+static void printLandmark(DumbDriver* me, TrackLandmark* l) {
+  if (l->type == LANDMARK_SENSOR) {
+    TrainDebug(me, "Landmark Sn  %c%d",
+        'A' +l->num1, l->num2);
+  } else if (l->type == LANDMARK_END) {
+    TrainDebug(me, "Landmark %s %d",
+        l->num1 == EN ? "EN" : "EX",
+        l->num2);
+  } else if (l->type == LANDMARK_FAKE) {
+    TrainDebug(me, "Landmark Fake %d %d",
+        l->num1, l->num2);
+  } else if (l->type == LANDMARK_SWITCH) {
+    TrainDebug(me, "Landmark Switch Num:%d Type:%s",
+        l->num2, l->num1 == MR ? "MR" : "BR");
+  } else if (l->type == LANDMARK_BAD) {
+    //TrainDebug(me, "Landmark type: bad.");
+  }
+}
+
 static void updateParentAboutPrediction(DumbDriver* me) {
   MultiTrainDriverMsg msg;
   msg.type = UPDATE_PREDICTION;
@@ -99,8 +118,10 @@ static void updatePrediction(DumbDriver* me) {
     me->predictions[i] = trackMsg.predictions[i];
   }
   me->numPredictions = trackMsg.numPred;
+  TrainDebug(me, "Predictions. %d", trackMsg.numPred);
   for (int i = 0; i < trackMsg.numPred; i++) {
     TrackSensorPrediction prediction = trackMsg.predictions[i];
+    printLandmark(me, &prediction.sensor);
   }
 
   TrackSensorPrediction primaryPrediction = trackMsg.predictions[0];
