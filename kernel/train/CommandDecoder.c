@@ -227,17 +227,12 @@ static void decodeCommand() {
     msg.data2 = 8;
     Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
   } else if (decoderBuffer[0] == 'm' && decoderBuffer[1] == 'r') {
-    PrintDebug(ui, "For testing purpose");
-    PrintDebug(ui, "Make sure first number is head, second number is tail");
-    PrintDebug(ui, "Also make sure they are sufficiently close to each other");
     char *temp = (char *)decoderBuffer + 3;
     int train_number1 = strgetui(&temp);
     temp++;
     int train_number2 = strgetui(&temp);
     temp++;
 
-    DoPositionFinding(trainController, train_number1);
-    DoPositionFinding(trainController, train_number2);
     // Train1 is head, train2 is new tail
     DoTrainMerge(trainController, train_number1, train_number2);
   } else {

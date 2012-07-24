@@ -137,6 +137,7 @@ static void initDriver(MultiTrainDriver* me) {
   me->driver.lastSensorIsTerminal = 0;
   me->driver.lastSensorVal = 0; // Note to ui to don't print sensor.
   me->driver.setSwitchNaggerCount = 0;
+  me->isReversing = 0;
 
   char timename[] = TIMESERVER_NAME;
   me->driver.timeserver = WhoIs(timename);
@@ -196,25 +197,30 @@ void multitrain_driver() {
     MultiTrainDriverMsg actualMsg;
     DriverMsg* msg = (DriverMsg*)&actualMsg;
     Receive(&tid, (char *)msg, sizeof(MultiTrainDriverMsg));
-    if (tid != me.driver.delayer && tid != me.driver.stopDelayer && msg->type != REPORT_INFO) {
+    if (msg->type != REPORT_INFO) {
       Reply(tid, (char*)1, 0);
     }
 
     switch (msg->type) {
       case SET_SPEED: {
-        // Head train replies.
-        if (!me.tailMode) Reply(msg->replyTid, (char*)1, 0);
+        PrintDebug(me.driver.ui, "Set speed");
+        // Head train replied and calculate speed.
+        if (!me.tailMode) {
+          PrintDebug(me.driver.ui, "head mode");
+          Reply(msg->replyTid, (char*)1, 0);
+          if (msg->data2 == -1) {
+            // make every train stop and wait for there stop response
+            msg->data2 = 0;
+            me.isReversing = 1;
+            me.speedAfterReverse = me.info[0].trainSpeed;
+          }
 
-        if (msg->data2 == -1) {
-          // make every train stop and wait for there stop response
-          msg->data2 = 0;
-          me.isReversing = 1;
-          me.speedAfterReverse = me.info[0].trainSpeed;
-        }
-
-        if (msg->data2 != -1 && msg->data2 != 0) {
-          // everyone is moving again
-          me.stoppedCount = 0;
+          if (msg->data2 != -1 && msg->data2 != 0) {
+            // everyone is moving again
+            me.stoppedCount = 0;
+          }
+        } else  {
+          PrintDebug(me.driver.ui, "tail mode");
         }
 
         // TODO(rcao) may only want to send to head train and tail trains coorperate
@@ -364,7 +370,7 @@ void multitrain_driver() {
         lock(me.driver.timeserver);
         // begin finding position in a slow speed
         DumbTrainSetSpeed(me.trainId[0], 5);
-        int replyTid = msg->replyTid;
+        Reply(msg->replyTid, (char*)1, 0);
         for (;;) {
           Receive(&tid, (char*)msg, sizeof(MultiTrainDriverMsg));
           Reply(tid, (char*)1, 0);
@@ -378,7 +384,6 @@ void multitrain_driver() {
         }
         Create(3, dumbDriverInfoUpdater);
         unlock();
-        Reply(replyTid, (char*)1, 0);
         break;
       }
       case MERGE_HEAD: {
@@ -419,6 +424,7 @@ void multitrain_driver() {
         break;
       }
       case REPORT_INFO: {
+        //PrintDebug(me.driver.ui, "REPORTTTING FOR DUTY SIR");
         if (!me.tailMode) {
           PrintDebug(me.driver.ui, "Report info Not in tail mode..??"); break;
         }
