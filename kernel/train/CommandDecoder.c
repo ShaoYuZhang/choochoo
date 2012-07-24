@@ -126,12 +126,7 @@ static void decodeCommand() {
   } else if (decoderBuffer[0] == 'r' && decoderBuffer[1] == 'v') {
     char *temp = (char *)decoderBuffer + 3;
     int train_number = strgetui(&temp);
-
-    DriverMsg msg;
-    msg.type = SET_SPEED;
-    msg.trainNum = train_number;
-    msg.data2 = -1;
-    Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
+    ReverseTrain(trainController, train_number);
   } else if (decoderBuffer[0] == 's' && decoderBuffer[1] == 'w') {
     char *temp = (char *)decoderBuffer + 3;
     int switch_number = strgetui(&temp);

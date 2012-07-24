@@ -198,6 +198,7 @@ void multitrain_driver() {
     int tid = -1;
     MultiTrainDriverMsg actualMsg;
     DriverMsg* msg = (DriverMsg*)&actualMsg;
+    msg->data3 = 0;
     Receive(&tid, (char *)msg, sizeof(MultiTrainDriverMsg));
     if (msg->type != REPORT_INFO && msg->type !=  QUERY_STOP_COUNT && msg->type != MULTI_TRAIN_DRIVER_COURIER && msg->type != SENSOR_TRIGGER) {
       Reply(tid, (char*)1, 0);
@@ -277,11 +278,8 @@ void multitrain_driver() {
         // check train's relative position difference
         for (int i = 1; i < me.numTrainInGroup; i++) {
           int distance = 0;
-          TrackMsg tMsg;
-          tMsg.type = QUERY_DISTANCE;
-          tMsg.position1 = me.info[i].pos;
-          tMsg.position2 = me.info[i-1].pos;
-          Send(me.driver.trackManager, (char*)&tMsg, sizeof(TrackMsg), (char *)&distance, sizeof(int));
+          QueryDistance(me.driver.trackManager,
+              &me.info[i].pos, &me.info[i-1].pos, &distance);
 
           // This is pretty arbitrary now and needs tuning
           if (distance > 2 * 180 + 100 && me.info[i].trainSpeed < me.info[i-1].trainSpeed + 1 && me.info[i].trainSpeed < 14) {

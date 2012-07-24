@@ -937,9 +937,19 @@ void clearReservation(int trackManagerTid, int trainNum) {
       (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
       (char*)1, 0);
 }
+
+void QueryDistance(int trackTid, Position* pos1, Position* pos2, int* distance) {
+  TrackMsg tMsg;
+  tMsg.type = QUERY_DISTANCE;
+  tMsg.position1 = *pos1;
+  tMsg.position2 = *pos2;
+  Send(trackTid, (char*)&tMsg, sizeof(TrackMsg), (char*)distance, sizeof(int));
+}
+
 int startTrackManagerTask() {
   return Create(4, trackController);
 }
+
 
 #include <TrackHelper.c>
 #include <TrackPresetRoute.c>

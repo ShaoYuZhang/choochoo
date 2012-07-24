@@ -106,4 +106,6 @@ int startTrackManagerTask();
 
 void clearReservation(int trackManagerTid, int trainNum);
 
+void QueryDistance(int trackTid, Position* pos1, Position* pos2, int* distance);
+
 #endif

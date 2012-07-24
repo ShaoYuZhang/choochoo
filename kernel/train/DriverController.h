@@ -68,5 +68,6 @@ void multitrain_driver();
 
 void DoPositionFinding(int controllerTid, int trianNum);
 void DoTrainMerge(int controllerTid, int headTrainNum, int tailTrainNum);
+void ReverseTrain(int controllerTid, int trainNum);
 
 #endif // DRIVER_CONTROLLER_

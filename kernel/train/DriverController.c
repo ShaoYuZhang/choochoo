@@ -103,6 +103,14 @@ void BroadcastLost(int controllerTid) {
   */
 }
 
+void ReverseTrain(int controllerTid, int trainNum){
+  DriverMsg msg;
+  msg.type = SET_SPEED;
+  msg.trainNum = trainNum;
+  msg.data2 = -1;
+  Send(controllerTid, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
+}
+
 int startDriverControllerTask() {
   return Create(5, trainController);
 }

@@ -4,15 +4,37 @@
 #include <UserInterface.h>
 #include <TimeServer.h>
 #include <MultiTrainDriver.h>
+#include <DriverController.h>
 #include <IoHelper.h>
+#include <Track.h>
 
 static int ui;
 static int trackController;
 static int trainController;
+static int timeserver;
+
+static void printLandmark(int ui, TrackLandmark* l) {
+  if (l->type == LANDMARK_SENSOR) {
+    PrintDebug(ui, "Landmark Sn  %c%d",
+        'A' +l->num1, l->num2);
+  } else if (l->type == LANDMARK_END) {
+    PrintDebug(ui, "Landmark %s %d",
+        l->num1 == EN ? "EN" : "EX",
+        l->num2);
+  } else if (l->type == LANDMARK_FAKE) {
+    PrintDebug(ui, "Landmark Fake %d %d",
+        l->num1, l->num2);
+  } else if (l->type == LANDMARK_SWITCH) {
+    PrintDebug(ui, "Landmark Switch Num:%d Type:%s",
+        l->num2, l->num1 == MR ? "MR" : "BR");
+  } else if (l->type == LANDMARK_BAD) {
+    PrintDebug(ui, "Landmark type: bad.");
+  } else {
+    PrintDebug(ui, "Unknown Landmark type: %d", l->type);
+  }
+}
 
 static void delayer_task() {
-  char timeServerName[] = TIMESERVER_NAME;
-  int timeserver = WhoIs(timeServerName);
   int parent = MyParentsTid();
   for (;;) {
     Delay(25, timeserver); // 4 times a second
@@ -38,8 +60,23 @@ static void try_find_position(GamePiece* snake, GamePiece* baits) {
   }
 }
 
+static void ReverseSensor(TrackLandmark* sensor) {
+  int action = sensor->num2%2 == 1 ? 1 : -1;
+  sensor->num2 += action;
+}
+
+static void QueryNextSensor(char box, char val, TrackNextSensorMsg* trackMsg) {
+  TrackMsg qMsg;
+  qMsg.type = QUERY_NEXT_SENSOR_FROM_SENSOR;
+  qMsg.landmark1.type = LANDMARK_SENSOR;
+  qMsg.landmark1.num1 = box;
+  qMsg.landmark1.num2 = val;
+  Send(trackController, (char*)&qMsg, sizeof(TrackMsg),
+      (char*)trackMsg, sizeof(TrackNextSensorMsg));
+}
+
 static void try_notify_snake(GamePiece* snake, GamePiece* baits) {
-  if (snake->eating || !snake->positionKnown) return;
+  if (snake->eating != (GamePiece*)NULL || !snake->positionKnown) return;
 
   // Try to find a bait for snake.
   GamePiece* bait = (GamePiece*)NULL;
@@ -54,19 +91,69 @@ static void try_notify_snake(GamePiece* snake, GamePiece* baits) {
   if (bait != (GamePiece*)NULL) {
     PrintDebug(ui, "Notifying snake about bait %d", bait->trainNum);
 
-    // Tell bait to release reservation so snake can go there.
+    // Release reservation so snake can go there.
+    clearReservation(trackController, bait->trainNum);
+
+    // Find a route to bait without colliding into the bait.
+    Position dest = bait->pos;
+
+    // If previous sensor is end,
+    // reverse the train to get a routable previous sensor.
+    if (dest.landmark1.type == LANDMARK_END) {
+      ReverseTrain(trainController, bait->trainNum);
+      Delay(timeserver, 10); // HACK. Wait for train to reverse.
+      try_find_position(snake, baits);
+      dest = bait->pos;
+      if (dest.landmark1.type == LANDMARK_END) {
+        PrintDebug(ui, "Previous still END after reverse");
+      }
+    }
+    // Now previous sensor is not LANDMARK_END;
+
+    PrintDebug(ui, "Tentative Dest. offset:%d", dest.offset);
+    printLandmark(ui, &dest.landmark1);
+    printLandmark(ui, &dest.landmark2);
+
+    if (dest.offset < 300) {
+      // Snake cannot stop after previous sensor (300mm).
+
+      TrackNextSensorMsg nextSensor;
+      ReverseSensor(&dest.landmark1);
+      //PrintDebug(ui, "Reversed landmark1");
+      //printLandmark(ui, &dest.landmark1);
+
+      QueryNextSensor(dest.landmark1.num1, dest.landmark1.num2, &nextSensor);
+      int stop = nextSensor.predictions[0].dist - (300 - dest.offset);
+      dest.offset = stop;
+      //                           Bait===>>>>
+      // -----S-------------------[--s-------]===>>------s--
+      //                             |_offset|
+      //      |_____dist_____________|
+      //      |________stop______|
+      //         .....[ snake    ]==>>>
+      dest.landmark1 = nextSensor.predictions[0].sensor;
+      ReverseSensor(&dest.landmark1);
+      //PrintDebug(ui, "Next sensor after reverse numpred:%d", nextSensor.numPred);
+      //printLandmark(ui, &dest.landmark1);
+    } else {
+      dest.offset = dest.offset - 300;
+    }
 
 
     DriverMsg driveMsg;
     driveMsg.type = SET_ROUTE;
     driveMsg.data2 = 9; // speed
+    driveMsg.data3 = 100; // Must include landmark1's edge.
     driveMsg.trainNum = bait->trainNum;
-    driveMsg.pos = bait->pos;
+    driveMsg.pos = dest;
 
-    PrintDebug(ui, "Snake going for bait %d", bait->trainNum);
+    PrintDebug(ui, "Snake going for bait %d offset:%d",
+        bait->trainNum, dest.offset);
+    printLandmark(ui, &dest.landmark1);
+    printLandmark(ui, &dest.landmark2);
     //Send(trainController, (char*)&driveMsg, sizeof(DriverMsg),
     //    (char*)NULL, 0);
-    snake->eating = 1;
+    snake->eating = bait;
   }
 }
 
@@ -78,6 +165,10 @@ static void snakeDirector() {
   trainController = WhoIs(trainControllerName);
   char uiName[] = UI_TASK_NAME;
   ui = WhoIs(uiName);
+  char trackName[] = TRACK_NAME;
+  trackController = WhoIs(trackName);
+  char timeServerName[] = TIMESERVER_NAME;
+  timeserver = WhoIs(timeServerName);
   int delayer = Create(9, delayer_task);
 
   // Initialization
@@ -90,7 +181,7 @@ static void snakeDirector() {
   GamePiece snake;
   snake.trainNum = -1;
   snake.eaten = 0;
-  snake.eating = 0;
+  snake.eating = (GamePiece*)NULL;
   snake.positionKnown = 0;
 
   // Handling events.
@@ -102,12 +193,15 @@ static void snakeDirector() {
     if (len == 0) {
       try_find_position(&snake, baits);
       try_notify_snake(&snake, baits);
-      // TODO,
-      //if (snake.eating) {
-      //  // Check if we are close enough.
-      //  // if close enough,
-      //  //    try_notify_snake again with new bait.
-      //}
+      if (snake.eating != (GamePiece*)NULL) {
+        int distance = 2000;
+        QueryDistance(trackController, &snake.pos, &snake.eating->pos, &distance);
+        if (distance < 350) {
+          PrintDebug(ui, "Close enough.. Snake ate bait");
+          // Snake came from behind bait.. bait takes on as head.
+          DoTrainMerge(trainController, snake.eating->trainNum, snake.trainNum);
+        }
+      }
       Reply(tid, (char*)1, 0);
     } else if (msg.type == REGISTER_BAIT) {
       int trainNum = msg.trainNum;
@@ -123,7 +217,6 @@ static void snakeDirector() {
         }
       }
       Reply(tid, (char*)&fail, 1);
-      //try_notify_snake(&snake, baits);
     } else if (msg.type == REGISTER_SNAKE) {
       int trainNum = msg.trainNum;
       PrintDebug(ui, "Reigster %d as snake", trainNum);
@@ -135,7 +228,6 @@ static void snakeDirector() {
         PrintDebug(ui, "Cannot register two snakes .. yet", trainNum);
       }
       Reply(tid, (char*)&fail, 1);
-      //try_notify_snake(&snake, baits);
     } else {
       PrintDebug(ui, "Invalid type %d to snake director from tid", tid);
       Reply(tid, (char*)1, 0);
