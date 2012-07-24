@@ -443,7 +443,7 @@ static void computeSafeReverseDist(track_node* track) {
 // Dijkstra's algorithm, currently slow, need a heap for efficiency
 static void findRoute(
     track_node* track, Position from, Position to,
-    Route* result, int trainNum) {
+    Route* result, int trainNum, track_edge* avoidEdge) {
   // fake position into graph
   track_edge* fromEdge = (track_edge*)NULL;
   int offsetFrom = locateNode(track, from, &fromEdge);
@@ -559,7 +559,9 @@ static void findRoute(
       // in queue and unreserved
       if (tempEdge->dest->in_queue &&
           (tempEdge->reserved_train_num == -1 ||
-           tempEdge->reserved_train_num == trainNum)
+           tempEdge->reserved_train_num == trainNum) &&
+          (avoidEdge == (track_edge*)NULL ||
+           tempEdge != avoidEdge)
          ) {
         neighbours[neighbour_count] = tempEdge->dest;
         neighbours_dist[neighbour_count++] = tempEdge->dist;
@@ -567,7 +569,9 @@ static void findRoute(
       tempEdge = &curr_node->edge[DIR_CURVED];
       if (tempEdge->dest->in_queue &&
           (tempEdge->reserved_train_num == -1 ||
-           tempEdge->reserved_train_num == trainNum)
+           tempEdge->reserved_train_num == trainNum) &&
+          (avoidEdge == (track_edge*)NULL ||
+           tempEdge != avoidEdge)
          ) {
         neighbours[neighbour_count] = tempEdge->dest;
         neighbours_dist[neighbour_count++] = tempEdge->dist;
@@ -576,7 +580,9 @@ static void findRoute(
       track_edge *tempEdge = &curr_node->edge[DIR_AHEAD];
       if (tempEdge->dest->in_queue &&
           (tempEdge->reserved_train_num == -1 ||
-           tempEdge->reserved_train_num == trainNum)
+           tempEdge->reserved_train_num == trainNum) &&
+          (avoidEdge == (track_edge*)NULL ||
+           tempEdge != avoidEdge)
          ) {
         neighbours[neighbour_count] = curr_node->edge[DIR_AHEAD].dest;
         neighbours_dist[neighbour_count++] = curr_node->edge[DIR_AHEAD].dist;
@@ -843,9 +849,20 @@ static void trackController() {
       case ROUTE_PLANNING: {
         Position from = msg->position1;
         Position to = msg->position2;
-        int trainNum = (int)msg->data;
+        int trainNum = (int)msg->trainNum;
+
+        track_edge* avoidEdge = (track_edge*)NULL;
+        if (msg->data == ONE_PATH_DEST) {
+          PrintDebug(ui, "One path dest.");
+          track_edge* toEdge = (track_edge*)NULL;
+          locateNode(track, to, &toEdge);
+          avoidEdge = toEdge->reverse;
+          PrintDebug(ui, "Avoiding edge (%s,%s)",
+              avoidEdge->src->name, avoidEdge->dest->name);
+        }
+
         Route route;
-        findRoute(track, from, to , &route, trainNum);
+        findRoute(track, from, to , &route, trainNum, avoidEdge);
 
         Reply(tid, (char *)&route, 8 + sizeof(RouteNode) * route.length);
         break;

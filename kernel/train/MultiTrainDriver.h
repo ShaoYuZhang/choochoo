@@ -38,6 +38,8 @@ typedef struct MultiTrainDriver {
 
   int tailMode;
   int headTid;
+
+  DriverMsg routeMsg;
 } MultiTrainDriver;
 
 typedef struct MultiTrainDriverMsg {

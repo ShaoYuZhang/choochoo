@@ -100,6 +100,7 @@ static void try_notify_snake(GamePiece* snake, GamePiece* baits) {
     // If previous sensor is end,
     // reverse the train to get a routable previous sensor.
     if (dest.landmark1.type == LANDMARK_END) {
+
       ReverseTrain(trainController, bait->trainNum);
       Delay(timeserver, 10); // HACK. Wait for train to reverse.
       try_find_position(snake, baits);
@@ -115,6 +116,9 @@ static void try_notify_snake(GamePiece* snake, GamePiece* baits) {
     printLandmark(ui, &dest.landmark2);
 
     if (dest.offset < 300) {
+      // Move a position sensor.
+      dest.landmark2 = dest.landmark1;
+
       // Snake cannot stop after previous sensor (300mm).
 
       TrackNextSensorMsg nextSensor;
@@ -143,16 +147,16 @@ static void try_notify_snake(GamePiece* snake, GamePiece* baits) {
     DriverMsg driveMsg;
     driveMsg.type = SET_ROUTE;
     driveMsg.data2 = 9; // speed
-    driveMsg.data3 = 100; // Must include landmark1's edge.
-    driveMsg.trainNum = bait->trainNum;
+    driveMsg.data3 = ONE_PATH_DEST; // Must include landmark1's edge.
+    driveMsg.trainNum = snake->trainNum;
     driveMsg.pos = dest;
 
     PrintDebug(ui, "Snake going for bait %d offset:%d",
         bait->trainNum, dest.offset);
     printLandmark(ui, &dest.landmark1);
     printLandmark(ui, &dest.landmark2);
-    //Send(trainController, (char*)&driveMsg, sizeof(DriverMsg),
-    //    (char*)NULL, 0);
+    Send(trainController, (char*)&driveMsg, sizeof(DriverMsg),
+        (char*)NULL, 0);
     snake->eating = bait;
   }
 }
@@ -197,9 +201,9 @@ static void snakeDirector() {
         int distance = 2000;
         QueryDistance(trackController, &snake.pos, &snake.eating->pos, &distance);
         if (distance < 350) {
-          PrintDebug(ui, "Close enough.. Snake ate bait");
+          //PrintDebug(ui, "Close enough.. Snake ate bait");
           // Snake came from behind bait.. bait takes on as head.
-          DoTrainMerge(trainController, snake.eating->trainNum, snake.trainNum);
+          //DoTrainMerge(trainController, snake.eating->trainNum, snake.trainNum);
         }
       }
       Reply(tid, (char*)1, 0);

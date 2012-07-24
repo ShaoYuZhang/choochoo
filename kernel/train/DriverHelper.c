@@ -125,8 +125,8 @@ static void updatePrediction(Driver* me) {
   sendUiReport(me);
 }
 
-static void getRoute(Driver* me, DriverMsg* msg) {
-  //TrainDebug(me, "Getting Route.");
+static void getRoute(Driver* me, Position* from, DriverMsg* msg) {
+  TrainDebug(me, "%d Getting Route.", me->trainNum);
   TrackMsg trackmsg;
   if (me->testMode) {
     //TrainDebug(me, "Test Mode");
@@ -134,14 +134,15 @@ static void getRoute(Driver* me, DriverMsg* msg) {
     trackmsg.data = msg->data3; // an index to a preset route
   } else {
     trackmsg.type = ROUTE_PLANNING;
-    trackmsg.landmark1 = me->reserveFailedLandmark;
-    toPosition(me, &trackmsg.position1);
-    //printLandmark(me, &trackmsg.position1.landmark1);
-    //printLandmark(me, &trackmsg.position1.landmark2);
-    //TrainDebug(me, "Offset %d", trackmsg.position1.offset);
 
+    trackmsg.position1 = *from;
     trackmsg.position2 = msg->pos;
-    trackmsg.data = (char)me->trainNum;
+    trackmsg.trainNum = (char)me->trainNum;
+    trackmsg.data = msg->data3; // May be ONE_PATH_DEST.
+
+    printLandmark(me, &trackmsg.position1.landmark1);
+    printLandmark(me, &trackmsg.position1.landmark2);
+    TrainDebug(me, "Offset %d", trackmsg.position1.offset);
   }
 
   Send(me->trackManager, (char*)&trackmsg,
@@ -413,11 +414,11 @@ static void printRoute(Driver* me) {
 
 }
 
-static void setRoute(Driver* me, DriverMsg* msg) {
+static void setRoute(Driver* me, Position* from, DriverMsg* msg) {
   //TrainDebug(me, "Route setting!");
   me->stopCommited = 0;
 
-  getRoute(me, msg);
+  getRoute(me, from, msg);
   if (me->route.length != 0) {
     if (me->route.nodes[1].num == REVERSE) {
       // Don't need to reverse... cuz.. it's probably stuck.

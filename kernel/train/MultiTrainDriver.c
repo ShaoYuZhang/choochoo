@@ -12,6 +12,7 @@
 #include <DumbDriver.h>
 #include <Lock.h>
 
+static void getRoute(Driver* me, Position* from, DriverMsg* msg);
 static void printLandmark(Driver* me, TrackLandmark* l);
 static void trainDelayer();
 static void trainStopDelayer();
@@ -20,7 +21,7 @@ static void trainNavigateNagger();
 static void printRoute(Driver* me);
 static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg);
 static int QueryIsSensorReserved(Driver* me, int box, int val);
-static void setRoute(Driver* me, DriverMsg* msg);
+static void setRoute(Driver* me, Position* from, DriverMsg* msg);
 static void updatePrediction(Driver* me);
 static int reserveMoreTrack(Driver* me, int stopped, int stoppingDistance);
 static void multiTrainDriverCourier();
@@ -380,6 +381,15 @@ void multitrain_driver() {
       }
       case NAVIGATE_NAGGER: {
         // TODO
+        break;
+      }
+      case SET_ROUTE: {
+        Reply(msg->replyTid, (char*)1, 0);
+        me.routeMsg = *msg;
+        getRoute(&me.driver, &(me.info[0].pos), msg);
+
+        PrintDebug(me.driver.ui, "Did not set route yet!!!");
+        //setRoute(&me, &msg);
         break;
       }
       case GET_POSITION: {
