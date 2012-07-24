@@ -205,7 +205,6 @@ void multitrain_driver() {
         // Head train replies.
         if (!me.tailMode) Reply(msg->replyTid, (char*)1, 0);
 
-        Reply(replyTid, (char*)1, 0);
         if (msg->data2 == -1) {
           // make every train stop and wait for there stop response
           msg->data2 = 0;
@@ -297,8 +296,15 @@ void multitrain_driver() {
         makeReservation(&me);
         break;
       }
-      case STOP_COMPLETED : {
+      case STOP_COMPLETED: {
+        // notify actual train controller.
+        if (me.tailMode) {
+          Send(me.headTid,
+              (char*)&actualMsg, sizeof(MultiTrainDriverMsg), (char*)1, 0);
+          break;
+        }
         me.stoppedCount++;
+
         if (me.stoppedCount == me.numTrainInGroup) {
           makeReservation(&me);
           if (me.isReversing) {
