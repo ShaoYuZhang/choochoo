@@ -11,6 +11,10 @@
 #define INFO_UPDATE_NAGGER 100
 #define UPDATE_PREDICTION 101
 #define STOP_COMPLETED 102
+#define MERGE_TAIL 103
+#define SEPARATE_TAIL 104
+#define QUERY_STOP_COUNT 105
+#define MULTI_TRAIN_DRIVER_COURIER 106
 
 typedef struct MultiTrainDriver {
   // the single train driver side of multi-train driver,
@@ -18,6 +22,7 @@ typedef struct MultiTrainDriver {
   Driver driver;
 
   // The multi-train driver side
+  int courier;
   int numTrainInGroup;
   int isReversing;
   int speedAfterReverse;
@@ -41,6 +46,11 @@ typedef struct MultiTrainDriverMsg {
   int numSensors;
   TrackLandmark sensors[10];
 } MultiTrainDriverMsg;
+
+typedef struct MultiTrainDriverCourierMsg {
+  int destTid;
+  MultiTrainDriverMsg msg;
+} MultiTrainDriverCourierMsg;
 
 void dumb_driver();
 

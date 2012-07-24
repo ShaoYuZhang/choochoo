@@ -23,6 +23,7 @@ static int QueryIsSensorReserved(Driver* me, int box, int val);
 static void setRoute(Driver* me, DriverMsg* msg);
 static void updatePrediction(Driver* me);
 static int reserveMoreTrack(Driver* me, int stopped, int stoppingDistance);
+static void multiTrainDriverCourier();
 
 static void reroute(Driver* me) {
   //TODO
@@ -89,7 +90,7 @@ static int makeReservation(MultiTrainDriver* me) {
   ReleaseOldAndReserveNewTrackMsg qMsg;
   qMsg.type = RELEASE_OLD_N_RESERVE_NEW;
   qMsg.trainNum = me->driver.trainNum;
-  qMsg.stoppingDistance = getStoppingDistance(&me->driver);
+  qMsg.stoppingDistance = isStationary ? 1 : getStoppingDistance(&me->driver);
   qMsg.lastSensor = sensors[0];
 
   //TrainDebug(me, "Reserving track");
@@ -161,6 +162,7 @@ static void initDriver(MultiTrainDriver* me) {
   me->driver.lastSensorDistanceError = 0;
 
   me->driver.sensorWatcher = Create(3, trainSensor);
+  me->courier = Create(3, multiTrainDriverCourier);
   //me->driver.navigateNagger = Create(2, trainNavigateNagger);
 
   me->driver.routeRemaining = -1;
@@ -181,6 +183,18 @@ void dumbDriverInfoUpdater() {
   }
 }
 
+static void multiTrainDriverCourier() {
+  int parent = MyParentsTid();
+
+  DriverMsg msg;
+  msg.type = MULTI_TRAIN_DRIVER_COURIER;
+  for (;;) {
+    MultiTrainDriverCourierMsg cMsg;
+    Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)&cMsg, sizeof(MultiTrainDriverCourierMsg));
+    Send(cMsg.destTid, (char*)&cMsg.msg, sizeof(MultiTrainDriverMsg), (char *)1, 0);
+  }
+}
+
 static void groupSetSpeed(MultiTrainDriver* me, DriverMsg* msg) {
   for (int i = 0; i < me->numTrainInGroup; i++) {
     Send(me->trainId[i], (char *)msg, sizeof(DriverMsg), (char*)1, 0);
@@ -197,7 +211,7 @@ void multitrain_driver() {
     MultiTrainDriverMsg actualMsg;
     DriverMsg* msg = (DriverMsg*)&actualMsg;
     Receive(&tid, (char *)msg, sizeof(MultiTrainDriverMsg));
-    if (msg->type != REPORT_INFO) {
+    if (msg->type != REPORT_INFO && msg->type !=  QUERY_STOP_COUNT && msg->type != MULTI_TRAIN_DRIVER_COURIER && msg->type != SENSOR_TRIGGER) {
       Reply(tid, (char*)1, 0);
     }
 
@@ -213,13 +227,18 @@ void multitrain_driver() {
             msg->data2 = 0;
             me.isReversing = 1;
             me.speedAfterReverse = me.info[0].trainSpeed;
+            me.stoppedCount = 0; // required hack, the count will be accumulated back to numTrain soon
           }
 
           if (msg->data2 != -1 && msg->data2 != 0) {
             // everyone is moving again
             me.stoppedCount = 0;
+            if (me.info[0].trainSpeed == 0) {
+              makeReservation(&me);
+            }
           }
         } else  {
+          //Send(me->trainId[0], (char *)msg, sizeof(DriverMsg), (char*)1, 0);
           PrintDebug(me.driver.ui, "tail mode");
         }
 
@@ -229,18 +248,30 @@ void multitrain_driver() {
         break;
       }
       case SENSOR_TRIGGER: {
-        if (me.tailMode) break;
-        int isSensorReserved = QueryIsSensorReserved(&me.driver, msg->data2, msg->data3);
-        if (isSensorReserved) {
-          // sensor is reserved
-          for (int i = 0; i < me.numTrainInGroup; i ++) {
-            int isHandled = 0;
-            Send(me.trainId[i],
-                (char*)msg, sizeof(DriverMsg), (char *)&isHandled, sizeof(int));
-            if (isHandled) {
-              break;
+        if (me.tailMode && tid == me.driver.sensorWatcher) {
+          Reply(tid, (char *)NULL, 0);
+          break;
+        }
+
+        if (me.tailMode) {
+          int isHandled = 0;
+          Send(me.trainId[0],
+              (char*)msg, sizeof(DriverMsg), (char *)&isHandled, sizeof(int));
+          Reply(tid, (char *)&isHandled, sizeof(int));
+        } else {
+          int isSensorReserved = QueryIsSensorReserved(&me.driver, msg->data2, msg->data3);
+          if (isSensorReserved) {
+            // sensor is reserved
+            for (int i = 0; i < me.numTrainInGroup; i ++) {
+              int isHandled = 0;
+              Send(me.trainId[i],
+                  (char*)msg, sizeof(DriverMsg), (char *)&isHandled, sizeof(int));
+              if (isHandled) {
+                break;
+              }
             }
           }
+          Reply(tid, (char *)NULL, 0);
         }
         break;
       } // case
@@ -286,8 +317,11 @@ void multitrain_driver() {
       }
       case UPDATE_PREDICTION: {
         if (me.tailMode) {
-          Send(me.headTid,
-              (char*)&actualMsg, sizeof(MultiTrainDriverMsg), (char*)1, 0);
+          MultiTrainDriverCourierMsg cMsg;
+          cMsg.destTid = me.headTid;
+          cMsg.msg = actualMsg;
+          cMsg.msg.data = MyTid();
+          Reply(me.courier, (char *)&cMsg, sizeof(MultiTrainDriverCourierMsg));
           break;
         }
 
@@ -305,8 +339,11 @@ void multitrain_driver() {
       case STOP_COMPLETED: {
         // notify actual train controller.
         if (me.tailMode) {
-          Send(me.headTid,
-              (char*)&actualMsg, sizeof(MultiTrainDriverMsg), (char*)1, 0);
+          MultiTrainDriverCourierMsg cMsg;
+          cMsg.destTid = me.headTid;
+          cMsg.msg = actualMsg;
+          cMsg.msg.data = MyTid();
+          Reply(me.courier, (char *)&cMsg, sizeof(MultiTrainDriverCourierMsg));
           break;
         }
         me.stoppedCount++;
@@ -396,6 +433,15 @@ void multitrain_driver() {
         me.trainId[me.numTrainInGroup] = msg->data2;
         me.numTrainInGroup++;
         Reply(msg->replyTid, (char*)1, 0);
+        DriverMsg dMsg;
+        dMsg.type = QUERY_STOP_COUNT;
+        int tailStopCount = 0;
+        Send(msg->data2, (char *)&dMsg, sizeof(DriverMsg), (char *)&tailStopCount, sizeof(int));
+        me.stoppedCount += tailStopCount;
+
+        dMsg.type = UPDATE_PARENT_ABOUT_PREDICTION;
+        Send(msg->data2, (char *)&dMsg, sizeof(DriverMsg), (char *)NULL, 0);
+
         PrintDebug(me.driver.ui, "merge head done");
         break;
       }
@@ -424,7 +470,6 @@ void multitrain_driver() {
         break;
       }
       case REPORT_INFO: {
-        //PrintDebug(me.driver.ui, "REPORTTTING FOR DUTY SIR");
         if (!me.tailMode) {
           PrintDebug(me.driver.ui, "Report info Not in tail mode..??"); break;
         }
@@ -434,6 +479,34 @@ void multitrain_driver() {
             (char*)&me.info[0], sizeof(DumbDriverInfo));
         // Reply the head that made query.
         Reply(me.headTid, (char*)&me.info[0], sizeof(DumbDriverInfo));
+        break;
+      }
+      case UPDATE_PARENT_ABOUT_PREDICTION: {
+        if (!me.tailMode) {
+          PrintDebug(me.driver.ui, "Update Parent Not in tail mode..??"); break;
+        }
+        // ASSUME ONLY 1 train when in tail mode.
+        Send(me.trainId[0], (char*)msg, sizeof(DriverMsg),
+            (char*)NULL, 0);
+        break;
+      }
+      case QUERY_STOP_COUNT: {
+        // asuumption: no tree strucutre
+        Reply(tid, (char *)&me.stoppedCount, sizeof(int));
+        break;
+      }
+      case MULTI_TRAIN_DRIVER_COURIER: {
+        // nothing
+        break;
+      }
+      case REVERSE_SPEED : {
+        if (!me.tailMode) {
+          PrintDebug(me.driver.ui, "Reverse Speed Not in tail mode..??"); break;
+        }
+
+        for (int i = 0; i < me.numTrainInGroup; i++) {
+          Send(me.trainId[i], (char *)msg, sizeof(DriverMsg), (char*)1, 0);
+        }
         break;
       }
       default: {

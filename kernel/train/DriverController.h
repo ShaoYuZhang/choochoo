@@ -20,12 +20,11 @@
 #define STOP_DELAYER 13
 #define BROADCAST_TEST_MODE 14
 #define MERGE_HEAD 15
-#define MERGE_TAIL 20
-#define SEPARATE_TAIL 21
 #define REPORT_INFO 16
 #define DRIVER_COURIER_INIT 17
 #define DRIVER_COURIER 18
 #define REVERSE_SPEED 19
+#define UPDATE_PARENT_ABOUT_PREDICTION 20
 
 #include <UserInterface.h>
 #include <Track.h>

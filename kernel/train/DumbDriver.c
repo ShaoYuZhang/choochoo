@@ -526,6 +526,11 @@ void dumb_driver() {
         Reply(tid, (char*)&info, sizeof(DumbDriverInfo));
         break;
       }
+      case UPDATE_PARENT_ABOUT_PREDICTION: {
+        updateParentAboutPrediction(&me);
+        Reply(tid, (char*)1, 0);
+        break;
+      }
       case DRIVER_COURIER_INIT: {
         Reply(tid, (char*)&me.multiTrainController, sizeof(int));
         break;
