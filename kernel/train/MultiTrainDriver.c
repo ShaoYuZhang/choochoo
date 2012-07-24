@@ -48,19 +48,6 @@ static int getVelocity(Driver* me) {
 static void trainSetSpeed(const int speed, const int stopTime, const int delayer, Driver* me) {
 }
 
-static void clearReservation(MultiTrainDriver* me) {
-  if (!me->tailMode) {
-    PrintDebug(me->driver.ui, "%d Cannot clear reservation in head mode", me->driver.trainNum);
-    return;
-  }
-  ReleaseOldAndReserveNewTrackMsg qMsg;
-  qMsg.type = RELEASE_ALL_RESERVATION;
-  qMsg.trainNum = me->driver.trainNum;
-
-  Send(me->driver.trackManager,
-      (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
-      (char*)1, 0);
-}
 
 static int makeReservation(MultiTrainDriver* me) {
   if (me->tailMode) {
@@ -478,7 +465,7 @@ void multitrain_driver() {
         // Enters courier mode that passes dumb_train msg to 'real' controller
         me.tailMode = 1;
         me.headTid = msg->data2;
-        clearReservation(&me);
+        clearReservation(me.driver.trackManager, me.driver.trainNum);
         Reply(msg->replyTid, (char*)1, 0);
         PrintDebug(me.driver.ui, "merge tail done");
         break;

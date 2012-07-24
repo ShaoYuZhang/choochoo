@@ -928,6 +928,15 @@ static void trackController() {
   }
 }
 
+
+void clearReservation(int trackManagerTid, int trainNum) {
+  ReleaseOldAndReserveNewTrackMsg qMsg;
+  qMsg.type = RELEASE_ALL_RESERVATION;
+  qMsg.trainNum = trainNum;
+  Send(trackManagerTid,
+      (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
+      (char*)1, 0);
+}
 int startTrackManagerTask() {
   return Create(4, trackController);
 }

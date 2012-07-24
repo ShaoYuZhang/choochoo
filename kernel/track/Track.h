@@ -104,4 +104,6 @@ typedef struct Route {
 
 int startTrackManagerTask();
 
+void clearReservation(int trackManagerTid, int trainNum);
+
 #endif

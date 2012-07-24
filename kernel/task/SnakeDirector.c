@@ -41,7 +41,6 @@ static void try_find_position(GamePiece* snake, GamePiece* baits) {
 static void try_notify_snake(GamePiece* snake, GamePiece* baits) {
   if (snake->eating || !snake->positionKnown) return;
 
-
   // Try to find a bait for snake.
   GamePiece* bait = (GamePiece*)NULL;
   for (int i = 0; i < 4; i++) {
@@ -54,6 +53,9 @@ static void try_notify_snake(GamePiece* snake, GamePiece* baits) {
   // If we got a bait for snake.
   if (bait != (GamePiece*)NULL) {
     PrintDebug(ui, "Notifying snake about bait %d", bait->trainNum);
+
+    // Tell bait to release reservation so snake can go there.
+
 
     DriverMsg driveMsg;
     driveMsg.type = SET_ROUTE;
