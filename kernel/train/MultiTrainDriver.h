@@ -15,11 +15,13 @@
 #define SEPARATE_TAIL 104
 #define QUERY_STOP_COUNT 105
 #define MULTI_TRAIN_DRIVER_COURIER 106
+#define GET_POSITION 107
 
 typedef struct MultiTrainDriver {
   // the single train driver side of multi-train driver,
   // most parameters relates to the head train
   Driver driver;
+  int infoUpdater;
 
   // The multi-train driver side
   int courier;

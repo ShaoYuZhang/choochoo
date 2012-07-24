@@ -148,6 +148,7 @@ static void initDriver(MultiTrainDriver* me) {
   Reply(me->driver.trainController, (char*)1, 0);
 
   // Create dumb drivers
+  me->infoUpdater = -1;
   me->tailMode = 0;
   me->numTrainInGroup = 1;
   me->trainId[0] = CreateDumbTrain(init.nth, (int)init.trainNum);
@@ -396,6 +397,19 @@ void multitrain_driver() {
         // TODO
         break;
       }
+      case GET_POSITION: {
+        if (me.tailMode) {
+          PrintDebug(me.driver.ui, "Get position from a tail train ??");
+          break;
+        }
+        // If don't have any valid info yet, reply empty message
+        if (me.infoUpdater == -1) {
+          Reply(msg->replyTid, (char*)1, 0);
+        } else {
+          Reply(msg->replyTid, (char*)&(me.info[0].pos), sizeof(Position));
+        }
+        break;
+      }
       case FIND_POSITION: {
         if (me.tailMode) {
           PrintDebug(me.driver.ui, "find position while merge????");
@@ -416,10 +430,20 @@ void multitrain_driver() {
                 sizeof(DriverMsg), (char*)NULL, 0);
             DumbTrainSetSpeed(me.trainId[0], 0);
             break;
+          } else if (msg->type == GET_POSITION) {
+            Reply(msg->replyTid, (char*)1, 0);
+          } else {
+            PrintDebug(me.driver.ui, "WARNN Drop %d", msg->type);
           }
-          PrintDebug(me.driver.ui, "WARNN Drop %d", msg->type);
         }
-        Create(3, dumbDriverInfoUpdater);
+        DriverMsg dMsg;
+        dMsg.type = REPORT_INFO;
+        for (int i = 0; i < me.numTrainInGroup; i++) {
+          Send(me.trainId[i],
+              (char *)&dMsg, sizeof(DriverMsg),
+              (char*)&me.info[i], sizeof(DumbDriverInfo));
+        }
+        me.infoUpdater = Create(3, dumbDriverInfoUpdater);
         unlock();
         break;
       }

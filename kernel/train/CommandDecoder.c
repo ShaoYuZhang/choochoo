@@ -68,18 +68,17 @@ static void decodeCommand() {
     char *temp = (char *)decoderBuffer + 5;
     int train_number = strgetui(&temp);
 
-    PrintDebug(ui, "Bait commnd for %d", train_number);
+    DoPositionFinding(trainController, train_number);
     int ret = RegisterBait(snakeDirector, train_number);
-    PrintDebug(ui, "%d return", ret);
 
   } else if (decoderBuffer[0] == 's' && decoderBuffer[2] == 'a') {
     // Snake command
     char *temp = (char*)decoderBuffer + 6;
     int train_number = strgetui(&temp);
 
-    PrintDebug(ui, "Snake commnd for %d", train_number);
+    DoPositionFinding(trainController, train_number);
+      PrintDebug(ui, "Registering snake... %d", MyTid());
     int ret = RegisterSnake(snakeDirector, train_number);
-    PrintDebug(ui, "%d return", ret);
   } else if (decoderBuffer[0] == 'i' && decoderBuffer[1] == 'n') {
     char *temp = (char *)decoderBuffer + 5;
     int train_number = strgetui(&temp);
