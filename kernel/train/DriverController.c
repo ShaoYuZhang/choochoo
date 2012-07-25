@@ -111,6 +111,16 @@ void ReverseTrain(int controllerTid, int trainNum){
   Send(controllerTid, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
 }
 
+void SetSpeedTrain(int controllerTid, int trainNum, int spd){
+  DriverMsg msg;
+  msg.type = SET_SPEED;
+  msg.trainNum = trainNum;
+  msg.data2 = spd;
+  Send(controllerTid, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
+}
+
+
+
 int startDriverControllerTask() {
   return Create(5, trainController);
 }

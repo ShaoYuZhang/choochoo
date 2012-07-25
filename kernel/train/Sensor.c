@@ -299,6 +299,15 @@ static void sensorServer() {
   }
 }
 
+void triggerFakeSensor(int tid, int time, char box, char val) {
+  SensorMsg msg;
+  msg.type = FAKE_TRIGGER;
+  msg.box = box;
+  msg.data = val;
+  msg.time = time;
+  Send(tid, (char *)&msg, sizeof(SensorMsg), (char *)NULL, 0);
+}
+
 int startSensorServerTask() {
   return Create(3, sensorServer);
 }

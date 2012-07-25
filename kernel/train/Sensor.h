@@ -34,4 +34,6 @@ typedef struct SensorWorkUnit {
 
 int startSensorServerTask();
 
+void triggerFakeSensor(int tid, int time, char box, char val);
+
 #endif // SENSOR_H

@@ -63,6 +63,7 @@ static void decodeCommand() {
   decoderCurrBufferPos = 0;
   if (shortEvalulation) return;
 
+  PrintDebug(ui, "__Command: %s", decoderBuffer);
   if (decoderBuffer[0] == 'b' && decoderBuffer[1] == 'a') {
     // Bait command
     char *temp = (char *)decoderBuffer + 5;
@@ -92,12 +93,7 @@ static void decodeCommand() {
       letter = letter - 'a' + 'A';
     }
     if (letter >= 'A' && letter <= 'E' && num >= 1 && num <= 16) {
-      SensorMsg msg;
-      msg.type = FAKE_TRIGGER;
-      msg.box = letter - 'A';
-      msg.data = (char)num;
-      msg.time = Time(timeServer);
-      Send(sensorServer, (char *)&msg, sizeof(SensorMsg), (char *)NULL, 0);
+      triggerFakeSensor(sensorServer, Time(timeServer), letter-'A', (char)num);
     } else {
       PrintDebug(ui, "Invalid Fake Sensor Value");
     }
@@ -118,11 +114,7 @@ static void decodeCommand() {
     int train_speed = strgetui(&temp);
     temp++;
 
-    DriverMsg msg;
-    msg.type = SET_SPEED;
-    msg.trainNum = train_number;
-    msg.data2 = train_speed;
-    Send(trainController, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
+    SetSpeedTrain(trainController, train_number, train_speed);
   } else if (decoderBuffer[0] == 'r' && decoderBuffer[1] == 'v') {
     char *temp = (char *)decoderBuffer + 3;
     int train_number = strgetui(&temp);
@@ -260,11 +252,39 @@ static void decodeCommand() {
     int distance = 9999;
     QueryDistance(trackController, &pos, &pos2, &distance);
     PrintDebug(ui, "Distance: %d", distance);
+  } else if (decoderBuffer[0] == 'p' && decoderBuffer[1] == 'r') {
+    DoPositionFinding(trainController, 45);
+    Delay(80, timeServer);
+    triggerFakeSensor(sensorServer, Time(timeServer), 3, 6); // D6
+    DoPositionFinding(trainController, 44);
+    Delay(80, timeServer);
+    triggerFakeSensor(sensorServer, Time(timeServer), 4, 5); // E5
+    DoPositionFinding(trainController, 43);
+    Delay(40, timeServer);
+    triggerFakeSensor(sensorServer, Time(timeServer), 3, 3); // D3
+    DoTrainMerge(trainController, 45, 44);
+    DoTrainMerge(trainController, 45, 43);
+    Delay(40, timeServer);
+    SetSpeedTrain(trainController, 45, 5);
+    Delay(40, timeServer);
+    // Train 44 moves
+    triggerFakeSensor(sensorServer, Time(timeServer), 3, 6);  // D6
+    Delay(40, timeServer);
+    // Train 45 moves
+    triggerFakeSensor(sensorServer, Time(timeServer), 4, 10); // E10
+    Delay(40, timeServer);
+    PrintDebug(ui, "e13");
+    // Train 45 moves
+    triggerFakeSensor(sensorServer, Time(timeServer), 4, 13); // E13
+    Delay(40, timeServer);
+    PrintDebug(ui, "last d6 ");
+    // Train 43 moves
+    triggerFakeSensor(sensorServer, Time(timeServer), 3, 6);  // D6
+    Delay(40, timeServer);
   } else {
     PrintDebug(ui, "__Bad command__ %s", decoderBuffer);
     return;
   }
-  PrintDebug(ui, "__Command: %s", decoderBuffer);
 }
 
 static void commandDecoder() {
