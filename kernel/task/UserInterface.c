@@ -725,7 +725,7 @@ static void userInterface() {
         break;
       }
       case DEBUG_TRAIN_MSG: {
-        com2msg = setColor(33+receiveBuffer[1]*3, com2msg);
+        com2msg = setColor(receiveBuffer[1], com2msg);
         com2msg = updateDebugMessage(receiveBuffer + 2, com2msg, len - 2);
         com2msg = resetColor(com2msg);
         break;
