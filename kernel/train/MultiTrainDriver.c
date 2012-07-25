@@ -31,7 +31,6 @@ static void reroute(Driver* me) {
 }
 
 static void sendUiReport(Driver* me) {
-
 }
 
 static int getStoppingDistance(Driver* me) {

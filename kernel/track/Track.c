@@ -838,9 +838,7 @@ static void trackController() {
         break;
       }
       case QUERY_DISTANCE: {
-        PrintDebug(ui, "Query _distance");
         int distance = calculateDistance(track, msg->position1, msg->position2);
-        PrintDebug(ui, "Query _distance%d", distance);
         Reply(tid, (char *)&distance, sizeof(int));
         break;
       }
