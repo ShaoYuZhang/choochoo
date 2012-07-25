@@ -286,14 +286,14 @@ void multitrain_driver() {
           distance -= me.info[i-1].lenFrontOfPickup;
 
           // This is pretty arbitrary now and needs tuning
-          if (distance > 200 && me.info[i].trainSpeed < me.info[i-1].trainSpeed + 1 && me.info[i].trainSpeed < 14) {
+          if (distance > 300 && me.info[i].trainSpeed < me.info[i-1].trainSpeed + 1 && me.info[i].trainSpeed < 14) {
             PrintDebug(me.driver.ui, "Speeding up Distance: %d", distance);
             // too far, back train need to speed up
             dMsg.type = SET_SPEED;
             dMsg.data2 = me.info[i].trainSpeed + 1;
             dMsg.data3 = -1;
             Send(me.trainId[i], (char*)&dMsg, sizeof(DriverMsg), (char*)1, 0);
-          } else if (distance < 200 && distance > 0 && me.info[i].trainSpeed > me.info[i-1].trainSpeed - 1 && me.info[i].trainSpeed > 0) {
+          } else if (distance < 300 && distance > 0 && me.info[i].trainSpeed > me.info[i-1].trainSpeed - 1 && me.info[i].trainSpeed > 0) {
             // too close, back train need to slow up
             PrintDebug(me.driver.ui, "Slowing down Distance %d", distance);
             // too far, back train need to speed up

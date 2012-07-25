@@ -114,7 +114,7 @@ static void try_notify_snake(GamePiece* snake, GamePiece* baits) {
     printLandmark(ui, &dest.landmark1);
     printLandmark(ui, &dest.landmark2);
 
-    if (dest.offset < 300) {
+    if (dest.offset < 300 ) {
       // Move a position sensor.
       dest.landmark2 = dest.landmark1;
 
@@ -199,7 +199,7 @@ static void snakeDirector() {
       if (snake.food != (GamePiece*)NULL) {
         int distance = 2000;
         QueryDistance(trackController, &snake.pos, &snake.food->pos, &distance);
-        if (distance < 350) {
+        if (distance < 350 && distance >= 0) {
           PrintDebug(ui, "Close enough %dmm.. Snake ate bait", distance);
           PrintDebug(ui, "Snake Position. offset:%d", snake.pos.offset);
           printLandmark(ui, &snake.pos.landmark1);

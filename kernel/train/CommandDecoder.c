@@ -243,7 +243,7 @@ static void decodeCommand() {
     num = strgetui(&temp);
     temp++;
     pos.landmark2 = formLandmarkFromInput(letter, num);
-    pos.offset = 0;
+    pos.offset = 1;
 
     letter = *temp++;
     Position pos2;
@@ -255,14 +255,16 @@ static void decodeCommand() {
     num = strgetui(&temp);
     temp++;
     pos2.landmark2 = formLandmarkFromInput(letter, num);
-    pos2.offset = 0;
+    pos2.offset = 2;
 
     int distance = 9999;
     QueryDistance(trackController, &pos, &pos2, &distance);
     PrintDebug(ui, "Distance: %d", distance);
   } else {
-    PrintDebug(ui, "Bad: %s", decoderBuffer);
+    PrintDebug(ui, "Bad command: %s", decoderBuffer);
+    return;
   }
+  PrintDebug(ui, "Command: %s", decoderBuffer);
 }
 
 static void commandDecoder() {
