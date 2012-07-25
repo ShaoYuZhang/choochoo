@@ -282,16 +282,17 @@ void multitrain_driver() {
           // Get more accurate distance based on knowledge of train direciton.
           distance -= me.info[i].lenBackOfPickup;
           distance -= me.info[i-1].lenFrontOfPickup;
+          distance -= PICKUP_LEN;
 
           // This is pretty arbitrary now and needs tuning
-          if (distance > 300 && me.info[i].trainSpeed < me.info[i-1].trainSpeed + 1 && me.info[i].trainSpeed < 14) {
+          if (distance > 150 && me.info[i].trainSpeed < me.info[i-1].trainSpeed + 1 && me.info[i].trainSpeed < 14) {
             PrintDebug(me.ui, "Speeding up Distance: %d", distance);
             // too far, back train need to speed up
             dMsg.type = SET_SPEED;
             dMsg.data2 = me.info[i].trainSpeed + 1;
             dMsg.data3 = -1;
             Send(me.trainId[i], (char*)&dMsg, sizeof(DriverMsg), (char*)1, 0);
-          } else if (distance < 300 && distance > 0 && me.info[i].trainSpeed > me.info[i-1].trainSpeed - 1 && me.info[i].trainSpeed > 0) {
+          } else if (distance < 100 && distance > 0 && me.info[i].trainSpeed > me.info[i-1].trainSpeed - 1 && me.info[i].trainSpeed > 0) {
             // too close, back train need to slow up
             PrintDebug(me.ui, "Slowing down Distance %d", distance);
             // too far, back train need to speed up

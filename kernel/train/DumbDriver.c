@@ -530,8 +530,8 @@ void dumb_driver() {
         info.maxStoppingDistance = getStoppingDistance(&me);
         info.currentStoppingDistance = interpolateStoppingDistance(&me, getVelocity(&me));
         info.lenFrontOfPickup =
-          me.reversed ? me.trainLen - (me.pickupOffset + PICKUP_LEN)
-                      : me.pickupOffset + PICKUP_LEN;
+          me.reversed ? me.trainLen - (me.pickupOffset)
+                      : me.pickupOffset;
         info.lenBackOfPickup = me.trainLen - info.lenFrontOfPickup;
 
         toPosition(&me, &info.pos);

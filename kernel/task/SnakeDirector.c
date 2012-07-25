@@ -44,11 +44,13 @@ static void delayer_task() {
 
 static void try_update_position(GamePiece* snake, GamePiece* baits) {
   DriverMsg msg;
-  msg.trainNum = (char)snake->trainNum;
   msg.type = GET_POSITION;
-  int l = Send(trainController, (char*)&msg, sizeof(msg),
-      (char*)&snake->pos, sizeof(snake->pos));
-  snake->positionKnown = (l == sizeof(snake->pos));
+  if (snake->trainNum != -1) {
+    msg.trainNum = (char)snake->trainNum;
+    int l = Send(trainController, (char*)&msg, sizeof(msg),
+        (char*)&snake->pos, sizeof(snake->pos));
+    snake->positionKnown = (l == sizeof(snake->pos));
+  }
 
   for (int i = 0; i < 4; i++) {
     if (baits[i].trainNum != -1 && baits[i].eaten == 0) {
