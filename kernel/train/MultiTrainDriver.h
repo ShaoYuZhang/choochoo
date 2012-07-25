@@ -24,9 +24,6 @@ typedef struct MultiTrainDriver {
   int timeserver;
   int trainController;
   int sensorWatcher;
-  int lastSensorDistanceError;
-  float distanceFromLastSensor;
-  float distanceToNextSensor;
   // the single train driver side of multi-train driver,
   // most parameters relates to the head train
   //Driver driver;
@@ -58,21 +55,6 @@ typedef struct MultiTrainDriver {
   int trainId[MAX_TRAIN_IN_GROUP];
   DumbDriverInfo info[MAX_TRAIN_IN_GROUP];
   int stoppedCount;
-  TrainUiMsg uiMsg;
-
-
-  // Actual Stuf
-  char lastSensorIsTerminal;
-  char lastSensorUnexpected;
-  char lastSensorBox;
-  char lastSensorVal;
-  int lastSensorActualTime;
-  int lastSensorPredictedTime;
-
-
-  // prediction stuff
-  TrackSensorPrediction predictions[20];
-  int numPredictions;
 
   // An array of sensors to reserve for each train in group
   TrackLandmark sensorToReserve[MAX_TRAIN_IN_GROUP][10];

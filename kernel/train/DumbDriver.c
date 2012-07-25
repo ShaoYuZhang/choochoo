@@ -118,11 +118,6 @@ static void updatePrediction(DumbDriver* me) {
     me->predictions[i] = trackMsg.predictions[i];
   }
   me->numPredictions = trackMsg.numPred;
-  TrainDebug(me, "Predictions. %d", trackMsg.numPred);
-  for (int i = 0; i < trackMsg.numPred; i++) {
-    TrackSensorPrediction prediction = trackMsg.predictions[i];
-    printLandmark(me, &prediction.sensor);
-  }
 
   TrackSensorPrediction primaryPrediction = trackMsg.predictions[0];
   me->distanceToNextSensor = primaryPrediction.dist;
@@ -539,6 +534,7 @@ void dumb_driver() {
         break;
       }
       case UPDATE_PARENT_ABOUT_PREDICTION: {
+        updatePrediction(&me);
         updateParentAboutPrediction(&me);
         Reply(tid, (char*)1, 0);
         break;
@@ -549,6 +545,11 @@ void dumb_driver() {
       }
       case DRIVER_COURIER: {
         // nothing
+        break;
+      }
+      case QUERY_STOPPING_DISTANCE: {
+        int speed = msg.data2;
+        Reply(tid, (char *)&me.d[speed][me.speedDir][MAX_VAL], sizeof(int));
         break;
       }
       default: {

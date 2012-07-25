@@ -25,6 +25,7 @@
 #define DRIVER_COURIER 18
 #define REVERSE_SPEED 19
 #define UPDATE_PARENT_ABOUT_PREDICTION 20
+#define QUERY_STOPPING_DISTANCE 21
 
 #include <UserInterface.h>
 #include <Track.h>

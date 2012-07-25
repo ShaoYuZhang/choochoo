@@ -1,13 +1,3 @@
-static void toPosition(MultiTrainDriver* me, Position* pos) {
-  pos->landmark1.type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
-  pos->landmark1.num1 = me->lastSensorBox;
-  pos->landmark1.num2 = me->lastSensorVal;
-  pos->landmark2.type = me->nextSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
-  pos->landmark2.num1 = me->nextSensorBox;
-  pos->landmark2.num2 = me->nextSensorVal;
-  pos->offset = (int)me->distanceFromLastSensor;
-}
-
 static void trySetSwitch_and_getNextSwitch(MultiTrainDriver* me) {
   TrackMsg setSwitch;
   setSwitch.type = SET_SWITCH;
@@ -30,103 +20,25 @@ static void trySetSwitch_and_getNextSwitch(MultiTrainDriver* me) {
         break;
       }
     }
+
     updatePrediction(me);
-    int reserveStatus = reserveMoreTrack(me, 0, getStoppingDistance(me)); // moving
-    if (reserveStatus == RESERVE_FAIL) {
-      reroute(me);
-    }
+
     if (!haveNextSwitch) {
       me->nextSetSwitchNode = -1;
     }
   }
 }
 
-static int reserveMoreTrack(MultiTrainDriver* me, int stationary, int stoppingDistance) {
-  // Note on passing in stopping distance:
-  // if a trainSetSpeed command follows immediately after reserveMoretrack then
-  // pass in the stoppingDistance of the newSpeed, else use getStoppingDistance(me)
-  ReleaseOldAndReserveNewTrackMsg qMsg;
-  qMsg.type = RELEASE_OLD_N_RESERVE_NEW;
-  qMsg.trainNum = me->trainNum;
-  qMsg.stoppingDistance = stoppingDistance;
-  qMsg.lastSensor.type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
-  qMsg.lastSensor.num1 = me->lastSensorBox;
-  qMsg.lastSensor.num2 = me->lastSensorVal;
-
-  if (!stationary) {
-    if (me->numPredictions > 10) {
-      TrainDebug(me, "__Can't reserve >10 predictions");
-    } else {
-      //TrainDebug(me, "Reserving track");
-      qMsg.numPredSensor = me->numPredictions;
-      for(int i = 0; i < me->numPredictions; i++) {
-        qMsg.predSensor[i] = me->predictions[i].sensor;
-        //printLandmark(me, &qMsg.predSensor[i]);
-      }
-    }
-  } else {
-    qMsg.stoppingDistance = 1;
-    qMsg.numPredSensor = 0;
-  }
-
-  int previousLandmarkState = me->reserveFailedLandmark.type;
-  int len = Send(
-      me->trackManager, (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
-      (char*)&(me->reserveFailedLandmark), sizeof(TrackLandmark));
-  if (len > 0) {
-    //TrainDebug(me, "Failed cuz couldn't get landmark");
-    printLandmark(me, &me->reserveFailedLandmark);
-    return RESERVE_FAIL;
-  } else if (!stationary &&
-      previousLandmarkState != LANDMARK_BAD &&
-      me->reserveFailedLandmark.type != LANDMARK_BAD){
-    //TrainDebug(me, "Got landmark bad.");
-    me->reserveFailedLandmark.type = LANDMARK_BAD;
-  }
-  return RESERVE_SUCESS;
-}
-
 static void updatePrediction(MultiTrainDriver* me) {
-  int now = Time(me->timeserver) * 10;
-  TrackNextSensorMsg trackMsg;
-  TrackMsg qMsg;
-  qMsg.type = QUERY_NEXT_SENSOR_FROM_POS;
-  toPosition(me, &qMsg.position1);
-  Send(me->trackManager, (char*)&qMsg, sizeof(TrackMsg),
-        (char*)&trackMsg, sizeof(TrackNextSensorMsg));
-
-  for (int i = 0; i < trackMsg.numPred; i++) {
-    me->predictions[i] = trackMsg.predictions[i];
+  DriverMsg dMsg;
+  dMsg.type = UPDATE_PARENT_ABOUT_PREDICTION;
+  for (int i = 0; i < MAX_TRAIN_IN_GROUP; i++) {
+    Send(me->trainId[i], (char *)&dMsg, sizeof(DriverMsg), (char *)NULL, 0);
   }
-  me->numPredictions = trackMsg.numPred;
-  TrainDebug(me, "Predictions. %d", trackMsg.numPred);
-  for (int i = 0; i < trackMsg.numPred; i++) {
-    TrackSensorPrediction prediction = trackMsg.predictions[i];
-    printLandmark(me, &prediction.sensor);
-  }
-
-  TrackSensorPrediction primaryPrediction = trackMsg.predictions[0];
-  me->distanceToNextSensor = primaryPrediction.dist;
-  if (primaryPrediction.sensor.type != LANDMARK_SENSOR &&
-      primaryPrediction.sensor.type != LANDMARK_END) {
-    TrainDebug(me, "QUERY_NEXT_SENSOR_FROM_SENSOR ..bad %d", primaryPrediction.sensor.type);
-  }
-  me->nextSensorIsTerminal = (primaryPrediction.sensor.type == LANDMARK_END);
-
-  if (primaryPrediction.sensor.num2 != 0) {
-    me->nextSensorBox = primaryPrediction.sensor.num1;
-    me->nextSensorVal = primaryPrediction.sensor.num2;
-  } else {
-    //TrainDebug(me, "No prediction.. has position");
-    //printLandmark(me, &qMsg.position1.landmark1);
-    //printLandmark(me, &qMsg.position1.landmark2);
-    //TrainDebug(me, "Offset %d", qMsg.position1.offset);
-  }
-  sendUiReport(me);
 }
 
 static void getRoute(MultiTrainDriver* me, Position* from, DriverMsg* msg) {
-  TrainDebug(me, "%d Getting Route.", me->trainNum);
+  PrintDebug(me->ui, "%d Getting Route.", me->trainNum);
   TrackMsg trackmsg;
   if (me->testMode) {
     //TrainDebug(me, "Test Mode");
@@ -142,14 +54,14 @@ static void getRoute(MultiTrainDriver* me, Position* from, DriverMsg* msg) {
 
     printLandmark(me, &trackmsg.position1.landmark1);
     printLandmark(me, &trackmsg.position1.landmark2);
-    TrainDebug(me, "Offset %d", trackmsg.position1.offset);
+    PrintDebug(me->ui, "Offset %d", trackmsg.position1.offset);
   }
 
   Send(me->trackManager, (char*)&trackmsg,
       sizeof(TrackMsg), (char*)&(me->route), sizeof(Route));
   me->routeRemaining = 0;
   me->previousStopNode = 0;
-  me->distanceFromLastSensorAtPreviousStopNode = me->distanceFromLastSensor;
+  me->distanceFromLastSensorAtPreviousStopNode = me->info[0].pos.offset;
   me->stopSensorVal = -1;
   me->stopSensorBox = -1;
   if (!me->testMode) {
@@ -161,17 +73,17 @@ static int shouldStopNow(MultiTrainDriver* me) {
   if (me->stopNow) {
     return 2; // no room to stop, must stop now
   }
-  if ( me->lastSensorBox == me->stopSensorBox &&
-        me->lastSensorVal == me->stopSensorVal) {
+  if ( me->info[0].pos.landmark1.num1 == me->stopSensorBox &&
+        me->info[0].pos.landmark1.num2 == me->stopSensorVal) {
     me->stopSensorHit = 1;
   }
   int canUseLastSensor =
-      ( me->lastSensorBox == me->stopSensorBox &&
-        me->lastSensorVal == me->stopSensorVal
+      ( me->info[0].pos.landmark1.num1 == me->stopSensorBox &&
+        me->info[0].pos.landmark1.num2 == me->stopSensorVal
       ) || me->useLastSensorNow;
 
   if (canUseLastSensor) {
-    int d = me->distancePassStopSensorToStop - (int)me->distanceFromLastSensor;
+    int d = me->distancePassStopSensorToStop - (int)me->info[0].pos.offset;
 
     me->CC &= 15;
     if (me->CC++ == 0) {
@@ -195,10 +107,7 @@ static int shouldStopNow(MultiTrainDriver* me) {
 static void updateStopNode(MultiTrainDriver* me) {
   // Find the first reverse on the path, stop if possible.
   me->stopNode = me->route.length-1;
-  const int stoppingDistance =
-    interpolateStoppingDistance(me,
-        getVelocity(me));
-  int stop = stoppingDistance;
+  const int stoppingDistance = me->info[0].currentStoppingDistance;
   for (int i = me->previousStopNode; i < me->route.length-1; i++) {
     if (me->route.nodes[i].num == REVERSE) {
       me->stopNode = i;
@@ -214,14 +123,15 @@ static void updateStopNode(MultiTrainDriver* me) {
   // |__travel_dist____|
   // |delay this much..|
   //TrainDebug(me, "Need %d mm at StopNode %d", stop, me->stopNode-1);
+  int stop = stoppingDistance;
   if (stoppingDistance == 0) {
-    return;
+    stop = 1; //hack
   }
   for (int i = me->stopNode-1; i >= me->previousStopNode; i--) {
     // Minus afterwards so that stoppping distance can be zero.
     if (stop > 0) {
       stop -= me->route.nodes[i].dist;
-      //TrainDebug(me, "Stop %d %d", stop, i);
+      //PrintDebug(me->ui, "Stop %d %d", stop, i);
     }
 
     if (stop <= 0) {
@@ -248,7 +158,7 @@ static void updateStopNode(MultiTrainDriver* me) {
         //          |______ distanceFromLastSensor
         me->useLastSensorNow = 1;
         previousStop += (int)me->distanceFromLastSensorAtPreviousStopNode;
-        //TrainDebug(me, "Use Last sensor now");
+        //PrintDebug(me->ui, "Use Last sensor now");
       }
       // Else..
       //     |---stopSensorBox
@@ -257,15 +167,15 @@ static void updateStopNode(MultiTrainDriver* me) {
       //       |__|
       //          |______ previous stop
       me->distancePassStopSensorToStop = previousStop;
-      //TrainDebug(me, "Stop Sensor %c%d",
+      //PrintDebug(me->ui, "Stop Sensor %c%d",
       //    'A'+me->stopSensorBox, me->stopSensorVal);
-      //TrainDebug(me, "Stop %dmm after sensor", previousStop);
+      //PrintDebug(me->ui, "Stop %dmm after sensor", previousStop);
       break;
     }
   }
   if (stop > 0) {
-      //TrainDebug(me, "No room to stop??? %d", stop);
-      //TrainDebug(me, "StopNode-1 %d, remaining %d ", me->stopNode-1,
+      //PrintDebug(me->ui, "No room to stop??? %d", stop);
+      //PrintDebug(me->ui, "StopNode-1 %d, remaining %d ", me->stopNode-1,
       //    me->previousStopNode);
 
       me->stopNow = 1;
@@ -309,15 +219,6 @@ static void updateSetSwitch(MultiTrainDriver* me) {
     }
   }
 }
-static void QueryNextSensor(MultiTrainDriver* me, TrackNextSensorMsg* trackMsg) {
-  TrackMsg qMsg;
-  qMsg.type = QUERY_NEXT_SENSOR_FROM_SENSOR;
-  qMsg.landmark1.type = LANDMARK_SENSOR;
-  qMsg.landmark1.num1 = me->lastSensorBox;
-  qMsg.landmark1.num2 = me->lastSensorVal;
-  Send(me->trackManager, (char*)&qMsg, sizeof(TrackMsg),
-      (char*)trackMsg, sizeof(TrackNextSensorMsg));
-}
 
 static int QueryIsSensorReserved(MultiTrainDriver* me, int box, int val) {
   char isReserved = 0;
@@ -334,20 +235,20 @@ static int QueryIsSensorReserved(MultiTrainDriver* me, int box, int val) {
 
 static void printLandmark(MultiTrainDriver* me, TrackLandmark* l) {
   if (l->type == LANDMARK_SENSOR) {
-    TrainDebug(me, "Landmark Sn  %c%d",
+    PrintDebug(me->ui, "Landmark Sn  %c%d",
         'A' +l->num1, l->num2);
   } else if (l->type == LANDMARK_END) {
-    TrainDebug(me, "Landmark %s %d",
+    PrintDebug(me->ui, "Landmark %s %d",
         l->num1 == EN ? "EN" : "EX",
         l->num2);
   } else if (l->type == LANDMARK_FAKE) {
-    TrainDebug(me, "Landmark Fake %d %d",
+    PrintDebug(me->ui, "Landmark Fake %d %d",
         l->num1, l->num2);
   } else if (l->type == LANDMARK_SWITCH) {
-    TrainDebug(me, "Landmark Switch Num:%d Type:%s",
+    PrintDebug(me->ui, "Landmark Switch Num:%d Type:%s",
         l->num2, l->num1 == MR ? "MR" : "BR");
   } else if (l->type == LANDMARK_BAD) {
-    //TrainDebug(me, "Landmark type: bad.");
+    PrintDebug(me->ui, "Landmark type: bad.");
   }
 }
 
@@ -384,34 +285,34 @@ static void trainSensor() {
 }
 
 static void printRoute(MultiTrainDriver* me) {
-  TrainDebug(me, "Route Distance %d", me->route.dist);
+  PrintDebug(me->ui, "Route Distance %d", me->route.dist);
 
-  TrainDebug(me, "<Route>");
+  PrintDebug(me->ui, "<Route>");
   for (int i = 0; i < me->route.length; i++) {
     RouteNode node = me->route.nodes[i];
     if (node.num == -1) {
-      TrainDebug(me, "%d reverse", i);
+      PrintDebug(me->ui, "%d reverse", i);
     } else {
       if (node.landmark.type == LANDMARK_SENSOR) {
-        TrainDebug(me, "%d Landmark Sn  %c%d D:%d",
+        PrintDebug(me->ui, "%d Landmark Sn  %c%d D:%d",
             i, 'A' +node.landmark.num1, node.landmark.num2, node.dist);
       } else if (node.landmark.type == LANDMARK_END) {
-        TrainDebug(me, "%d Landmark %s %d D:%d",
+        PrintDebug(me->ui, "%d Landmark %s %d D:%d",
             i, node.landmark.num1 == EN ? "EN" : "EX",
             node.landmark.num2, node.dist);
       } else if (node.landmark.type == LANDMARK_FAKE) {
-        TrainDebug(me, "%d Landmark Fake %d %d D:%d",
+        PrintDebug(me->ui, "%d Landmark Fake %d %d D:%d",
             i, node.landmark.num1, node.landmark.num2, node.dist);
       }
 
       if (node.landmark.type == LANDMARK_SWITCH && node.landmark.num1 == BR) {
-        TrainDebug(me, "%d Switch %d to %s Type:%d D:%d", i, node.landmark.num2,
+        PrintDebug(me->ui, "%d Switch %d to %s Type:%d D:%d", i, node.landmark.num2,
             node.num == SWITCH_CURVED ? "Curve" : "Straight", node.landmark.num1,
             node.dist);
       }
     }
   }
-  TrainDebug(me, "</Route>");
+  PrintDebug(me->ui, "</Route>");
 
 }
 
@@ -422,27 +323,26 @@ static void setRoute(MultiTrainDriver* me, Position* from, DriverMsg* msg) {
   getRoute(me, from, msg);
   if (me->route.length != 0) {
     if (me->route.nodes[1].num == REVERSE) {
-      // Don't need to reverse... cuz.. it's probably stuck.
-      trainSetSpeed(msg->data2, 0, 0, me);
+      // Don't need to reserve... cuz.. it's probably stuck.
+      groupSetSpeed(me, msg->data2);
       updateStopNode(me);
       me->nextSetSwitchNode = -1;
       updateSetSwitch(me);
     } else {
-      int reserveStatus = reserveMoreTrack(me, 0, me->d[(int)msg->data2][ACCELERATE][MAX_VAL]); // Moving
-      if (reserveStatus == RESERVE_SUCESS) {
-        trainSetSpeed(msg->data2, 0, 0, me);
+      int setSpeedSuccess= groupSetSpeed(me, msg->data2);
+      if (setSpeedSuccess) {
         updateStopNode(me);
         me->nextSetSwitchNode = -1;
         updateSetSwitch(me);
       } else {
-        TrainDebug(me, "Cannot reserve track!");
-        trainSetSpeed(0, 0, 0, me);
+        PrintDebug(me->ui, "Cannot reserve track!");
+        groupSetSpeed(me, 0);
         me->rerouteCountdown = 200;
       }
     }
   } else {
-    TrainDebug(me, "No route found!");
-    trainSetSpeed(0, 0, 0, me);
+    PrintDebug(me->ui, "No route found!");
+    groupSetSpeed(me, 0);
     me->stopCommited = 1;
   }
 }

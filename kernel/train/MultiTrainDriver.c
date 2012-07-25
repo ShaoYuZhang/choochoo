@@ -14,42 +14,26 @@
 
 static void getRoute(MultiTrainDriver* me, Position* from, DriverMsg* msg);
 static void printLandmark(MultiTrainDriver* me, TrackLandmark* l);
-static void trainDelayer();
-static void trainStopDelayer();
 static void trainSensor();
 static void trainNavigateNagger();
 static void printRoute(MultiTrainDriver* me);
 static void QueryNextSensor(MultiTrainDriver* me, TrackNextSensorMsg* trackMsg);
 static int QueryIsSensorReserved(MultiTrainDriver* me, int box, int val);
 static void setRoute(MultiTrainDriver* me, Position* from, DriverMsg* msg);
-static void updatePrediction(MultiTrainDriver* me);
-static int reserveMoreTrack(MultiTrainDriver* me, int stopped, int stoppingDistance);
 static void multiTrainDriverCourier();
+static void updateStopNode(MultiTrainDriver* me);
+static void trySetSwitch_and_getNextSwitch(MultiTrainDriver* me);
+static void updateSetSwitch(MultiTrainDriver* me);
+static void updatePrediction(MultiTrainDriver* me);
+static int groupSetSpeed(MultiTrainDriver* me, int speed);
+static int shouldStopNow(MultiTrainDriver* me);
 
 static void reroute(MultiTrainDriver* me) {
-  //TODO
+  groupSetSpeed(me, 0);
+  me->rerouteCountdown = GET_TIMER4() % 2 == 0 ? 45 : 55; // wait ~1 seconds then reroute.
 }
 
-static void sendUiReport(MultiTrainDriver* me) {
-}
-
-static int getStoppingDistance(MultiTrainDriver* me) {
-  return 440; // TODO
-}
-
-static int interpolateStoppingDistance(MultiTrainDriver* me, int velocity) {
-  return 440; // TODO
-}
-
-static int getVelocity(MultiTrainDriver* me) {
-  return 56000; // TODO
-}
-
-static void trainSetSpeed(const int speed, const int stopTime, const int delayer, MultiTrainDriver* me) {
-}
-
-
-static int makeReservation(MultiTrainDriver* me) {
+static int makeReservation(MultiTrainDriver* me, int stoppingDistance) {
   if (me->tailMode) {
     PrintDebug(me->ui, "Cannot make reservation in tail mode");
     return 0;
@@ -77,7 +61,7 @@ static int makeReservation(MultiTrainDriver* me) {
   ReleaseOldAndReserveNewTrackMsg qMsg;
   qMsg.type = RELEASE_OLD_N_RESERVE_NEW;
   qMsg.trainNum = me->trainNum;
-  qMsg.stoppingDistance = isStationary ? 1 : getStoppingDistance(me);
+  qMsg.stoppingDistance = isStationary ? 1 : stoppingDistance;
   qMsg.lastSensor = sensors[0];
 
   //TrainDebug(me, "Reserving track");
@@ -87,21 +71,26 @@ static int makeReservation(MultiTrainDriver* me) {
     //printLandmark(me, &qMsg.predSensor[i]);
   }
 
+  int previousLandmarkState = me->reserveFailedLandmark.type;
   // reserveFailedlandmark is not really being used right now
   int len = Send(
       me->trackManager,
       (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
       (char*)&(me->reserveFailedLandmark), sizeof(TrackLandmark));
   if (len > 0) {
+    //TrainDebug(me, "Failed cuz couldn't get landmark");
+    printLandmark(me, &me->reserveFailedLandmark);
     return RESERVE_FAIL;
-  } else {
-    return RESERVE_SUCESS;
+  } else if (!isStationary &&
+      previousLandmarkState != LANDMARK_BAD &&
+      me->reserveFailedLandmark.type != LANDMARK_BAD){
+    //TrainDebug(me, "Got landmark bad.");
+    me->reserveFailedLandmark.type = LANDMARK_BAD;
   }
+  return RESERVE_SUCESS;
 }
 
 
-// copied from driver......
-// TODO, clean up of things this doesn't need
 static void initDriver(MultiTrainDriver* me) {
 
   char uiName[] = UI_TASK_NAME;
@@ -120,9 +109,6 @@ static void initDriver(MultiTrainDriver* me) {
   me->stopNow = 0;
   me->testMode = 0;
   me->stopSensorHit = 0;
-  me->nextSensorIsTerminal = 0;
-  me->lastSensorIsTerminal = 0;
-  me->lastSensorVal = 0; // Note to ui to don't print sensor.
   me->setSwitchNaggerCount = 0;
   me->isReversing = 0;
 
@@ -143,31 +129,12 @@ static void initDriver(MultiTrainDriver* me) {
 
   me->speed = 0;
   me->speedDir = ACCELERATE;
-  me->distanceToNextSensor = 0;
-  me->distanceFromLastSensor = 0;
-  me->lastSensorActualTime = 0;
-  me->lastSensorDistanceError = 0;
 
   me->sensorWatcher = Create(3, trainSensor);
   me->courier = Create(3, multiTrainDriverCourier);
-  //me.navigateNagger = Create(2, trainNavigateNagger);
 
   me->routeRemaining = -1;
   me->stoppedCount = 0;
-}
-
-void dumbDriverInfoUpdater() {
-  char timename[] = TIMESERVER_NAME;
-  int timeserver = WhoIs(timename);
-  int parent = MyParentsTid();
-
-  DriverMsg msg;
-  msg.type = INFO_UPDATE_NAGGER;
-
-  for (;;) {
-    Delay(5, timeserver);
-    Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
-  }
 }
 
 static void multiTrainDriverCourier() {
@@ -182,9 +149,81 @@ static void multiTrainDriverCourier() {
   }
 }
 
-static void groupSetSpeed(MultiTrainDriver* me, DriverMsg* msg) {
+static int groupSetSpeed(MultiTrainDriver* me, int speed) {
+  int shouldSetSpeed = 1;
+  if (!me->tailMode) {
+    if (speed == -1) {
+      // make every train stop and wait for there stop response
+      speed = 0;
+      me->isReversing = 1;
+      me->speedAfterReverse = me->info[0].trainSpeed;
+      me->stoppedCount = 0; // required hack, the count will be accumulated back to numTrain soon
+    }
+
+    if (speed != 0) {
+      // everyone is moving again
+      me->stoppedCount = 0;
+      if (me->info[0].trainSpeed == 0) {
+        int stoppingDistance;
+        DriverMsg qMsg;
+        qMsg.type = QUERY_STOPPING_DISTANCE;
+        qMsg.data2 = speed;
+        Send(me->trainId[0], (char *)&qMsg, sizeof(DriverMsg), (char*)&stoppingDistance, sizeof(int));
+        PrintDebug(me->ui, "Stopping Dist: %d", stoppingDistance);
+
+        shouldSetSpeed = makeReservation(me, stoppingDistance) == RESERVE_SUCESS;
+        PrintDebug(me->ui, "Should set speed: %d", shouldSetSpeed);
+      }
+    }
+  }
+
+  DriverMsg msg;
+  msg.type = SET_SPEED;
+  msg.data2 = speed;
+  if (shouldSetSpeed) {
+    for (int i = 0; i < me->numTrainInGroup; i++) {
+      Send(me->trainId[i], (char *)&msg, sizeof(DriverMsg), (char*)1, 0);
+    }
+  }
+  return shouldSetSpeed;
+}
+
+static void updateInfo(MultiTrainDriver* me) {
+  DriverMsg dMsg;
+  dMsg.type = REPORT_INFO;
   for (int i = 0; i < me->numTrainInGroup; i++) {
-    Send(me->trainId[i], (char *)msg, sizeof(DriverMsg), (char*)1, 0);
+    Send(me->trainId[i],
+        (char *)&dMsg, sizeof(DriverMsg),
+        (char*)&me->info[i], sizeof(DumbDriverInfo));
+  }
+
+  // check train's relative position difference
+  for (int i = 1; i < me->numTrainInGroup; i++) {
+    int distance = 0;
+    QueryDistance(me->trackManager,
+        &me->info[i].pos, &me->info[i-1].pos, &distance);
+    // Get more accurate distance based on knowledge of train direciton.
+    distance -= me->info[i].lenBackOfPickup;
+    distance -= me->info[i-1].lenFrontOfPickup;
+    distance -= PICKUP_LEN;
+
+    // This is pretty arbitrary now and needs tuning
+    if (distance > 150 && me->info[i].trainSpeed < me->info[i-1].trainSpeed + 1 && me->info[i].trainSpeed < 14) {
+      PrintDebug(me->ui, "Speeding up Distance: %d", distance);
+      // too far, back train need to speed up
+      dMsg.type = SET_SPEED;
+      dMsg.data2 = me->info[i].trainSpeed + 1;
+      dMsg.data3 = -1;
+      Send(me->trainId[i], (char*)&dMsg, sizeof(DriverMsg), (char*)1, 0);
+    } else if (distance < 100 && distance > 0 && me->info[i].trainSpeed > me->info[i-1].trainSpeed - 1 && me->info[i].trainSpeed > 0) {
+      // too close, back train need to slow up
+      PrintDebug(me->ui, "Slowing down Distance %d", distance);
+      // too far, back train need to speed up
+      dMsg.type = SET_SPEED;
+      dMsg.data2 = me->info[i].trainSpeed - 1;
+      dMsg.data3 = -1;
+      Send(me->trainId[i], (char*)&dMsg, sizeof(DriverMsg), (char*)1, 0);
+    }
   }
 }
 
@@ -192,7 +231,9 @@ void multitrain_driver() {
   MultiTrainDriver me;
 
   initDriver(&me);
-  int initCounter = 0; // TODO, hack, train need to be properly inited
+  unsigned int naggCount = 0;
+  unsigned int updateStoppingDistanceCount = 0;
+
   for (;;) {
     int tid = -1;
     MultiTrainDriverMsg actualMsg;
@@ -206,33 +247,11 @@ void multitrain_driver() {
     switch (msg->type) {
       case SET_SPEED: {
         PrintDebug(me.ui, "Set speed");
-        // Head train replied and calculate speed.
         if (!me.tailMode) {
-          PrintDebug(me.ui, "head mode");
           Reply(msg->replyTid, (char*)1, 0);
-          if (msg->data2 == -1) {
-            // make every train stop and wait for there stop response
-            msg->data2 = 0;
-            me.isReversing = 1;
-            me.speedAfterReverse = me.info[0].trainSpeed;
-            me.stoppedCount = 0; // required hack, the count will be accumulated back to numTrain soon
-          }
-
-          if (msg->data2 != -1 && msg->data2 != 0) {
-            // everyone is moving again
-            me.stoppedCount = 0;
-            if (me.info[0].trainSpeed == 0) {
-              makeReservation(&me);
-            }
-          }
-        } else  {
-          //Send(me->trainId[0], (char *)msg, sizeof(DriverMsg), (char*)1, 0);
-          PrintDebug(me.ui, "tail mode");
         }
 
-        // TODO(rcao) may only want to send to head train and tail trains coorperate
-        // NOTE:zhang MERGE_TAIL mode should be in sync with here.
-        groupSetSpeed(&me, msg);
+        groupSetSpeed(&me, msg->data2);
         break;
       }
       case SENSOR_TRIGGER: {
@@ -263,43 +282,52 @@ void multitrain_driver() {
         }
         break;
       } // case
-      case INFO_UPDATE_NAGGER: {
+      case NAVIGATE_NAGGER: {
         if (me.tailMode) break;
 
-        DriverMsg dMsg;
-        dMsg.type = REPORT_INFO;
-        for (int i = 0; i < me.numTrainInGroup; i++) {
-          Send(me.trainId[i],
-              (char *)&dMsg, sizeof(DriverMsg),
-              (char*)&me.info[i], sizeof(DumbDriverInfo));
+        updateInfo(&me);
+
+        if (me.routeRemaining != -1) {
+          if (!me.stopCommited) {
+            if (shouldStopNow(&me)) {
+              if (me.route.nodes[me.stopNode].num == REVERSE) {
+                //TrainDebug(&me, "Navi reversing.");
+                groupSetSpeed(&me, -1); // reverse
+              }
+              else {
+                //TrainDebug(&me, "Navi Nagger stopping.");
+                groupSetSpeed(&me, 0); // stopping
+                me.route.length = 0; // Finished the route.
+                me.testMode = 0;
+              }
+              me.stopCommited = 1;
+              me.useLastSensorNow = 0;
+              me.stopNow = 0;
+              me.stopSensorHit = 0;
+            } else {
+              if ((++updateStoppingDistanceCount & 15) == 0) updateStopNode(&me);
+            }
+          }
         }
 
-        // check train's relative position difference
-        for (int i = 1; i < me.numTrainInGroup; i++) {
-          int distance = 0;
-          QueryDistance(me.trackManager,
-              &me.info[i].pos, &me.info[i-1].pos, &distance);
-          // Get more accurate distance based on knowledge of train direciton.
-          distance -= me.info[i].lenBackOfPickup;
-          distance -= me.info[i-1].lenFrontOfPickup;
-          distance -= PICKUP_LEN;
-
-          // This is pretty arbitrary now and needs tuning
-          if (distance > 150 && me.info[i].trainSpeed < me.info[i-1].trainSpeed + 1 && me.info[i].trainSpeed < 14) {
-            PrintDebug(me.ui, "Speeding up Distance: %d", distance);
-            // too far, back train need to speed up
-            dMsg.type = SET_SPEED;
-            dMsg.data2 = me.info[i].trainSpeed + 1;
-            dMsg.data3 = -1;
-            Send(me.trainId[i], (char*)&dMsg, sizeof(DriverMsg), (char*)1, 0);
-          } else if (distance < 100 && distance > 0 && me.info[i].trainSpeed > me.info[i-1].trainSpeed - 1 && me.info[i].trainSpeed > 0) {
-            // too close, back train need to slow up
-            PrintDebug(me.ui, "Slowing down Distance %d", distance);
-            // too far, back train need to speed up
-            dMsg.type = SET_SPEED;
-            dMsg.data2 = me.info[i].trainSpeed - 1;
-            dMsg.data3 = -1;
-            Send(me.trainId[i], (char*)&dMsg, sizeof(DriverMsg), (char*)1, 0);
+        if (me.nextSetSwitchNode != -1 && (++me.setSwitchNaggerCount & 3) == 0) {
+          trySetSwitch_and_getNextSwitch(&me);
+        }
+        if (me.rerouteCountdown-- == 0) {
+          if (me.testMode) {
+            int reserveStatus = makeReservation(&me, 440);
+            if (reserveStatus == RESERVE_FAIL) {
+              reroute(&me);
+            } else {
+              me.nextSetSwitchNode = -1;
+              updateSetSwitch(&me);
+              groupSetSpeed(&me, 8);
+            }
+          } else {
+            // reroute
+            if (me.route.length != 0) {
+              setRoute(&me, &(me.info[0].pos), &(me.routeMsg));
+            }
           }
         }
         break;
@@ -322,7 +350,7 @@ void multitrain_driver() {
             me.numSensorToReserve[i] = actualMsg.numSensors;
           }
         }
-        makeReservation(&me);
+        makeReservation(&me, me.info[0].maxStoppingDistance);
         break;
       }
       case STOP_COMPLETED: {
@@ -338,7 +366,7 @@ void multitrain_driver() {
         me.stoppedCount++;
 
         if (me.stoppedCount == me.numTrainInGroup) {
-          makeReservation(&me);
+          makeReservation(&me, 1);
           if (me.isReversing) {
             // flip the heads and tails of everythingggg
             for (int i = 0; i < me.numTrainInGroup / 2; i++) {
@@ -374,24 +402,30 @@ void multitrain_driver() {
               Send(me.trainId[i], (char *)&dMsg, sizeof(DriverMsg), (char *)NULL, 0);
             }
             me.isReversing = 0;
+            updateInfo(&me);
             if (me.speedAfterReverse != 0) {
               me.stoppedCount = 0;
+            }
+            if (me.route.length != 0) {
+              // Delayer came back. Reverse command completed
+              me.stopCommited = 0; // We're moving again.
+              // We've completed everything up to the reverse node.
+              me.routeRemaining = me.stopNode+1;
+              me.previousStopNode = me.routeRemaining;
+              me.distanceFromLastSensorAtPreviousStopNode = me.info[0].pos.offset;
+              // Calculate the next stop node.
+              updateStopNode(&me);
+              me.nextSetSwitchNode = -1;
+              updateSetSwitch(&me);
             }
           }
         }
         break;
       }
-      case NAVIGATE_NAGGER: {
-        // TODO
-        break;
-      }
       case SET_ROUTE: {
         Reply(msg->replyTid, (char*)1, 0);
         me.routeMsg = *msg;
-        getRoute(&me, &(me.info[0].pos), msg);
-
-        PrintDebug(me.ui, "Did not set route yet!!!");
-        //setRoute(&me, &msg);
+        setRoute(&me, &(me.info[0].pos), msg);
         break;
       }
       case GET_POSITION: {
@@ -440,7 +474,7 @@ void multitrain_driver() {
               (char *)&dMsg, sizeof(DriverMsg),
               (char*)&me.info[i], sizeof(DumbDriverInfo));
         }
-        me.infoUpdater = Create(3, dumbDriverInfoUpdater);
+        me.infoUpdater = Create(3, trainNavigateNagger);
         unlock();
         break;
       }
@@ -529,6 +563,20 @@ void multitrain_driver() {
           Send(me.trainId[i], (char *)msg, sizeof(DriverMsg), (char*)1, 0);
         }
         break;
+      }
+      case QUERY_STOPPING_DISTANCE: {
+        if (!me.tailMode) {
+          PrintDebug(me.ui, "Query stopping dist Not in tail mode..??"); break;
+        }
+
+        int stoppingDist = 0;
+        // ASSUME ONLY 1 train when in tail mode.
+        Send(me.trainId[0], (char*)msg, sizeof(DriverMsg),
+            (char*)&stoppingDist, sizeof(int));
+        // Reply the head that made query.
+        Reply(me.headTid, (char*)&stoppingDist, sizeof(int));
+        break;
+
       }
       default: {
         PrintDebug(me.ui, "Not Handled %d", msg->type);
