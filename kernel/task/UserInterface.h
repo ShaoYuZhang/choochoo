@@ -63,10 +63,10 @@ int startUserInterfaceTask();
 
 #define TrainDebug(me, fmt, ...) \
 { \
-  int colors[4] = {33, 36, 32, 35}; \
+  int __colors[4] = {33, 36, 32, 35}; \
   char DebugBuffer[128]; \
   DebugBuffer[0] = DEBUG_TRAIN_MSG; \
-  DebugBuffer[1] = colors[(int)(me)->uiMsg.nth];  \
+  DebugBuffer[1] = __colors[(int)(me)->uiMsg.nth];  \
   int DebugLen = sprintff(DebugBuffer+2, fmt, ##__VA_ARGS__ ); \
   Send((me)->ui, DebugBuffer, DebugLen + 2, (char*)1, 0);  \
 }

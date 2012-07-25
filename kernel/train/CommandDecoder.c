@@ -261,10 +261,10 @@ static void decodeCommand() {
     QueryDistance(trackController, &pos, &pos2, &distance);
     PrintDebug(ui, "Distance: %d", distance);
   } else {
-    PrintDebug(ui, "Bad command: %s", decoderBuffer);
+    PrintDebug(ui, "__Bad command__ %s", decoderBuffer);
     return;
   }
-  PrintDebug(ui, "Command: %s", decoderBuffer);
+  PrintDebug(ui, "__Command: %s", decoderBuffer);
 }
 
 static void commandDecoder() {
