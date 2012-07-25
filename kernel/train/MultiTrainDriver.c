@@ -45,18 +45,21 @@ static int makeReservation(MultiTrainDriver* me, int stoppingDistance) {
   for (int i = 0; i < me->numTrainInGroup; i++) {
     int numSensor = isStationary ? 1 : me->numSensorToReserve[i];
     for (int j = 0; j < numSensor; j++) {
-      int isInQueue = 1;
+      int isInQueue = 0;
       for (int k = 0; k < sensorIndex; k++) {
         if (sensors[k].type == me->sensorToReserve[i][j].type &&
-            sensors[k].num2 == me->sensorToReserve[i][j].num1 &&
+            sensors[k].num1 == me->sensorToReserve[i][j].num1 &&
             sensors[k].num2 == me->sensorToReserve[i][j].num2) {
-          isInQueue = 0;
+          isInQueue = 1;
           break;
         }
       }
-      sensors[sensorIndex++] = me->sensorToReserve[i][j];
+      if (!isInQueue) {
+        sensors[sensorIndex++] = me->sensorToReserve[i][j];
+      }
     }
   }
+  PrintDebug(me->ui, "WTFFF %d", sensorIndex);
 
   ReleaseOldAndReserveNewTrackMsg qMsg;
   qMsg.type = RELEASE_OLD_N_RESERVE_NEW;
@@ -68,7 +71,7 @@ static int makeReservation(MultiTrainDriver* me, int stoppingDistance) {
   qMsg.numPredSensor = sensorIndex - 1;
   for(int i = 1; i < sensorIndex; i++) {
     qMsg.predSensor[i-1] = sensors[i];
-    //printLandmark(me, &qMsg.predSensor[i]);
+    //printLandmark(me, &qMsg.predSensor[i-1]);
   }
 
   int previousLandmarkState = me->reserveFailedLandmark.type;

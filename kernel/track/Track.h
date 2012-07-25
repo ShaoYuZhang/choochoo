@@ -58,7 +58,7 @@ typedef struct ReleaseOldAndReserveNewTrackMsg {
   int stoppingDistance;
   TrackLandmark lastSensor;
   int numPredSensor;
-  TrackLandmark predSensor[10];
+  TrackLandmark predSensor[45];
 } ReleaseOldAndReserveNewTrackMsg;
 
 typedef struct Position {
