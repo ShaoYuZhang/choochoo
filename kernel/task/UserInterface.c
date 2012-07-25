@@ -13,9 +13,9 @@
 #define NUM_SENSORSET 5
 #define NUM_SENSOR_STATUS 21
 #define UI_WIDTH 80
-#define PROMPT_R1 '0'+2
+#define PROMPT_R1 '0'+3
 #define PROMPT_R2 '0'+7
-#define CLOCK_R1 '0'+2
+#define CLOCK_R1 '0'+3
 #define CLOCK_R2 '0'+5
 #define CLOCK_C1 '8'
 
@@ -139,10 +139,11 @@ static char* timeu(unsigned int ms, char* msg) {
 // |             | LMARK    |
 static char* updateTrain(TrainUiMsg* train, char* msg) {
   msg = saveCursor(msg);
+  int colors[4] = {33, 36, 32, 35};
 
-  msg = setColor(33+train->nth*3, msg);
-  int col = 26+(int)(train->nth)*10;
-  int row = 2;
+  msg = setColor(colors[(int)train->nth], msg);
+  int col = 26+(int)(train->nth%2)*10;
+  int row = 2+(15*(train->nth/2));
   // TRAIN NUMBER
   msg = moveTo(row++, col, msg);
   *msg++ = 'N';
@@ -335,7 +336,7 @@ static char* updateDebugMessage(char* receive, char* msg, int len) {
 static char* updateTime(unsigned int ms, char* msg) {
   msg = saveCursor(msg);
 
-  msg = moveTo(25, 8, msg);
+  msg = moveTo(35, 8, msg);
   msg = timeu(ms, msg);
 
   return restoreCursor(msg);
@@ -387,13 +388,13 @@ static char* updateSensor(int box, int val, char* msg) {
 
   // move to position
   if (numUpdated == 0) {
-    msg = moveTo(26, 10, msg);
+    msg = moveTo(36, 10, msg);
     for (int i = 0; i < 40; i++) {
       *msg++ = ' ';
     }
-    msg = moveTo(26, 10, msg);
+    msg = moveTo(36, 10, msg);
   } else {
-    msg = moveTo(26, 10 + numUpdated*5, msg);
+    msg = moveTo(36, 10 + numUpdated*5, msg);
   }
 
   // Print sensor info
@@ -449,8 +450,7 @@ static char* drawTrainFrameHelper(
   return msg;
 }
 
-static char* drawTrainFrame(char* msg) {
-  int row = 1;
+static char* drawTrainFrame(char* msg, int row) {
   msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '.', '+', '+', "-------------", "----------");
 
@@ -581,10 +581,9 @@ static char* updateSwitch(int sw, int ss, char* msg) {
   return msg;
 }
 
+static int timeserver;
 static void timerDelay() {
   int parent = MyParentsTid();
-  char timeName[] = TIMESERVER_NAME;
-  int timeserver = WhoIs(timeName);
   UiMsg msg;
   msg.type = UPDATE_TIME;
   int ticks = Time(timeserver);
@@ -636,7 +635,7 @@ static void sensorQuery() {
 }
 
 static void displayStaticContent(int com2) {
-  char msgStart[2048];
+  char msgStart[2000];
   char* msg = msgStart;
 
   // Do not show cursor
@@ -658,7 +657,7 @@ static void displayStaticContent(int com2) {
   msg = drawSwitches(msg);
 
   // Draw sensor
-  msg = moveTo(26, 1, msg);
+  msg = moveTo(36, 1, msg);
 
   // Text
   *msg++ = 'S';
@@ -669,11 +668,14 @@ static void displayStaticContent(int com2) {
   *msg++ = 'r';
   *msg++ = ':';
 
-  msg = drawTrainFrame(msg);
-  msg = promptChar(1, '>', msg);
-
+  msg = drawTrainFrame(msg, 1);  // Draw a frame begin row 1
   Putstr(com2, msgStart, msg-msgStart);
 
+  Delay(2, timeserver); // Too much data..
+  msg = msgStart;
+  msg = drawTrainFrame(msg, 16); // Draw a frame begin row 16
+  msg = promptChar(1, '>', msg);
+  Putstr(com2, msgStart, msg-msgStart);
 }
 
 static void userInterface() {
@@ -739,5 +741,7 @@ static void userInterface() {
 int startUserInterfaceTask() {
   numUpdated = 0;
   debugUpdateNum = 0;
+  char timeName[] = TIMESERVER_NAME;
+  timeserver = WhoIs(timeName);
   return Create(3, userInterface);
 }
