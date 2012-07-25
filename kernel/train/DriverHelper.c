@@ -1,4 +1,4 @@
-static void toPosition(Driver* me, Position* pos) {
+static void toPosition(MultiTrainDriver* me, Position* pos) {
   pos->landmark1.type = me->lastSensorIsTerminal ? LANDMARK_END : LANDMARK_SENSOR;
   pos->landmark1.num1 = me->lastSensorBox;
   pos->landmark1.num2 = me->lastSensorVal;
@@ -8,7 +8,7 @@ static void toPosition(Driver* me, Position* pos) {
   pos->offset = (int)me->distanceFromLastSensor;
 }
 
-static void trySetSwitch_and_getNextSwitch(Driver* me) {
+static void trySetSwitch_and_getNextSwitch(MultiTrainDriver* me) {
   TrackMsg setSwitch;
   setSwitch.type = SET_SWITCH;
   setSwitch.trainNum = me->trainNum;
@@ -41,7 +41,7 @@ static void trySetSwitch_and_getNextSwitch(Driver* me) {
   }
 }
 
-static int reserveMoreTrack(Driver* me, int stationary, int stoppingDistance) {
+static int reserveMoreTrack(MultiTrainDriver* me, int stationary, int stoppingDistance) {
   // Note on passing in stopping distance:
   // if a trainSetSpeed command follows immediately after reserveMoretrack then
   // pass in the stoppingDistance of the newSpeed, else use getStoppingDistance(me)
@@ -86,7 +86,7 @@ static int reserveMoreTrack(Driver* me, int stationary, int stoppingDistance) {
   return RESERVE_SUCESS;
 }
 
-static void updatePrediction(Driver* me) {
+static void updatePrediction(MultiTrainDriver* me) {
   int now = Time(me->timeserver) * 10;
   TrackNextSensorMsg trackMsg;
   TrackMsg qMsg;
@@ -125,7 +125,7 @@ static void updatePrediction(Driver* me) {
   sendUiReport(me);
 }
 
-static void getRoute(Driver* me, Position* from, DriverMsg* msg) {
+static void getRoute(MultiTrainDriver* me, Position* from, DriverMsg* msg) {
   TrainDebug(me, "%d Getting Route.", me->trainNum);
   TrackMsg trackmsg;
   if (me->testMode) {
@@ -157,7 +157,7 @@ static void getRoute(Driver* me, Position* from, DriverMsg* msg) {
   }
 }
 
-static int shouldStopNow(Driver* me) {
+static int shouldStopNow(MultiTrainDriver* me) {
   if (me->stopNow) {
     return 2; // no room to stop, must stop now
   }
@@ -192,7 +192,7 @@ static int shouldStopNow(Driver* me) {
   return 0;
 }
 
-static void updateStopNode(Driver* me) {
+static void updateStopNode(MultiTrainDriver* me) {
   // Find the first reverse on the path, stop if possible.
   me->stopNode = me->route.length-1;
   const int stoppingDistance =
@@ -280,7 +280,7 @@ static void updateStopNode(Driver* me) {
 }
 
 // Update route traveled as sensors are hit.
-static void updateRoute(Driver* me, char box, char val) {
+static void updateRoute(MultiTrainDriver* me, char box, char val) {
   if (me->routeRemaining == -1) return;
 
   // See if we triggered a sensor on the route.
@@ -298,7 +298,7 @@ static void updateRoute(Driver* me, char box, char val) {
   // TODO if stoppped, update next stopNode.
 }
 
-static void updateSetSwitch(Driver* me) {
+static void updateSetSwitch(MultiTrainDriver* me) {
   for (int i = me->routeRemaining; i < me->stopNode; i++) {
     if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
         me->route.nodes[i].landmark.num1 == BR && me->nextSetSwitchNode == -1) {
@@ -309,7 +309,7 @@ static void updateSetSwitch(Driver* me) {
     }
   }
 }
-static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg) {
+static void QueryNextSensor(MultiTrainDriver* me, TrackNextSensorMsg* trackMsg) {
   TrackMsg qMsg;
   qMsg.type = QUERY_NEXT_SENSOR_FROM_SENSOR;
   qMsg.landmark1.type = LANDMARK_SENSOR;
@@ -319,7 +319,7 @@ static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg) {
       (char*)trackMsg, sizeof(TrackNextSensorMsg));
 }
 
-static int QueryIsSensorReserved(Driver* me, int box, int val) {
+static int QueryIsSensorReserved(MultiTrainDriver* me, int box, int val) {
   char isReserved = 0;
   TrackMsg qMsg;
   qMsg.type = QUERY_SENSOR_RESERVED;
@@ -332,7 +332,7 @@ static int QueryIsSensorReserved(Driver* me, int box, int val) {
   return (int)isReserved;
 }
 
-static void printLandmark(Driver* me, TrackLandmark* l) {
+static void printLandmark(MultiTrainDriver* me, TrackLandmark* l) {
   if (l->type == LANDMARK_SENSOR) {
     TrainDebug(me, "Landmark Sn  %c%d",
         'A' +l->num1, l->num2);
@@ -382,7 +382,8 @@ static void trainSensor() {
     Send(parent, (char*)&msg, sizeof(DriverMsg), (char*)1, 0);
   }
 }
-static void printRoute(Driver* me) {
+
+static void printRoute(MultiTrainDriver* me) {
   TrainDebug(me, "Route Distance %d", me->route.dist);
 
   TrainDebug(me, "<Route>");
@@ -414,7 +415,7 @@ static void printRoute(Driver* me) {
 
 }
 
-static void setRoute(Driver* me, Position* from, DriverMsg* msg) {
+static void setRoute(MultiTrainDriver* me, Position* from, DriverMsg* msg) {
   //TrainDebug(me, "Route setting!");
   me->stopCommited = 0;
 

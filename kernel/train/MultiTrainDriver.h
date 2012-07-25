@@ -18,12 +18,39 @@
 #define GET_POSITION 107
 
 typedef struct MultiTrainDriver {
+  int trainNum;
+  int speed;      // 0 - 14
+  int speedDir;
+  int timeserver;
+  int trainController;
+  int sensorWatcher;
+  int lastSensorDistanceError;
+  float distanceFromLastSensor;
+  float distanceToNextSensor;
   // the single train driver side of multi-train driver,
   // most parameters relates to the head train
-  Driver driver;
+  //Driver driver;
   int infoUpdater;
+  int stopNode;
+  int previousStopNode;
+  int distanceFromLastSensorAtPreviousStopNode;
+  int stopCommited;
+  int stopSensorHit;
+  int stopSensorBox;
+  int stopSensorVal;
+  int distancePassStopSensorToStop;
+  int useLastSensorNow;
+  int stopNow;
+  int positionFinding;
+  int rerouteCountdown;
+  int nextSetSwitchNode;
+  int setSwitchNaggerCount;
+  int testMode;
+  Route route;
 
   // The multi-train driver side
+  int ui;
+  int trackManager;
   int courier;
   int numTrainInGroup;
   int isReversing;
@@ -31,6 +58,21 @@ typedef struct MultiTrainDriver {
   int trainId[MAX_TRAIN_IN_GROUP];
   DumbDriverInfo info[MAX_TRAIN_IN_GROUP];
   int stoppedCount;
+  TrainUiMsg uiMsg;
+
+
+  // Actual Stuf
+  char lastSensorIsTerminal;
+  char lastSensorUnexpected;
+  char lastSensorBox;
+  char lastSensorVal;
+  int lastSensorActualTime;
+  int lastSensorPredictedTime;
+
+
+  // prediction stuff
+  TrackSensorPrediction predictions[20];
+  int numPredictions;
 
   // An array of sensors to reserve for each train in group
   TrackLandmark sensorToReserve[MAX_TRAIN_IN_GROUP][10];
@@ -38,6 +80,19 @@ typedef struct MultiTrainDriver {
 
   int tailMode;
   int headTid;
+
+  int v[15][2];
+  int d[15][2][2];
+  int a[15]; // TODO should be 15 * 15 later
+  int CC;
+  int routeRemaining;
+  char nextSensorIsTerminal;
+  char nextSensorBox;
+  TrackLandmark reserveFailedLandmark;
+  char nextSensorVal;
+  int nextSensorPredictedTime;
+
+
 
   DriverMsg routeMsg;
 } MultiTrainDriver;

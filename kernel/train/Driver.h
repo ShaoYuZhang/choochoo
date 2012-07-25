@@ -3,6 +3,7 @@
 
 #include <Poly.h>
 #include <DriverController.h>
+#if 0
 
 typedef struct Driver {
   int trainNum;
@@ -85,4 +86,5 @@ typedef struct Driver {
 } Driver;
 
 
+#endif
 #endif // TRAIN_H_

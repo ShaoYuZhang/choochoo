@@ -12,46 +12,46 @@
 #include <DumbDriver.h>
 #include <Lock.h>
 
-static void getRoute(Driver* me, Position* from, DriverMsg* msg);
-static void printLandmark(Driver* me, TrackLandmark* l);
+static void getRoute(MultiTrainDriver* me, Position* from, DriverMsg* msg);
+static void printLandmark(MultiTrainDriver* me, TrackLandmark* l);
 static void trainDelayer();
 static void trainStopDelayer();
 static void trainSensor();
 static void trainNavigateNagger();
-static void printRoute(Driver* me);
-static void QueryNextSensor(Driver* me, TrackNextSensorMsg* trackMsg);
-static int QueryIsSensorReserved(Driver* me, int box, int val);
-static void setRoute(Driver* me, Position* from, DriverMsg* msg);
-static void updatePrediction(Driver* me);
-static int reserveMoreTrack(Driver* me, int stopped, int stoppingDistance);
+static void printRoute(MultiTrainDriver* me);
+static void QueryNextSensor(MultiTrainDriver* me, TrackNextSensorMsg* trackMsg);
+static int QueryIsSensorReserved(MultiTrainDriver* me, int box, int val);
+static void setRoute(MultiTrainDriver* me, Position* from, DriverMsg* msg);
+static void updatePrediction(MultiTrainDriver* me);
+static int reserveMoreTrack(MultiTrainDriver* me, int stopped, int stoppingDistance);
 static void multiTrainDriverCourier();
 
-static void reroute(Driver* me) {
+static void reroute(MultiTrainDriver* me) {
   //TODO
 }
 
-static void sendUiReport(Driver* me) {
+static void sendUiReport(MultiTrainDriver* me) {
 }
 
-static int getStoppingDistance(Driver* me) {
+static int getStoppingDistance(MultiTrainDriver* me) {
   return 440; // TODO
 }
 
-static int interpolateStoppingDistance(Driver* me, int velocity) {
+static int interpolateStoppingDistance(MultiTrainDriver* me, int velocity) {
   return 440; // TODO
 }
 
-static int getVelocity(Driver* me) {
+static int getVelocity(MultiTrainDriver* me) {
   return 56000; // TODO
 }
 
-static void trainSetSpeed(const int speed, const int stopTime, const int delayer, Driver* me) {
+static void trainSetSpeed(const int speed, const int stopTime, const int delayer, MultiTrainDriver* me) {
 }
 
 
 static int makeReservation(MultiTrainDriver* me) {
   if (me->tailMode) {
-    PrintDebug(me->driver.ui, "Cannot make reservation in tail mode");
+    PrintDebug(me->ui, "Cannot make reservation in tail mode");
     return 0;
   }
   int isStationary = me->stoppedCount == me->numTrainInGroup;
@@ -76,8 +76,8 @@ static int makeReservation(MultiTrainDriver* me) {
 
   ReleaseOldAndReserveNewTrackMsg qMsg;
   qMsg.type = RELEASE_OLD_N_RESERVE_NEW;
-  qMsg.trainNum = me->driver.trainNum;
-  qMsg.stoppingDistance = isStationary ? 1 : getStoppingDistance(&me->driver);
+  qMsg.trainNum = me->trainNum;
+  qMsg.stoppingDistance = isStationary ? 1 : getStoppingDistance(me);
   qMsg.lastSensor = sensors[0];
 
   //TrainDebug(me, "Reserving track");
@@ -89,9 +89,9 @@ static int makeReservation(MultiTrainDriver* me) {
 
   // reserveFailedlandmark is not really being used right now
   int len = Send(
-      me->driver.trackManager,
+      me->trackManager,
       (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
-      (char*)&(me->driver.reserveFailedLandmark), sizeof(TrackLandmark));
+      (char*)&(me->reserveFailedLandmark), sizeof(TrackLandmark));
   if (len > 0) {
     return RESERVE_FAIL;
   } else {
@@ -105,55 +105,54 @@ static int makeReservation(MultiTrainDriver* me) {
 static void initDriver(MultiTrainDriver* me) {
 
   char uiName[] = UI_TASK_NAME;
-  me->driver.ui = WhoIs(uiName);
-  me->driver.CC = 0;
-  me->driver.speedAfterReverse = -1;
-  me->driver.rerouteCountdown = -1;
-  me->driver.nextSetSwitchNode = -1;
-  me->driver.reserveFailedLandmark.type = LANDMARK_BAD;
+  me->ui = WhoIs(uiName);
+  me->CC = 0;
+  me->speedAfterReverse = -1;
+  me->rerouteCountdown = -1;
+  me->nextSetSwitchNode = -1;
+  me->reserveFailedLandmark.type = LANDMARK_BAD;
 
   char trackName[] = TRACK_NAME;
-  me->driver.trackManager = WhoIs(trackName);
-  me->driver.route.length = 0;
-  me->driver.stopCommited = 0; // haven't enabled speed zero yet.
-  me->driver.useLastSensorNow = 0;
-  me->driver.stopNow = 0;
-  me->driver.currentlyLost = 0;
-  me->driver.testMode = 0;
-  me->driver.stopSensorHit = 0;
-  me->driver.nextSensorIsTerminal = 0;
-  me->driver.lastSensorIsTerminal = 0;
-  me->driver.lastSensorVal = 0; // Note to ui to don't print sensor.
-  me->driver.setSwitchNaggerCount = 0;
+  me->trackManager = WhoIs(trackName);
+  me->route.length = 0;
+  me->stopCommited = 0; // haven't enabled speed zero yet.
+  me->useLastSensorNow = 0;
+  me->stopNow = 0;
+  me->testMode = 0;
+  me->stopSensorHit = 0;
+  me->nextSensorIsTerminal = 0;
+  me->lastSensorIsTerminal = 0;
+  me->lastSensorVal = 0; // Note to ui to don't print sensor.
+  me->setSwitchNaggerCount = 0;
   me->isReversing = 0;
 
   char timename[] = TIMESERVER_NAME;
-  me->driver.timeserver = WhoIs(timename);
+  me->timeserver = WhoIs(timename);
 
   MultiTrainInitMsg init;
-  Receive(&(me->driver.trainController), (char*)&init, sizeof(MultiTrainInitMsg));
-  Reply(me->driver.trainController, (char*)1, 0);
+  Receive(&(me->trainController), (char*)&init, sizeof(MultiTrainInitMsg));
+  Reply(me->trainController, (char*)1, 0);
 
   // Create dumb drivers
   me->infoUpdater = -1;
   me->tailMode = 0;
   me->numTrainInGroup = 1;
   me->trainId[0] = CreateDumbTrain(init.nth, (int)init.trainNum);
-  me->driver.trainNum = init.trainNum;
+  me->trainNum = init.trainNum;
   RegisterMulti(init.trainNum);
 
-  me->driver.speed = 0;
-  me->driver.speedDir = ACCELERATE;
-  me->driver.distanceToNextSensor = 0;
-  me->driver.distanceFromLastSensor = 0;
-  me->driver.lastSensorActualTime = 0;
-  me->driver.lastSensorDistanceError = 0;
+  me->speed = 0;
+  me->speedDir = ACCELERATE;
+  me->distanceToNextSensor = 0;
+  me->distanceFromLastSensor = 0;
+  me->lastSensorActualTime = 0;
+  me->lastSensorDistanceError = 0;
 
-  me->driver.sensorWatcher = Create(3, trainSensor);
+  me->sensorWatcher = Create(3, trainSensor);
   me->courier = Create(3, multiTrainDriverCourier);
-  //me->driver.navigateNagger = Create(2, trainNavigateNagger);
+  //me.navigateNagger = Create(2, trainNavigateNagger);
 
-  me->driver.routeRemaining = -1;
+  me->routeRemaining = -1;
   me->stoppedCount = 0;
 }
 
@@ -206,10 +205,10 @@ void multitrain_driver() {
 
     switch (msg->type) {
       case SET_SPEED: {
-        PrintDebug(me.driver.ui, "Set speed");
+        PrintDebug(me.ui, "Set speed");
         // Head train replied and calculate speed.
         if (!me.tailMode) {
-          PrintDebug(me.driver.ui, "head mode");
+          PrintDebug(me.ui, "head mode");
           Reply(msg->replyTid, (char*)1, 0);
           if (msg->data2 == -1) {
             // make every train stop and wait for there stop response
@@ -228,7 +227,7 @@ void multitrain_driver() {
           }
         } else  {
           //Send(me->trainId[0], (char *)msg, sizeof(DriverMsg), (char*)1, 0);
-          PrintDebug(me.driver.ui, "tail mode");
+          PrintDebug(me.ui, "tail mode");
         }
 
         // TODO(rcao) may only want to send to head train and tail trains coorperate
@@ -237,7 +236,7 @@ void multitrain_driver() {
         break;
       }
       case SENSOR_TRIGGER: {
-        if (me.tailMode && tid == me.driver.sensorWatcher) {
+        if (me.tailMode && tid == me.sensorWatcher) {
           Reply(tid, (char *)NULL, 0);
           break;
         }
@@ -248,7 +247,7 @@ void multitrain_driver() {
               (char*)msg, sizeof(DriverMsg), (char *)&isHandled, sizeof(int));
           Reply(tid, (char *)&isHandled, sizeof(int));
         } else {
-          int isSensorReserved = QueryIsSensorReserved(&me.driver, msg->data2, msg->data3);
+          int isSensorReserved = QueryIsSensorReserved(&me, msg->data2, msg->data3);
           if (isSensorReserved) {
             // sensor is reserved
             for (int i = 0; i < me.numTrainInGroup; i ++) {
@@ -278,7 +277,7 @@ void multitrain_driver() {
         // check train's relative position difference
         for (int i = 1; i < me.numTrainInGroup; i++) {
           int distance = 0;
-          QueryDistance(me.driver.trackManager,
+          QueryDistance(me.trackManager,
               &me.info[i].pos, &me.info[i-1].pos, &distance);
           // Get more accurate distance based on knowledge of train direciton.
           distance -= me.info[i].lenBackOfPickup;
@@ -286,7 +285,7 @@ void multitrain_driver() {
 
           // This is pretty arbitrary now and needs tuning
           if (distance > 300 && me.info[i].trainSpeed < me.info[i-1].trainSpeed + 1 && me.info[i].trainSpeed < 14) {
-            PrintDebug(me.driver.ui, "Speeding up Distance: %d", distance);
+            PrintDebug(me.ui, "Speeding up Distance: %d", distance);
             // too far, back train need to speed up
             dMsg.type = SET_SPEED;
             dMsg.data2 = me.info[i].trainSpeed + 1;
@@ -294,7 +293,7 @@ void multitrain_driver() {
             Send(me.trainId[i], (char*)&dMsg, sizeof(DriverMsg), (char*)1, 0);
           } else if (distance < 300 && distance > 0 && me.info[i].trainSpeed > me.info[i-1].trainSpeed - 1 && me.info[i].trainSpeed > 0) {
             // too close, back train need to slow up
-            PrintDebug(me.driver.ui, "Slowing down Distance %d", distance);
+            PrintDebug(me.ui, "Slowing down Distance %d", distance);
             // too far, back train need to speed up
             dMsg.type = SET_SPEED;
             dMsg.data2 = me.info[i].trainSpeed - 1;
@@ -388,15 +387,15 @@ void multitrain_driver() {
       case SET_ROUTE: {
         Reply(msg->replyTid, (char*)1, 0);
         me.routeMsg = *msg;
-        getRoute(&me.driver, &(me.info[0].pos), msg);
+        getRoute(&me, &(me.info[0].pos), msg);
 
-        PrintDebug(me.driver.ui, "Did not set route yet!!!");
+        PrintDebug(me.ui, "Did not set route yet!!!");
         //setRoute(&me, &msg);
         break;
       }
       case GET_POSITION: {
         if (me.tailMode) {
-          PrintDebug(me.driver.ui, "Get position from a tail train ??");
+          PrintDebug(me.ui, "Get position from a tail train ??");
           break;
         }
         // If don't have any valid info yet, reply empty message
@@ -409,13 +408,13 @@ void multitrain_driver() {
       }
       case FIND_POSITION: {
         if (me.tailMode) {
-          PrintDebug(me.driver.ui, "find position while merge????");
+          PrintDebug(me.ui, "find position while merge????");
           break;
         }
 
-        PrintDebug(me.driver.ui, "Train locking %d", me.driver.trainNum);
+        PrintDebug(me.ui, "Train locking %d", me.trainNum);
         // Only 1 train can lock at the same time.
-        lock(me.driver.timeserver);
+        lock(me.timeserver);
         // begin finding position in a slow speed
         DumbTrainSetSpeed(me.trainId[0], 5);
         Reply(msg->replyTid, (char*)1, 0);
@@ -430,7 +429,7 @@ void multitrain_driver() {
           } else if (msg->type == GET_POSITION) {
             Reply(msg->replyTid, (char*)1, 0);
           } else {
-            PrintDebug(me.driver.ui, "WARNN Drop %d", msg->type);
+            PrintDebug(me.ui, "WARNN Drop %d", msg->type);
           }
         }
         DriverMsg dMsg;
@@ -445,9 +444,9 @@ void multitrain_driver() {
         break;
       }
       case MERGE_HEAD: {
-        PrintDebug(me.driver.ui, "merge head");
+        PrintDebug(me.ui, "merge head");
         if (me.tailMode) {
-          PrintDebug(me.driver.ui, "Cannot be a head when in tail mode??");
+          PrintDebug(me.ui, "Cannot be a head when in tail mode??");
           break;
         }
         // Other train controller's id.
@@ -463,26 +462,26 @@ void multitrain_driver() {
         dMsg.type = UPDATE_PARENT_ABOUT_PREDICTION;
         Send(msg->data2, (char *)&dMsg, sizeof(DriverMsg), (char *)NULL, 0);
 
-        PrintDebug(me.driver.ui, "merge head done");
+        PrintDebug(me.ui, "merge head done");
         break;
       }
       case MERGE_TAIL: {
-        PrintDebug(me.driver.ui, "merge tail begin");
+        PrintDebug(me.ui, "merge tail begin");
         if (me.tailMode) {
-          PrintDebug(me.driver.ui, "Double merge tail??");
+          PrintDebug(me.ui, "Double merge tail??");
           break;
         }
         // Enters courier mode that passes dumb_train msg to 'real' controller
         me.tailMode = 1;
         me.headTid = msg->data2;
-        clearReservation(me.driver.trackManager, me.driver.trainNum);
+        clearReservation(me.trackManager, me.trainNum);
         Reply(msg->replyTid, (char*)1, 0);
-        PrintDebug(me.driver.ui, "merge tail done");
+        PrintDebug(me.ui, "merge tail done");
         break;
       }
       case SEPARATE_TAIL: {
         if (!me.tailMode) {
-          PrintDebug(me.driver.ui, "Not in tail mode..??"); break;
+          PrintDebug(me.ui, "Not in tail mode..??"); break;
         }
         me.tailMode = 0;
         me.headTid = 0;
@@ -492,7 +491,7 @@ void multitrain_driver() {
       }
       case REPORT_INFO: {
         if (!me.tailMode) {
-          PrintDebug(me.driver.ui, "Report info Not in tail mode..??"); break;
+          PrintDebug(me.ui, "Report info Not in tail mode..??"); break;
         }
 
         // ASSUME ONLY 1 train when in tail mode.
@@ -504,7 +503,7 @@ void multitrain_driver() {
       }
       case UPDATE_PARENT_ABOUT_PREDICTION: {
         if (!me.tailMode) {
-          PrintDebug(me.driver.ui, "Update Parent Not in tail mode..??"); break;
+          PrintDebug(me.ui, "Update Parent Not in tail mode..??"); break;
         }
         // ASSUME ONLY 1 train when in tail mode.
         Send(me.trainId[0], (char*)msg, sizeof(DriverMsg),
@@ -522,7 +521,7 @@ void multitrain_driver() {
       }
       case REVERSE_SPEED : {
         if (!me.tailMode) {
-          PrintDebug(me.driver.ui, "Reverse Speed Not in tail mode..??"); break;
+          PrintDebug(me.ui, "Reverse Speed Not in tail mode..??"); break;
         }
 
         for (int i = 0; i < me.numTrainInGroup; i++) {
@@ -531,7 +530,7 @@ void multitrain_driver() {
         break;
       }
       default: {
-        PrintDebug(me.driver.ui, "Not Handled %d", msg->type);
+        PrintDebug(me.ui, "Not Handled %d", msg->type);
       }
     } // switch
   } // for
