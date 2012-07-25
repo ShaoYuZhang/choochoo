@@ -47,6 +47,10 @@ typedef struct DumbDriver {
   TrackSensorPrediction predictions[20];
   int numPredictions;
 
+  int reversed;
+  int trainLen;
+  int pickupOffset;
+
   // A/D stuff
   int isAding;
   float lastReportDist;
@@ -63,6 +67,8 @@ typedef struct DumbDriverInfo {
   int velocity;
   int maxStoppingDistance;
   int currentStoppingDistance;
+  char lenFrontOfPickup;
+  char lenBackOfPickup;
   Position pos;
 } DumbDriverInfo;
 

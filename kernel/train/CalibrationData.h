@@ -7,6 +7,8 @@
 #define MIN_VAL 0
 #define MAX_VAL 1
 
+#define PICKUP_LEN 50
+
 // Mapping between speed and velocity
 // Units: 10*um/s
 // Get Velocity based on current speed and whether slowing down or speeding up.
@@ -19,4 +21,5 @@ void initStoppingDistance(int* stoppingDistance);
 // Num millisecond to accelerate to speed from zero.
 void initAccelerationProfile(int* accel);
 
+void initMultiTrain(int trainNum, int* trainLen, int* pickupOffset);
 #endif // CALIBRATION_DATA_H_

@@ -157,6 +157,7 @@ static void initDriver(DumbDriver* me) {
   me->lastSensorBox = 0;
   me->lastSensorVal = 0; // Note to ui to don't print sensor.
 
+
   char timename[] = TIMESERVER_NAME;
   me->timeserver = WhoIs(timename);
 
@@ -169,6 +170,10 @@ static void initDriver(DumbDriver* me) {
   char com1Name[] = IOSERVERCOM1_NAME;
   me->com1 = WhoIs(com1Name);
   me->uiMsg.type = UPDATE_TRAIN;
+
+  me->reversed = 0;
+  initMultiTrain(me->trainNum,
+      &me->trainLen, &me->pickupOffset);
 
   me->speed = 0;
   me->speedDir = ACCELERATE;
@@ -320,8 +325,10 @@ static void trainSetSpeed(
       msg[2] = (char)speed;
       msg[3] = (char)me->trainNum;
       Putstr(me->com1, msg, 4);
+      me->reversed = (++me->reversed)%2;
 
-      //TrainDebug(me, "Next Sensor: %d %d", me->nextSensorIsTerminal, me->lastSensorIsTerminal);
+      //TrainDebug(me,
+      //"Next Sensor: %d %d", me->nextSensorIsTerminal, me->lastSensorIsTerminal);
       // Update prediction
       if (me->nextSensorIsTerminal) {
         me->nextSensorBox = me->nextSensorBox == EX ? EN : EX;
@@ -522,6 +529,11 @@ void dumb_driver() {
         info.velocity = getVelocity(&me);
         info.maxStoppingDistance = getStoppingDistance(&me);
         info.currentStoppingDistance = interpolateStoppingDistance(&me, getVelocity(&me));
+        info.lenFrontOfPickup =
+          me.reversed ? me.trainLen - (me.pickupOffset + PICKUP_LEN)
+                      : me.pickupOffset + PICKUP_LEN;
+        info.lenBackOfPickup = me.trainLen - info.lenFrontOfPickup;
+
         toPosition(&me, &info.pos);
         Reply(tid, (char*)&info, sizeof(DumbDriverInfo));
         break;

@@ -2,6 +2,22 @@
 
 #include <memory.h>
 
+void initMultiTrain(int trainNum, int* trainLen, int* pickupOffset) {
+  if (trainNum == 37 || trainNum == 35) {
+    *trainLen = 190;    // 190mm
+    *pickupOffset = 20; // mm
+  } else if (trainNum == 39 ||
+             trainNum == 41 ||
+             trainNum == 43 ||
+             trainNum == 44 ||
+             trainNum == 45) {
+    *trainLen = 210;    // 210mm
+    *pickupOffset = 25; // mm
+  } else {
+    *trainLen = -1;
+    *pickupOffset = -1;
+  }
+}
 
 void initVelocity(int* velocity) {
   int v[15][2] = {
