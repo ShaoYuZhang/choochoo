@@ -279,7 +279,7 @@ static int calculateDistance(track_node* track, Position from, Position to) {
   track_edge* fromEdge = (track_edge*)NULL;
   int offsetFrom = locateNode(track, from, &fromEdge);
   if (offsetFrom == -1) {
-    PrintDebug(ui, "%d %d %d %d %d %d %d",
+    PrintDebug(ui, "Query Distance Fail position from: %d %d %d %d %d %d %d",
         from.landmark1.type,
         from.landmark1.num1,
         from.landmark1.num2,
@@ -287,6 +287,7 @@ static int calculateDistance(track_node* track, Position from, Position to) {
         from.landmark2.num1,
         from.landmark2.num2,
         from.offset);
+
 
     return -1;
   }
@@ -304,6 +305,14 @@ static int calculateDistance(track_node* track, Position from, Position to) {
   if (offsetTo == -1) {
     *fromNodeSrcPointer = fromNodeSrc;
     *fromNodeReverseSrcPointer = fromNodeReverseSrc;
+    PrintDebug(ui, "QueryDistance Fail position to: %d %d %d %d %d %d %d",
+        to.landmark1.type,
+        to.landmark1.num1,
+        to.landmark1.num2,
+        to.landmark2.type,
+        to.landmark2.num1,
+        to.landmark2.num2,
+        to.offset);
     return -2;
   }
 
@@ -831,7 +840,7 @@ static void trackController() {
         break;
       }
       case QUERY_DISTANCE: {
-    PrintDebug(ui, "Query _distance");
+        PrintDebug(ui, "Query _distance");
         int distance = calculateDistance(track, msg->position1, msg->position2);
         PrintDebug(ui, "Query _distance%d", distance);
         Reply(tid, (char *)&distance, sizeof(int));

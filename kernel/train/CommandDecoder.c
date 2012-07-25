@@ -229,6 +229,37 @@ static void decodeCommand() {
 
     // Train1 is head, train2 is new tail
     DoTrainMerge(trainController, train_number1, train_number2);
+  } else if (decoderBuffer[0] == 'q' && decoderBuffer[1] == 'd') {
+    char *temp = (char *)decoderBuffer + 3;
+
+    char letter, num;
+    letter = *temp++;
+    Position pos;
+    num = strgetui(&temp);
+    temp++;
+    pos.landmark1 = formLandmarkFromInput(letter, num);
+
+    letter = *temp++;
+    num = strgetui(&temp);
+    temp++;
+    pos.landmark2 = formLandmarkFromInput(letter, num);
+    pos.offset = 0;
+
+    letter = *temp++;
+    Position pos2;
+    num = strgetui(&temp);
+    temp++;
+    pos2.landmark1 = formLandmarkFromInput(letter, num);
+
+    letter = *temp++;
+    num = strgetui(&temp);
+    temp++;
+    pos2.landmark2 = formLandmarkFromInput(letter, num);
+    pos2.offset = 0;
+
+    int distance = 9999;
+    QueryDistance(trackController, &pos, &pos2, &distance);
+    PrintDebug(ui, "Distance: %d", distance);
   } else {
     PrintDebug(ui, "Bad: %s", decoderBuffer);
   }
