@@ -18,7 +18,7 @@ typedef struct SnakeMessage {
 typedef struct GamePiece {
   signed char trainNum;
   char eaten;
-  struct GamePiece* eating;
+  struct GamePiece* food;
   char positionKnown;
   Position pos;
 } GamePiece;
