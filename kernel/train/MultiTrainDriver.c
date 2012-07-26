@@ -440,7 +440,7 @@ void multitrain_driver() {
         if (me.infoUpdater == -1) {
           Reply(msg->replyTid, (char*)1, 0);
         } else {
-          Reply(msg->replyTid, (char*)&(me.info[0].pos), sizeof(Position));
+          Reply(msg->replyTid, (char*)&(me.info[0]), sizeof(DumbDriverInfo));
         }
         break;
       }

@@ -10,7 +10,8 @@ void initMultiTrain(int trainNum, int* trainLen, int* pickupOffset) {
              trainNum == 41 ||
              trainNum == 43 ||
              trainNum == 44 ||
-             trainNum == 45) {
+             trainNum == 45 ||
+             trainNum == 48) {
     *trainLen = 210;    // 210mm
     *pickupOffset = 25; // mm
   } else {
@@ -42,6 +43,7 @@ void initVelocity(int* velocity, int trainNum) {
   } else if (trainNum == 39 ||
              trainNum == 41 ||
              trainNum == 44 ||
+             trainNum == 48 ||
              trainNum == 45) {
     int v[15][2] = {
       {0.0, 0.0},
@@ -115,7 +117,7 @@ void initStoppingDistance(int* distance, int trainNum) {
       {{190, 190}, {190, 190} },
       {{270, 270}, {270, 270} },
       {{375, 375}, {375, 375} },
-      {{455, 455}, {455, 455} },
+      {{485, 485}, {485, 485} },
       {{595, 595}, {595, 595} },
       {{720, 720}, {720, 720} },
       {{785, 795}, {780, 780} },
@@ -127,6 +129,7 @@ void initStoppingDistance(int* distance, int trainNum) {
   else if (trainNum == 39 ||
            trainNum == 41 ||
            trainNum == 44 ||
+           trainNum == 48 ||
            trainNum == 45 ) {
     // 15 speeds each with Acc/Desc .. each with min/max
     int d[15][2][2] = {

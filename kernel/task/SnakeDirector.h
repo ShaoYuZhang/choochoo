@@ -2,6 +2,7 @@
 #define SNAKE_DIRECTOR_H_
 
 #include <Track.h>
+#include <DumbDriver.h>
 
 #define SNAKE_DIRECTOR_NAME "SNAKEKKY\0"
 
@@ -20,7 +21,7 @@ typedef struct GamePiece {
   char eaten;
   struct GamePiece* food;
   char positionKnown;
-  Position pos;
+  DumbDriverInfo info;
 } GamePiece;
 
 int RegisterBait(int tid, int trainNum);

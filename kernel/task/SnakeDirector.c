@@ -1,6 +1,7 @@
 #include "SnakeDirector.h"
 #include <Driver.h>
 #include <NameServer.h>
+#include <CalibrationData.h>
 #include <UserInterface.h>
 #include <TimeServer.h>
 #include <MultiTrainDriver.h>
@@ -48,16 +49,16 @@ static void try_update_position(GamePiece* snake, GamePiece* baits) {
   if (snake->trainNum != -1) {
     msg.trainNum = (char)snake->trainNum;
     int l = Send(trainController, (char*)&msg, sizeof(msg),
-        (char*)&snake->pos, sizeof(snake->pos));
-    snake->positionKnown = (l == sizeof(snake->pos));
+        (char*)&snake->info, sizeof(DumbDriverInfo));
+    snake->positionKnown = (l == sizeof(DumbDriverInfo));
   }
 
   for (int i = 0; i < 4; i++) {
     if (baits[i].trainNum != -1 && baits[i].eaten == 0) {
       msg.trainNum = (char)baits[i].trainNum;
       int l = Send(trainController, (char*)&msg, sizeof(msg),
-          (char*)&baits[i].pos, sizeof(baits[i].pos));
-      baits[i].positionKnown = (l == sizeof(baits[i].pos));
+          (char*)&baits[i].info, sizeof(DumbDriverInfo));
+      baits[i].positionKnown = (l == sizeof(DumbDriverInfo));
     }
   }
 }
@@ -96,16 +97,15 @@ static void try_notify_snake(GamePiece* snake, GamePiece* baits) {
     clearReservation(trackController, snake->food->trainNum);
 
     // Find a route to bait without colliding into the bait.
-    Position dest = snake->food->pos;
+    Position dest = snake->food->info.pos;
 
     // If previous sensor is end,
     // reverse the train to get a routable previous sensor.
     if (dest.landmark1.type == LANDMARK_END) {
-
       ReverseTrain(trainController, snake->food->trainNum);
       Delay(timeserver, 10); // HACK. Wait for train to reverse.
       try_update_position(snake, baits);
-      dest = snake->food->pos;
+      dest = snake->food->info.pos;
       if (dest.landmark1.type == LANDMARK_END) {
         PrintDebug(ui, "Previous still END after reverse");
       }
@@ -200,21 +200,42 @@ static void snakeDirector() {
       try_notify_snake(&snake, baits);
       if (snake.food != (GamePiece*)NULL) {
         int distance = 2000;
-        QueryDistance(trackController, &snake.pos, &snake.food->pos, &distance);
-        if (distance < 350 && distance >= 0) {
+        QueryDistance(trackController,
+            &snake.info.pos, &snake.food->info.pos, &distance);
+
+        if (distance >= 0) {
+          // Get more accurate distance based on knowledge of train direciton.
+          // Bait first, snake chases from behind.
+          distance -= snake.food->info.lenBackOfPickup;
+          distance -= snake.info.lenFrontOfPickup;
+          distance -= PICKUP_LEN;
+          if (distance < 0) {
+            distance = 0;
+          }
+        }
+
+        if (distance < 100 && distance >= 0) {
           PrintDebug(ui, "Close enough %dmm.. Snake ate bait", distance);
-          PrintDebug(ui, "Snake Position. offset:%d", snake.pos.offset);
-          printLandmark(ui, &snake.pos.landmark1);
-          printLandmark(ui, &snake.pos.landmark2);
-          PrintDebug(ui, "Food position. offset:%d", snake.food->pos.offset);
-          printLandmark(ui, &(snake.food->pos.landmark1));
-          printLandmark(ui, &(snake.food->pos.landmark2));
+          PrintDebug(ui, "Snake Position. offset:%d", snake.info.pos.offset);
+          printLandmark(ui, &snake.info.pos.landmark1);
+          printLandmark(ui, &snake.info.pos.landmark2);
+          PrintDebug(ui, "Food position. offset:%d", snake.food->info.pos.offset);
+          printLandmark(ui, &(snake.food->info.pos.landmark1));
+          printLandmark(ui, &(snake.food->info.pos.landmark2));
+
+          // Stop the trains.
+          SetSpeedTrain(trainController, snake.trainNum, 0);
+          SetSpeedTrain(trainController, snake.food->trainNum, 0);
 
           // Snake came from behind bait.. bait takes on as head.
-          //DoTrainMerge(trainController, snake.food->trainNum, snake.trainNum);
+          DoTrainMerge(trainController, snake.food->trainNum, snake.trainNum);
 
           snake.food->eaten = 1;
           snake.food = (GamePiece*)NULL;
+        } else if (distance < 300 && distance >= 0 && snake.info.trainSpeed == 0) {
+          PrintDebug(ui, "Almost there but stoppped. %d", distance);
+          // Nudge closer..
+          SetSpeedTrain(trainController, snake.food->trainNum, 2);
         }
       }
       Reply(tid, (char*)1, 0);

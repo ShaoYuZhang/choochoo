@@ -41,7 +41,7 @@ static void trainController() {
         }
       }
     } else {
-      if (msg.trainNum >= 35 && msg.trainNum <= 45) {
+      if (msg.trainNum >= 35 && msg.trainNum <= 48) {
         if (trainTid[(int)msg.trainNum] == -1) {
           trainTid[(int)msg.trainNum] =
             createMultitrainDriver(nth, msg.trainNum);
@@ -118,8 +118,6 @@ void SetSpeedTrain(int controllerTid, int trainNum, int spd){
   msg.data2 = spd;
   Send(controllerTid, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
 }
-
-
 
 int startDriverControllerTask() {
   return Create(5, trainController);
