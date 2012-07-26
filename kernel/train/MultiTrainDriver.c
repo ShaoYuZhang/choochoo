@@ -232,7 +232,17 @@ static void updateInfo(MultiTrainDriver* me) {
       dMsg.data3 = -1;
       Send(me->trainId[i], (char*)&dMsg, sizeof(DriverMsg), (char*)1, 0);
     }
+
+    DriverMsg dMsg;
+    dMsg.type = DELTA_DISTANCE;
+    dMsg.timestamp = distance;
+    Send(me->trainId[i],
+        (char*)&dMsg, sizeof(DriverMsg) - sizeof(Position), (char*)1, 0);
   }
+  dMsg.type = DELTA_DISTANCE;
+  dMsg.timestamp = 0;
+  Send(me->trainId[0],
+        (char*)&dMsg, sizeof(DriverMsg) - sizeof(Position), (char*)1, 0);
 }
 
 void multitrain_driver() {
@@ -543,6 +553,18 @@ void multitrain_driver() {
             (char*)&me.info[0], sizeof(DumbDriverInfo));
         // Reply the head that made query.
         Reply(me.headTid, (char*)&me.info[0], sizeof(DumbDriverInfo));
+        break;
+      }
+      case DELTA_DISTANCE: {
+        if (!me.tailMode) {
+          PrintDebug(me.ui, "Delta distance and not in tail mode..??"); break;
+        }
+
+        // ASSUME ONLY 1 train when in tail mode.
+        Send(me.trainId[0], (char*)msg,
+            sizeof(DriverMsg) - sizeof(Position), (char*)1, 0);
+        // Reply the head that made query.
+        Reply(me.headTid, (char*)1, 0);
         break;
       }
       case UPDATE_PARENT_ABOUT_PREDICTION: {

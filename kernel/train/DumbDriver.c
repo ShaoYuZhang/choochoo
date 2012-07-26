@@ -27,6 +27,7 @@ static void sendUiReport(DumbDriver* me) {
   me->uiMsg.speedDir                 = me->speedDir;
   me->uiMsg.distanceFromLastSensor   = (int)me->distanceFromLastSensor;
   me->uiMsg.distanceToNextSensor     = (int)me->distanceToNextSensor;
+  me->uiMsg.distanceToPreviousTrain  = me->distanceToPreviousTrain;
 
   me->uiMsg.nextSensorBox            = me->nextSensorBox;
   me->uiMsg.nextSensorVal            = me->nextSensorVal;
@@ -146,6 +147,7 @@ static void initDriver(DumbDriver* me) {
   me->speedAfterReverse = -1;
   char trackName[] = TRACK_NAME;
   me->trackManager = WhoIs(trackName);
+  me->distanceToPreviousTrain = 0;
 
   me->nextSensorIsTerminal = 0;
   me->lastSensorIsTerminal = 0;
@@ -548,6 +550,11 @@ void dumb_driver() {
       }
       case DRIVER_COURIER: {
         // nothing
+        break;
+      }
+      case DELTA_DISTANCE: {
+        me.distanceToPreviousTrain = msg.timestamp; // Hack
+        Reply(tid, (char*)1, 0);
         break;
       }
       case QUERY_STOPPING_DISTANCE: {

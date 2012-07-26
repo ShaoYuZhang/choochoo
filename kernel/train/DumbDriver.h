@@ -36,6 +36,7 @@ typedef struct DumbDriver {
   float distanceFromLastSensor;
   float distanceToNextSensor;
   int lastSensorDistanceError;
+  int distanceToPreviousTrain;
 
   char nextSensorIsTerminal;
   char nextSensorBox;

@@ -28,6 +28,7 @@
 #define REVERSE_SPEED 19
 #define UPDATE_PARENT_ABOUT_PREDICTION 20
 #define QUERY_STOPPING_DISTANCE 21
+#define DELTA_DISTANCE 22
 
 #include <UserInterface.h>
 #include <Track.h>
@@ -57,9 +58,6 @@ typedef struct MultiTrainState {
   int trainNum[10];
   int numTrain;
 } MultiTrainState;
-
-
-
 
 int startDriverControllerTask();
 

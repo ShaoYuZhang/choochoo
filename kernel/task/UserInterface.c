@@ -240,6 +240,9 @@ static char* updateTrain(TrainUiMsg* train, char* msg) {
   *msg++ = ' ';
 
   row++;
+
+  msg = moveTo(row++, col, msg);
+  msg = formatInt(train->distanceToPreviousTrain, 3, msg);
   row++;
 
   // ---------------------------------
@@ -488,7 +491,7 @@ static char* drawTrainFrame(char* msg, int row) {
   msg = drawTrainFrameHelper(msg, '|', '|', '|', " N Sensor    ", "          ");
 
   msg = moveTo(row++, 10, msg);
-  msg = drawTrainFrameHelper(msg, '|', '|', '|', " Nx Switch   ", "          ");
+  msg = drawTrainFrameHelper(msg, '|', '|', '|', " D to Prev   ", "          ");
 
   msg = moveTo(row++, 10, msg);
   msg = drawTrainFrameHelper(msg, '|', '|', '|', "             ", "          ");
