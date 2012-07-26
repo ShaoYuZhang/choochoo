@@ -634,6 +634,14 @@ static void findRoute(
       tempRouteNode.dist = curr_node->safe_reverse_dist;
       tempRoute[--index] = tempRouteNode;
       tempRouteNode.num = SWITCH_CURVED;
+    } else if (curr_node->type == NODE_MERGE) {
+      if (curr_node->reverse->edge[DIR_STRAIGHT].dest == curr_node->route_previous->reverse) {
+        tempRouteNode.num = SWITCH_STRAIGHT;
+        tempRouteNode.dist = curr_node->edge[DIR_AHEAD].dist;
+      } else {
+        tempRouteNode.num = SWITCH_CURVED;
+        tempRouteNode.dist = curr_node->edge[DIR_AHEAD].dist;
+      }
     } else if (curr_node->type == NODE_BRANCH) {
       if (curr_node->edge[DIR_STRAIGHT].dest == next_node) {
         tempRouteNode.num = SWITCH_STRAIGHT;

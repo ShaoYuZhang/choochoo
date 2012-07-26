@@ -14,7 +14,8 @@ static void trySetSwitch_and_getNextSwitch(MultiTrainDriver* me) {
     int haveNextSwitch = 0;
     for (int i = me->nextSetSwitchNode + 1; i < me->stopNode; i++) {
       if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
-          me->route.nodes[i].landmark.num1 == BR ) {
+          (me->route.nodes[i].landmark.num1 == BR ||
+           me->route.nodes[i].landmark.num1 == MR)) {
         haveNextSwitch = 1;
         me->nextSetSwitchNode = i;
         break;
@@ -211,7 +212,8 @@ static void updateRoute(MultiTrainDriver* me, char box, char val) {
 static void updateSetSwitch(MultiTrainDriver* me) {
   for (int i = me->routeRemaining; i < me->stopNode; i++) {
     if (me->route.nodes[i].landmark.type == LANDMARK_SWITCH &&
-        me->route.nodes[i].landmark.num1 == BR && me->nextSetSwitchNode == -1) {
+        (me->route.nodes[i].landmark.num1 == BR ||
+         me->route.nodes[i].landmark.num1 == MR) && me->nextSetSwitchNode == -1) {
       //TrainDebug(me, "Will try to set:");
       //printLandmark(me, &(me->route.nodes[i].landmark));
       me->nextSetSwitchNode = i;
@@ -305,7 +307,7 @@ static void printRoute(MultiTrainDriver* me) {
             i, node.landmark.num1, node.landmark.num2, node.dist);
       }
 
-      if (node.landmark.type == LANDMARK_SWITCH && node.landmark.num1 == BR) {
+      if (node.landmark.type == LANDMARK_SWITCH && (node.landmark.num1 == BR || node.landmark.num1 == MR)) {
         PrintDebug(me->ui, "%d Switch %d to %s Type:%d D:%d", i, node.landmark.num2,
             node.num == SWITCH_CURVED ? "Curve" : "Straight", node.landmark.num1,
             node.dist);
