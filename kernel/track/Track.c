@@ -446,11 +446,7 @@ static void computeSafeReverseDist(track_node* track) {
     if (track[i].type != NODE_NONE) {
 
     }
-    if (track[i].type == NODE_BRANCH) {
-      track[i].safe_reverse_dist = SAFE_REVERSE_DIST;
-      computeSafeReverseDistHelper(&track[i].edge[DIR_STRAIGHT]);
-      computeSafeReverseDistHelper(&track[i].edge[DIR_CURVED]);
-    } else if (track[i].type == NODE_MERGE) {
+    if (track[i].type == NODE_MERGE) {
       track[i].safe_reverse_dist = SAFE_REVERSE_DIST;
       computeSafeReverseDistHelper(&track[i].edge[DIR_AHEAD]);
     }
