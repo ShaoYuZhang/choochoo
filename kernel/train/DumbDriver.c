@@ -183,8 +183,8 @@ static void initDriver(DumbDriver* me) {
   me->courier = Create(2, dumbDriverCourier);
 
   me->isAding = 0;
-  initStoppingDistance((int*)me->d);
-  initVelocity((int*)me->v);
+  initStoppingDistance((int*)me->d, me->trainNum);
+  initVelocity((int*)me->v, me->trainNum);
   initAccelerationProfile((int*)me->a);
 }
 

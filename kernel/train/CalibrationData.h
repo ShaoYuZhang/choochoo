@@ -12,11 +12,11 @@
 // Mapping between speed and velocity
 // Units: 10*um/s
 // Get Velocity based on current speed and whether slowing down or speeding up.
-void initVelocity(int* velocity);
+void initVelocity(int* velocity, int trainNum);
 
 // Best estimated velocity
 // Units: mm
-void initStoppingDistance(int* stoppingDistance);
+void initStoppingDistance(int* stoppingDistance, int trainNum);
 
 // Num millisecond to accelerate to speed from zero.
 void initAccelerationProfile(int* accel);
