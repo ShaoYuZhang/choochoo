@@ -43,6 +43,7 @@ typedef struct MultiTrainDriver {
   int nextSetSwitchNode;
   int setSwitchNaggerCount;
   int testMode;
+  int reserveTrackMode;
   Route route;
 
   // The multi-train driver side

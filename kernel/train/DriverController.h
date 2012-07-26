@@ -14,6 +14,8 @@
 #define NAVIGATE_NAGGER 7
 #define BROADCAST_UPDATE_PREDICTION 8
 #define FIND_POSITION  9
+  #define RESERVE 0
+  #define NO_RESERVE 1
 #define KNOW_POSITION  10
 #define LOST_TRAIN     11
 #define BROADCAST_LOST 12
@@ -67,6 +69,7 @@ void FinishPositionFinding(int trainNum, int controllerTid);
 void driver();
 void multitrain_driver();
 
+void DoBaitPositionFinding(int controllerTid, int trainNum);
 void DoPositionFinding(int controllerTid, int trianNum);
 void DoTrainMerge(int controllerTid, int headTrainNum, int tailTrainNum);
 void ReverseTrain(int controllerTid, int trainNum);

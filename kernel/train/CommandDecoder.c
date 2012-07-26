@@ -69,7 +69,7 @@ static void decodeCommand() {
     char *temp = (char *)decoderBuffer + 5;
     int train_number = strgetui(&temp);
 
-    DoPositionFinding(trainController, train_number);
+    DoBaitPositionFinding(trainController, train_number);
     int ret = RegisterBait(snakeDirector, train_number);
 
   } else if (decoderBuffer[0] == 's' && decoderBuffer[2] == 'a') {

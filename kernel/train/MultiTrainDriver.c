@@ -38,6 +38,9 @@ static int makeReservation(MultiTrainDriver* me, int stoppingDistance) {
   if (me->tailMode) {
     PrintDebug(me->ui, "Cannot make reservation in tail mode");
     return 0;
+  } else if (!me->reserveTrackMode) {
+    PrintDebug(me->ui, "No reservation mode");
+    return 0;
   }
   int isStationary = me->stoppedCount == me->numTrainInGroup;
   TrackLandmark sensors[MAX_TRAIN_IN_GROUP * 10];
@@ -154,7 +157,7 @@ static void multiTrainDriverCourier() {
 }
 
 static int groupSetSpeed(MultiTrainDriver* me, int speed) {
-  PrintDebug(me->ui, "MultiTrain set speed %d", speed);
+  PrintDebug(me->ui, "MultiTrain %d set speed %d", me->trainNum, speed);
   int shouldSetSpeed = 1;
   if (!me->tailMode) {
     if (speed == -1) {
@@ -358,6 +361,8 @@ void multitrain_driver() {
         break;
       }
       case STOP_COMPLETED: {
+        PrintDebug(me.ui, "COME BACKKKKK");
+        PrintDebug(me.ui, "%d", me.numTrainInGroup);
         // notify actual train controller.
         if (me.tailMode) {
           MultiTrainDriverCourierMsg cMsg;
@@ -450,6 +455,7 @@ void multitrain_driver() {
           PrintDebug(me.ui, "find position while merge????");
           break;
         }
+        me.reserveTrackMode = (msg->data2 == RESERVE);
 
         PrintDebug(me.ui, "Train locking %d", me.trainNum);
         // Only 1 train can lock at the same time.
@@ -487,6 +493,7 @@ void multitrain_driver() {
           PrintDebug(me.ui, "Cannot be a head when in tail mode??");
           break;
         }
+        me.reserveTrackMode = 1; //  Head always reserves track.
         // Other train controller's id.
         me.trainId[me.numTrainInGroup] = msg->data2;
         me.numTrainInGroup++;
@@ -540,7 +547,8 @@ void multitrain_driver() {
       }
       case UPDATE_PARENT_ABOUT_PREDICTION: {
         if (!me.tailMode) {
-          PrintDebug(me.ui, "Update Parent Not in tail mode..??"); break;
+          PrintDebug(me.ui, "%d Update Parent Not in tail mode..??", me.trainNum);
+          break;
         }
         // ASSUME ONLY 1 train when in tail mode.
         Send(me.trainId[0], (char*)msg, sizeof(DriverMsg),

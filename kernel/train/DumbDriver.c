@@ -365,6 +365,7 @@ static void trainSetSpeed(
       Putstr(me->com1, msg, 2);
       if (speed == 0) {
         int delayTime = stopTime + 500;
+        TrainDebug(me, "%d", stopTime);
         Reply(me->stopDelayer, (char*)&delayTime, 4);
       }
     }
@@ -411,6 +412,8 @@ void dumb_driver() {
         break;
       }
       case STOP_DELAYER: {
+                           TrainDebug(&me, "DUBM stop");
+                           TrainDebug(&me, "%d %d %d", me.lastSensorActualTime, me.speed, me.isAding);
         // To prevent the first receive from this delayer
         if (me.lastSensorActualTime > 0 && me.speed == 0 && !me.isAding) {
           MultiTrainDriverMsg msg;

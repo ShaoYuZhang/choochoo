@@ -60,9 +60,19 @@ static void trainController() {
   }
 }
 
+
+void DoBaitPositionFinding(int controllerTid, int trainNum) {
+  DriverMsg msg;
+  msg.type = FIND_POSITION;
+  msg.data2 = NO_RESERVE;
+  msg.trainNum = trainNum;
+  Send(controllerTid, (char*)&msg, sizeof(DriverMsg), (char *)NULL, 0);
+}
+
 void DoPositionFinding(int controllerTid, int trainNum) {
   DriverMsg msg;
   msg.type = FIND_POSITION;
+  msg.data2 = RESERVE;
   msg.trainNum = trainNum;
   Send(controllerTid, (char*)&msg, sizeof(DriverMsg), (char *)NULL, 0);
 }
