@@ -83,7 +83,9 @@ static void try_notify_snake(GamePiece* snake, GamePiece* baits) {
 
   // Try to find a bait for snake.
   for (int i = 0; i < 4; i++) {
-    if (baits[i].trainNum != -1 && baits[i].positionKnown) {
+    if (baits[i].trainNum != -1 &&
+        baits[i].positionKnown &&
+        baits[i].eaten == 0) {
       snake->food = &(baits[i]);
       break;
     }
@@ -232,7 +234,7 @@ static void snakeDirector() {
 
           snake.food->eaten = 1;
           snake.food = (GamePiece*)NULL;
-        } else if (distance < 300 && distance >= 0 && snake.info.trainSpeed == 0) {
+        } else if (distance < 300 && distance >= 0 && snake.info.velocity == 0) {
           PrintDebug(ui, "Almost there but stoppped. %d", distance);
           // Nudge closer..
           SetSpeedTrain(trainController, snake.food->trainNum, 2);

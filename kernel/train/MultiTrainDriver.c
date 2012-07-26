@@ -29,6 +29,7 @@ static int groupSetSpeed(MultiTrainDriver* me, int speed);
 static int shouldStopNow(MultiTrainDriver* me);
 
 static void reroute(MultiTrainDriver* me) {
+  PrintDebug(me->ui, "Rerouting....");
   groupSetSpeed(me, 0);
   me->rerouteCountdown = GET_TIMER4() % 2 == 0 ? 45 : 55; // wait ~1 seconds then reroute.
 }
@@ -69,7 +70,7 @@ static int makeReservation(MultiTrainDriver* me, int stoppingDistance) {
 
   //TrainDebug(me, "Reserving track");
   qMsg.numPredSensor = sensorIndex - 1;
-  for(int i = 1; i < sensorIndex; i++) {
+  for (int i = 1; i < sensorIndex; i++) {
     qMsg.predSensor[i-1] = sensors[i];
     //printLandmark(me, &qMsg.predSensor[i-1]);
   }
@@ -153,6 +154,7 @@ static void multiTrainDriverCourier() {
 }
 
 static int groupSetSpeed(MultiTrainDriver* me, int speed) {
+  PrintDebug(me->ui, "MultiTrain set speed %d", speed);
   int shouldSetSpeed = 1;
   if (!me->tailMode) {
     if (speed == -1) {
@@ -175,7 +177,7 @@ static int groupSetSpeed(MultiTrainDriver* me, int speed) {
         PrintDebug(me->ui, "Stopping Dist: %d", stoppingDistance);
 
         shouldSetSpeed = makeReservation(me, stoppingDistance) == RESERVE_SUCESS;
-        PrintDebug(me->ui, "Should set speed: %d", shouldSetSpeed);
+        PrintDebug(me->ui, "ShouldSetSpeed is %d", shouldSetSpeed);
       }
     }
   }
@@ -249,7 +251,6 @@ void multitrain_driver() {
 
     switch (msg->type) {
       case SET_SPEED: {
-        PrintDebug(me.ui, "Set speed");
         if (!me.tailMode) {
           Reply(msg->replyTid, (char*)1, 0);
         }
@@ -482,7 +483,6 @@ void multitrain_driver() {
         break;
       }
       case MERGE_HEAD: {
-        PrintDebug(me.ui, "merge head");
         if (me.tailMode) {
           PrintDebug(me.ui, "Cannot be a head when in tail mode??");
           break;
@@ -500,11 +500,10 @@ void multitrain_driver() {
         dMsg.type = UPDATE_PARENT_ABOUT_PREDICTION;
         Send(msg->data2, (char *)&dMsg, sizeof(DriverMsg), (char *)NULL, 0);
 
-        PrintDebug(me.ui, "merge head done");
+        PrintDebug(me.ui, "merged. head is %d", me.trainNum);
         break;
       }
       case MERGE_TAIL: {
-        PrintDebug(me.ui, "merge tail begin");
         if (me.tailMode) {
           PrintDebug(me.ui, "Double merge tail??");
           break;
@@ -514,7 +513,7 @@ void multitrain_driver() {
         me.headTid = msg->data2;
         clearReservation(me.trackManager, me.trainNum);
         Reply(msg->replyTid, (char*)1, 0);
-        PrintDebug(me.ui, "merge tail done");
+        PrintDebug(me.ui, "Train %d is tail", me.trainNum);
         break;
       }
       case SEPARATE_TAIL: {
