@@ -420,7 +420,7 @@ static int findNextSensors(track_node *track, Position pos, TrackSensorPredictio
   return 1 + secondaryPredictionCount; // 1 primary + secondaryPredictionCount secondary
 }
 
-static void computeSafeReverseDistHelper(track_edge* edge) {
+static void computeSafeReverseDistHelper(track_edge* edge, int trainLength) {
   if (edge->src->safe_reverse_dist == INT_MAX) {
     return;
   }
@@ -430,25 +430,22 @@ static void computeSafeReverseDistHelper(track_edge* edge) {
     edge->src->safe_reverse_dist = INT_MAX;
     edge->dest->safe_reverse_dist = MAX(new_safe, edge->dest->safe_reverse_dist);
     if (edge->dest->type == NODE_BRANCH) {
-      computeSafeReverseDistHelper(&edge->dest->edge[DIR_CURVED]);
+      computeSafeReverseDistHelper(&edge->dest->edge[DIR_CURVED], trainLength);
     } else if (edge->dest->type != NODE_EXIT) {
-      computeSafeReverseDistHelper(&edge->dest->edge[DIR_AHEAD]);
+      computeSafeReverseDistHelper(&edge->dest->edge[DIR_AHEAD], trainLength);
     }
   } else {
-    if ((edge->dest->type == NODE_BRANCH || edge->dest->type == NODE_MERGE) && edge->dist < SAFE_REVERSE_DIST) {
+    if ((edge->dest->type == NODE_BRANCH || edge->dest->type == NODE_MERGE) && edge->dist < trainLength + SAFE_REVERSE_DIST_COMPENSATION) {
       edge->src->safe_reverse_dist = INT_MAX;
     }
   }
 }
 
-static void computeSafeReverseDist(track_node* track) {
+static void computeSafeReverseDist(track_node* track, int trainLength) {
   for (int i = 0 ; i < TRACK_MAX + 4; i++) {
-    if (track[i].type != NODE_NONE) {
-
-    }
     if (track[i].type == NODE_MERGE) {
-      track[i].safe_reverse_dist = SAFE_REVERSE_DIST;
-      computeSafeReverseDistHelper(&track[i].edge[DIR_AHEAD]);
+      track[i].safe_reverse_dist = trainLength + SAFE_REVERSE_DIST_COMPENSATION;
+      computeSafeReverseDistHelper(&track[i].edge[DIR_AHEAD], trainLength);
     }
   }
 }
@@ -456,7 +453,7 @@ static void computeSafeReverseDist(track_node* track) {
 // Dijkstra's algorithm, currently slow, need a heap for efficiency
 static void findRoute(
     track_node* track, Position from, Position to,
-    Route* result, int trainNum, track_edge* avoidEdge) {
+    Route* result, int trainNum, track_edge* avoidEdge, int trainLength) {
   // fake position into graph
   track_edge* fromEdge = (track_edge*)NULL;
   int offsetFrom = locateNode(track, from, &fromEdge);
@@ -515,7 +512,7 @@ static void findRoute(
     track[i].safe_reverse_dist = 0;
   }
 
-  computeSafeReverseDist(track);
+  computeSafeReverseDist(track, trainLength);
 
   fromNode->curr_dist = 0;
   char uiName[] = UI_TASK_NAME;
@@ -873,6 +870,8 @@ static void trackController() {
         Position from = msg->position1;
         Position to = msg->position2;
         int trainNum = (int)msg->trainNum;
+        int trainLength = (int)msg->trainLength;
+        PrintDebug(ui, "Train Length: %d", trainLength);
 
         track_edge* avoidEdge = (track_edge*)NULL;
         if (msg->data == ONE_PATH_DEST) {
@@ -885,7 +884,7 @@ static void trackController() {
         }
 
         Route route;
-        findRoute(track, from, to , &route, trainNum, avoidEdge);
+        findRoute(track, from, to , &route, trainNum, avoidEdge, trainLength);
 
         Reply(tid, (char *)&route, 8 + sizeof(RouteNode) * route.length);
         break;

@@ -182,10 +182,8 @@ static int groupSetSpeed(MultiTrainDriver* me, int speed) {
         qMsg.type = QUERY_STOPPING_DISTANCE;
         qMsg.data2 = speed;
         Send(me->trainId[0], (char *)&qMsg, sizeof(DriverMsg), (char*)&stoppingDistance, sizeof(int));
-        PrintDebug(me->ui, "Stopping Dist: %d", stoppingDistance);
 
         shouldSetSpeed = makeReservation(me, stoppingDistance) == RESERVE_SUCESS;
-        PrintDebug(me->ui, "ShouldSetSpeed is %d", shouldSetSpeed);
       }
     }
   }
@@ -317,7 +315,7 @@ void multitrain_driver() {
     DriverMsg* msg = (DriverMsg*)&actualMsg;
     msg->data3 = 0;
     Receive(&tid, (char *)msg, sizeof(MultiTrainDriverMsg));
-    if (msg->type != REPORT_INFO && msg->type !=  QUERY_STOP_COUNT && msg->type != MULTI_TRAIN_DRIVER_COURIER && msg->type != SENSOR_TRIGGER) {
+    if (msg->type != REPORT_INFO && msg->type !=  QUERY_STOP_COUNT && msg->type != MULTI_TRAIN_DRIVER_COURIER && msg->type != SENSOR_TRIGGER && msg->type != DELTA_DISTANCE) {
       Reply(tid, (char*)1, 0);
     }
 

@@ -9,7 +9,7 @@ static void trySetSwitch_and_getNextSwitch(MultiTrainDriver* me) {
   Send(me->trackManager, (char*)&setSwitch, sizeof(TrackMsg), &reply, 1);
 
   if (reply == SET_SWITCH_SUCCESS) {
-    //TrainDebug(me, "Set Switch Success");
+    //PrintDebug(me->ui, "Set Switch Success");
     //printLandmark(me, &setSwitch.landmark1);
     int haveNextSwitch = 0;
     for (int i = me->nextSetSwitchNode + 1; i < me->stopNode; i++) {
@@ -22,11 +22,11 @@ static void trySetSwitch_and_getNextSwitch(MultiTrainDriver* me) {
       }
     }
 
-    updatePrediction(me);
 
     if (!haveNextSwitch) {
       me->nextSetSwitchNode = -1;
     }
+    updatePrediction(me);
   }
 }
 
@@ -36,6 +36,15 @@ static void updatePrediction(MultiTrainDriver* me) {
   for (int i = 0; i < me->numTrainInGroup; i++) {
     Send(me->trainId[i], (char *)&dMsg, sizeof(DriverMsg), (char *)NULL, 0);
   }
+}
+
+static int computeTrainLength(MultiTrainDriver* me) {
+  int trainLength = me->info[0].lenBackOfPickup;
+  for (int i = 1; i < me->numTrainInGroup; i++) {
+    trainLength += me->maxFollowingDist + 20; // add distance between trains plus from compensation
+    trainLength += me->info[0].lenFrontOfPickup + me->info[0].lenBackOfPickup; // add length of the train
+  }
+  return trainLength;
 }
 
 static void getRoute(MultiTrainDriver* me, Position* from, DriverMsg* msg) {
@@ -52,10 +61,13 @@ static void getRoute(MultiTrainDriver* me, Position* from, DriverMsg* msg) {
     trackmsg.position2 = msg->pos;
     trackmsg.trainNum = (char)me->trainNum;
     trackmsg.data = msg->data3; // May be ONE_PATH_DEST.
+    int trainLength = computeTrainLength(me);
+    trackmsg.trainLength = trainLength;
 
     printLandmark(me, &trackmsg.position1.landmark1);
     printLandmark(me, &trackmsg.position1.landmark2);
     PrintDebug(me->ui, "Offset %d", trackmsg.position1.offset);
+    PrintDebug(me->ui, "train length %d", trainLength);
   }
 
   Send(me->trackManager, (char*)&trackmsg,

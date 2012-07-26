@@ -74,6 +74,7 @@ typedef struct TrackMsg {
   TrackLandmark landmark1;
   Position position1;
   Position position2;
+  int trainLength;
 } TrackMsg;
 
 typedef struct TrackSensorPrediction {
@@ -95,7 +96,7 @@ typedef struct RouteNode {
 } RouteNode;
 
 #define MAX_ROUTE_NODE 300
-#define SAFE_REVERSE_DIST 280
+#define SAFE_REVERSE_DIST_COMPENSATION 60
 
 typedef struct Route {
   int dist;
