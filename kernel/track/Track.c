@@ -430,7 +430,10 @@ static void computeSafeReverseDistHelper(track_edge* edge, int trainLength) {
     edge->src->safe_reverse_dist = INT_MAX;
     edge->dest->safe_reverse_dist = MAX(new_safe, edge->dest->safe_reverse_dist);
     if (edge->dest->type == NODE_BRANCH) {
+      int temp = edge->dest->safe_reverse_dist;
       computeSafeReverseDistHelper(&edge->dest->edge[DIR_CURVED], trainLength);
+      edge->dest->safe_reverse_dist = temp;
+      computeSafeReverseDistHelper(&edge->dest->edge[DIR_STRAIGHT], trainLength);
     } else if (edge->dest->type != NODE_EXIT) {
       computeSafeReverseDistHelper(&edge->dest->edge[DIR_AHEAD], trainLength);
     }

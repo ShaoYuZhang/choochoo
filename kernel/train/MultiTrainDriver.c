@@ -220,6 +220,21 @@ static void updateInfo(MultiTrainDriver* me) {
     distance -= me->info[i-1].lenFrontOfPickup;
     distance -= PICKUP_LEN;
 
+    if (me->info[i].trainSpeed > me->info[i-1].trainSpeed + 1) {
+        // kind of tricky what to do if distance is -1
+        dMsg.type = SET_SPEED;
+        dMsg.data2 = me->info[i-1].trainSpeed + 1;
+        dMsg.data3 = -1;
+        Send(me->trainId[i], (char*)&dMsg, sizeof(DriverMsg), (char*)1, 0);
+    }
+    if (me->info[i].trainSpeed < me->info[i-1].trainSpeed - 1) {
+        // kind of tricky what to do if distance is -1
+        dMsg.type = SET_SPEED;
+        dMsg.data2 = me->info[i-1].trainSpeed - 1;
+        dMsg.data3 = -1;
+        Send(me->trainId[i], (char*)&dMsg, sizeof(DriverMsg), (char*)1, 0);
+    }
+
     if (distance == -1) {
       if (me->info[i].trainSpeed != me->info[i-1].trainSpeed) {
         // kind of tricky what to do if distance is -1
