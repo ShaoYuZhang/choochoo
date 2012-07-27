@@ -17,6 +17,7 @@
 #define MULTI_TRAIN_DRIVER_COURIER 106
 #define GET_POSITION 107
 #define HIT_SECONDARY 108
+#define SET_FOLLOWING_DISTANCE 109
 
 typedef struct MultiTrainDriver {
   int trainNum;
@@ -74,6 +75,8 @@ typedef struct MultiTrainDriver {
   int nextSensorPredictedTime;
 
   int routeRemaining;
+  int maxFollowingDist;
+  int minFollowingDist;
   DriverMsg routeMsg;
   int rerouteCountdown;
   Route route;

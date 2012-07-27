@@ -142,6 +142,9 @@ static void initDriver(MultiTrainDriver* me) {
   me->routeRemaining = -1;
   me->stoppedCount = 0;
   me->route.length = 0;
+
+  me->minFollowingDist = 100;
+  me->maxFollowingDist = 150;
 }
 
 static void multiTrainDriverCourier() {
@@ -218,14 +221,14 @@ static void updateInfo(MultiTrainDriver* me) {
     distance -= PICKUP_LEN;
 
     // This is pretty arbitrary now and needs tuning
-    if (distance > 150 && me->info[i].trainSpeed < me->info[i-1].trainSpeed + 1 && me->info[i].trainSpeed < 14) {
+    if (distance > me->maxFollowingDist && me->info[i].trainSpeed < me->info[i-1].trainSpeed + 1 && me->info[i].trainSpeed < 14) {
       PrintDebug(me->ui, "Speeding up Distance: %d", distance);
       // too far, back train need to speed up
       dMsg.type = SET_SPEED;
       dMsg.data2 = me->info[i].trainSpeed + 1;
       dMsg.data3 = -1;
       Send(me->trainId[i], (char*)&dMsg, sizeof(DriverMsg), (char*)1, 0);
-    } else if (distance < 100 && distance > 0 && me->info[i].trainSpeed > me->info[i-1].trainSpeed - 1 && me->info[i].trainSpeed > 0) {
+    } else if (distance < me->minFollowingDist && distance > 0 && me->info[i].trainSpeed > me->info[i-1].trainSpeed - 1 && me->info[i].trainSpeed > 0) {
       // too close, back train need to slow up
       PrintDebug(me->ui, "Slowing down Distance %d", distance);
       // too far, back train need to speed up
@@ -623,6 +626,13 @@ void multitrain_driver() {
           PrintDebug(me.ui, "Hit secondary rerouting..");
           groupSetSpeed(&me, 0);
         }
+        break;
+      }
+      case SET_FOLLOWING_DISTANCE: {
+        me.minFollowingDist = msg->data2;
+        me.maxFollowingDist = msg->data3;
+
+        Reply(msg->replyTid, (char*)1, 0);
         break;
       }
       default: {

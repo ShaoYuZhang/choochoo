@@ -137,6 +137,15 @@ void SetSpeedTrain(int controllerTid, int trainNum, int spd){
   Send(controllerTid, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
 }
 
+void SetFollowingDistance(int controllerTid, int trainNum, int minDist, int maxDist) {
+  DriverMsg msg;
+  msg.type = SET_FOLLOWING_DISTANCE;
+  msg.trainNum = trainNum;
+  msg.data2 = minDist;
+  msg.data3 = maxDist;
+  Send(controllerTid, (char *)&msg, sizeof(DriverMsg), (char *)NULL, 0);
+}
+
 int startDriverControllerTask() {
   return Create(5, trainController);
 }

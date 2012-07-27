@@ -280,6 +280,21 @@ static void decodeCommand() {
     // Train 43 moves
     triggerFakeSensor(sensorServer, Time(timeServer), 3, 6);  // D6
     Delay(40, timeServer);
+  } else if (decoderBuffer[0] == 'f' && decoderBuffer[1] == 'o') {
+    // sets the max/min distance between train during merge mode
+    char *temp = (char *)decoderBuffer + 3;
+    int train_number = strgetui(&temp);
+    temp++;
+    int min_dist = strgetui(&temp);
+    temp++;
+    int max_dist = strgetui(&temp);
+    temp++;
+
+    if (max_dist > min_dist) {
+      SetFollowingDistance(trainController, train_number, min_dist, max_dist);
+    } else {
+      PrintDebug(ui, "ERROR, maxDist less than minDist");
+    }
   } else {
     PrintDebug(ui, "__Bad command__ %s", decoderBuffer);
     return;

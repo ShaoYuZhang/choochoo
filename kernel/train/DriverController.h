@@ -37,8 +37,8 @@ typedef struct DriverMsg {
   char trainNum; // DONT USE IN DRIVER.c use me->trainNum
   char type;           // As defined above
   char replyTid;       // The user that first send the message.
-  signed char data2;   // Speed (-1 for reverse)
-  unsigned char data3; // Delay num, or msg came from worker
+  int data2;   // Speed (-1 for reverse)
+  int data3; // Delay num, or msg came from worker
   int timestamp;
   Position pos;
 } DriverMsg;
@@ -72,5 +72,6 @@ void DoPositionFinding(int controllerTid, int trianNum);
 void DoTrainMerge(int controllerTid, int headTrainNum, int tailTrainNum);
 void ReverseTrain(int controllerTid, int trainNum);
 void SetSpeedTrain(int controllerTid, int trainNum, int spd);
+void SetFollowingDistance(int controllerTid, int trainNum, int minDist, int maxDist);
 
 #endif // DRIVER_CONTROLLER_
