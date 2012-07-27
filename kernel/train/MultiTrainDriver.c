@@ -216,9 +216,12 @@ static void updateInfo(MultiTrainDriver* me) {
     QueryDistance(me->trackManager,
         &me->info[i].pos, &me->info[i-1].pos, &distance);
     // Get more accurate distance based on knowledge of train direciton.
-    distance -= me->info[i].lenBackOfPickup;
-    distance -= me->info[i-1].lenFrontOfPickup;
-    distance -= PICKUP_LEN;
+    distance -= me->info[i].lenFrontOfPickup;
+    distance -= me->info[i-1].lenBackOfPickup;
+    distance -= PICKUP_LEN * 2;
+    if (distance < 0) {
+      distance = 1;
+    }
 
     if (me->info[i].trainSpeed > me->info[i-1].trainSpeed + 1) {
         // kind of tricky what to do if distance is -1
