@@ -118,7 +118,7 @@ static void try_notify_snake(GamePiece* snake, GamePiece* baits) {
     printLandmark(ui, &dest.landmark1);
     printLandmark(ui, &dest.landmark2);
 
-    if (dest.offset < 300 ) {
+    if (dest.offset < 300) {
       // Move a position sensor.
       dest.landmark2 = dest.landmark1;
 
@@ -190,6 +190,7 @@ static void snakeDirector() {
   snake.eaten = 0;
   snake.food = (GamePiece*)NULL;
   snake.positionKnown = 0;
+  int CC = 0;
 
   // Handling events.
   for (;;) {
@@ -242,10 +243,12 @@ static void snakeDirector() {
           snake.food->positionKnown = 0;
 
           snake.food = (GamePiece*)NULL;
-        } else if (distance < 300 && distance >= 0 && snake.info.velocity == 0) {
-          PrintDebug(ui, "Almost there but stoppped. %d", distance);
+          CC = 0;
+        } else if (distance < 500 && distance >= 0 && snake.info.velocity == 0) {
           // Nudge closer..
           SetSpeedTrain(trainController, snake.trainNum, 2);
+        } else if (distance < 500) {
+          if ((++CC & 7) == 0) PrintDebug(ui, "Almost there %dmm", distance);
         }
       }
       Reply(tid, (char*)1, 0);

@@ -29,7 +29,6 @@ typedef struct DumbDriver {
   char lastSensorBox;
   char lastSensorVal;
   int lastSensorActualTime;
-  int lastSensorPredictedTime;
 
   int speed;      // 0 - 14
   int speedDir;

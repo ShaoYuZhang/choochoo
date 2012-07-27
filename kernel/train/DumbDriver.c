@@ -184,6 +184,7 @@ static void initDriver(DumbDriver* me) {
   me->distanceFromLastSensor = 0;
   me->lastSensorActualTime = 0;
   me->lastSensorDistanceError = 0;
+  me->lastSensorUnexpected = 1;
 
   me->delayer = Create(1, trainDelayer);
   me->stopDelayer = Create(1, trainStopDelayer);
@@ -267,20 +268,45 @@ static int getStoppingTime(DumbDriver* me) {
 }
 
 static void dynamicCalibration(DumbDriver* me) {
+  TrainDebug(me, "DC: %d %d %d", me->isAding, me->lastSensorUnexpected, me->speed);
   if (me->isAding) return; // TODO doesn't cover all cases
   if (me->lastSensorUnexpected) return;
   if (me->speed == 0) return; // Cannot calibrate speed zero
 
-  int dTime = me->lastSensorPredictedTime - me->lastSensorActualTime;
-  if (dTime > 400) return;
-  if (dTime < -400) return;
-  int velocity =
+  int newVelocity =
     me->calibrationDistance * 100 * 1000 /
     (me->lastSensorActualTime - me->calibrationStart);
 
-  int originalVelocity = me->v[(int)me->speed][(int)me->speedDir];
-  me->v[(int)me->speed][(int)me->speedDir]
-      = (originalVelocity * 85 + velocity * 15) / 100;
+  int oldVelocity = me->v[(int)me->speed][(int)me->speedDir];
+  float diff = (float)(newVelocity - oldVelocity);
+  float relative = (diff / (float)oldVelocity) + 1.0;
+
+  if (relative >= 0.80 && relative < 1.20) {
+    //TrainDebug(me, "Rel: %d old %d new %d", (int)(relative * 100),
+    //       oldVelocity,
+    //      (oldVelocity * 85 + (int)(relative*oldVelocity)* 15) / 100
+    //    );
+    int i = me->speed;
+    //for (int i = 1; i < 11; i++) {
+      oldVelocity = me->v[i][0];
+      me->v[i][0]
+        = (oldVelocity * 85 + (int)(relative*oldVelocity)* 15) / 100;
+
+      oldVelocity = me->v[i][1];
+      me->v[i][1]
+        = (oldVelocity * 85 + (int)(relative*oldVelocity)* 15) / 100;
+
+      int oldStopping = me->d[i][0][MAX_VAL];
+      me->d[i][0][MAX_VAL]
+        = (oldStopping * 90 + (int)(relative*oldStopping) * 10) / 100;
+
+      oldStopping = me->d[i][1][MAX_VAL];
+      me->d[i][1][MAX_VAL]
+        = (oldStopping * 90 + (int)(relative*oldStopping) * 10) / 100;
+    //}
+  } else {
+    //TrainDebug(me, "out of range. %d", (int)(relative * 100));
+  }
 }
 
 static void trainSetSpeed(
@@ -480,7 +506,6 @@ void dumb_driver() {
           me.lastSensorIsTerminal = 0;
           me.lastSensorActualTime = msg.timestamp;
           dynamicCalibration(&me);
-          me.lastSensorPredictedTime = me.nextSensorPredictedTime;
 
           TrackNextSensorMsg trackMsg;
           QueryNextSensor(&me, &trackMsg);
