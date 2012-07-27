@@ -21,6 +21,7 @@ typedef struct GamePiece {
   char eaten;
   struct GamePiece* food;
   char positionKnown;
+  Position baitRoutePosition;
   DumbDriverInfo info;
 } GamePiece;
 

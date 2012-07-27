@@ -58,7 +58,18 @@ static void try_update_position(GamePiece* snake, GamePiece* baits) {
       msg.trainNum = (char)baits[i].trainNum;
       int l = Send(trainController, (char*)&msg, sizeof(msg),
           (char*)&baits[i].info, sizeof(DumbDriverInfo));
+      int alreadyKnown = baits[i].positionKnown;
       baits[i].positionKnown = (l == sizeof(DumbDriverInfo));
+
+      // If position is known for the first time.
+      if (!alreadyKnown && baits[i].positionKnown) {
+        // Copy current location
+        baits[i].baitRoutePosition = baits[i].info.pos;
+        // Move the bait slighly forward.
+        SetSpeedTrain(trainController, baits[i].trainNum, 3);
+        Delay(310, timeserver); // Move the bait away from current location.
+        SetSpeedTrain(trainController, baits[i].trainNum, 0);
+      }
     }
   }
 }
@@ -99,7 +110,7 @@ static void try_notify_snake(GamePiece* snake, GamePiece* baits) {
     clearReservation(trackController, snake->food->trainNum);
 
     // Find a route to bait without colliding into the bait.
-    Position dest = snake->food->info.pos;
+    Position dest = snake->food->baitRoutePosition;
 
     // If previous sensor is end,
     // reverse the train to get a routable previous sensor.
@@ -114,11 +125,12 @@ static void try_notify_snake(GamePiece* snake, GamePiece* baits) {
     }
     // Now previous sensor is not LANDMARK_END;
 
+    /*
     PrintDebug(ui, "Tentative Dest. offset:%d", dest.offset);
     printLandmark(ui, &dest.landmark1);
     printLandmark(ui, &dest.landmark2);
 
-    if (dest.offset < 300) {
+    if (dest.offset < 220) {
       // Move a position sensor.
       dest.landmark2 = dest.landmark1;
 
@@ -130,7 +142,7 @@ static void try_notify_snake(GamePiece* snake, GamePiece* baits) {
       //printLandmark(ui, &dest.landmark1);
 
       QueryNextSensor(dest.landmark1.num1, dest.landmark1.num2, &nextSensor);
-      int stop = nextSensor.predictions[0].dist - (300 - dest.offset);
+      int stop = nextSensor.predictions[0].dist - (220 - dest.offset);
       dest.offset = stop;
       //                           Bait===>>>>
       // -----S-------------------[--s-------]===>>------s--
@@ -143,10 +155,10 @@ static void try_notify_snake(GamePiece* snake, GamePiece* baits) {
       //PrintDebug(ui, "Next sensor after reverse numpred:%d", nextSensor.numPred);
       //printLandmark(ui, &dest.landmark1);
     } else {
-      dest.offset = dest.offset - 300;
+      dest.offset = dest.offset - 220;
     }
-
-    Delay(170, timeserver);
+    */
+    Delay(165, timeserver);
 
     DriverMsg driveMsg;
     driveMsg.type = SET_ROUTE;
@@ -247,7 +259,7 @@ static void snakeDirector() {
         } else if (distance < 500 && distance >= 0 && snake.info.velocity == 0) {
           // Nudge closer..
           SetSpeedTrain(trainController, snake.trainNum, 2);
-        } else if (distance < 500) {
+        } else if (distance < 500 && distance >= 0) {
           if ((++CC & 7) == 0) PrintDebug(ui, "Almost there %dmm", distance);
         }
       }
