@@ -71,6 +71,12 @@ static void updateParentAboutPrediction(DumbDriver* me) {
   Reply(me->courier, (char *)&msg, sizeof(MultiTrainDriverMsg));
 }
 
+static void BeginReroute(DumbDriver* me) {
+  MultiTrainDriverMsg msg;
+  msg.type = HIT_SECONDARY;
+  Reply(me->courier, (char*)&msg, 2);
+}
+
 static void QueryNextSensor(DumbDriver* me, TrackNextSensorMsg* trackMsg) {
   TrackMsg qMsg;
   qMsg.type = QUERY_NEXT_SENSOR_FROM_SENSOR;
@@ -444,15 +450,18 @@ void dumb_driver() {
                 condition = me.predictions[i].condition;
                 me.lastSensorUnexpected = 1;
                 if (conditionLandmark.type == LANDMARK_SWITCH) {
+                  // NOTE: c14, followed by a14 secondary not correct.
                   TrackMsg setSwitch;
                   setSwitch.type = UPDATE_SWITCH_STATE;
-                  TrainDebug(&me, "UPDATE SWITCH STATE");
+                  TrainDebug(&me, "Update Switch %d to %d",
+                      conditionLandmark.num2, condition);
                   setSwitch.landmark1 = conditionLandmark;
                   setSwitch.data = condition;
 
-                  Send(me.trackManager, (char*)&setSwitch, sizeof(TrackMsg), (char *)1, 0);
+                  Send(me.trackManager,
+                      (char*)&setSwitch, sizeof(TrackMsg), (char*)1, 0);
                 }
-                //reroute(&me); // TODO, what TODO
+                BeginReroute(&me);
               } else {
                 me.lastSensorUnexpected = 0;
               }

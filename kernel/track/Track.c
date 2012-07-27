@@ -833,6 +833,8 @@ static void trackController() {
         uimsg.type = UPDATE_SWITCH;
         uimsg.data1 = sw.num2;
         uimsg.data2 = msg->data;
+
+        PrintDebug(ui, "Update switch state %d.", msg->data);
         Send(ui, (char*)&uimsg, sizeof(UiMsg), (char*)1, 0);
         Reply(tid, (char *)1, 0);
         break;

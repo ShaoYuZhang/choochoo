@@ -141,6 +141,7 @@ static void initDriver(MultiTrainDriver* me) {
 
   me->routeRemaining = -1;
   me->stoppedCount = 0;
+  me->route.length = 0;
 }
 
 static void multiTrainDriverCourier() {
@@ -164,6 +165,8 @@ static int groupSetSpeed(MultiTrainDriver* me, int speed) {
       speed = 0;
       me->isReversing = 1;
       me->speedAfterReverse = me->info[0].trainSpeed;
+      me->stoppedCount = 0; // required hack, the count will be accumulated back to numTrain soon
+    } else if (speed == 0){
       me->stoppedCount = 0; // required hack, the count will be accumulated back to numTrain soon
     }
 
@@ -244,6 +247,60 @@ static void updateInfo(MultiTrainDriver* me) {
         (char*)&dMsg, sizeof(DriverMsg) - sizeof(Position), (char*)1, 0);
 }
 
+static void handleReverse(MultiTrainDriver* me) {
+  // flip the heads and tails of everythingggg
+  for (int i = 0; i < me->numTrainInGroup / 2; i++) {
+    int tempTrainId = me->trainId[i];
+    DumbDriverInfo tempInfo = me->info[i];
+    TrackLandmark tempSensorToReserve[10];
+    for (int j = 0; j < 10; j++) {
+      tempSensorToReserve[j] = me->sensorToReserve[i][j];
+    }
+    int tempNumSensorToReserve = me->numSensorToReserve[i];
+
+    int dest = me->numTrainInGroup - i - 1;
+    me->trainId[i] = me->trainId[dest];
+    me->info[i] = me->info[dest];
+    for (int j = 0; j < 10; j++) {
+      me->sensorToReserve[i][j] = me->sensorToReserve[dest][j];
+    }
+    me->numSensorToReserve[i] = me->numSensorToReserve[dest];
+
+    me->trainId[dest] = tempTrainId;
+    me->info[dest] = tempInfo;
+    for (int j = 0; j < 10; j++) {
+      me->sensorToReserve[dest][j] = tempSensorToReserve[j];
+    }
+    me->numSensorToReserve[dest] = tempNumSensorToReserve;
+  }
+
+  DriverMsg dMsg;
+  dMsg.type = REVERSE_SPEED;
+  dMsg.data2 = me->speedAfterReverse;
+  // inform everyone to reverse now
+  for (int i = 0; i < me->numTrainInGroup; i++) {
+    Send(me->trainId[i], (char *)&dMsg, sizeof(DriverMsg), (char *)NULL, 0);
+  }
+  me->isReversing = 0;
+  updateInfo(me);
+  if (me->speedAfterReverse != 0) {
+    me->stoppedCount = 0;
+  }
+  if (me->route.length != 0) {
+    // Delayer came back. Reverse command completed
+    me->stopCommited = 0; // We're moving again.
+    // We've completed everything up to the reverse node.
+    me->routeRemaining = me->stopNode+1;
+    me->previousStopNode = me->routeRemaining;
+    me->distanceFromLastSensorAtPreviousStopNode = me->info[0].pos.offset;
+    // Calculate the next stop node.
+    updateStopNode(me);
+    me->nextSetSwitchNode = -1;
+    updateSetSwitch(me);
+  }
+}
+
+
 void multitrain_driver() {
   MultiTrainDriver me;
 
@@ -315,6 +372,7 @@ void multitrain_driver() {
                 groupSetSpeed(&me, 0); // stopping
                 me.route.length = 0; // Finished the route.
                 me.testMode = 0;
+                me.routeRemaining = -1;
               }
               me.stopCommited = 1;
               me.useLastSensorNow = 0;
@@ -384,56 +442,10 @@ void multitrain_driver() {
         if (me.stoppedCount == me.numTrainInGroup) {
           makeReservation(&me, 1);
           if (me.isReversing) {
-            // flip the heads and tails of everythingggg
-            for (int i = 0; i < me.numTrainInGroup / 2; i++) {
-              int tempTrainId = me.trainId[i];
-              DumbDriverInfo tempInfo = me.info[i];
-              TrackLandmark tempSensorToReserve[10];
-              for (int j = 0; j < 10; j++) {
-                tempSensorToReserve[j] = me.sensorToReserve[i][j];
-              }
-              int tempNumSensorToReserve = me.numSensorToReserve[i];
-
-              int dest = me.numTrainInGroup - i - 1;
-              me.trainId[i] = me.trainId[dest];
-              me.info[i] = me.info[dest];
-              for (int j = 0; j < 10; j++) {
-                me.sensorToReserve[i][j] = me.sensorToReserve[dest][j];
-              }
-              me.numSensorToReserve[i] = me.numSensorToReserve[dest];
-
-              me.trainId[dest] = tempTrainId;
-              me.info[dest] = tempInfo;
-              for (int j = 0; j < 10; j++) {
-                me.sensorToReserve[dest][j] = tempSensorToReserve[j];
-              }
-              me.numSensorToReserve[dest] = tempNumSensorToReserve;
-            }
-
-            DriverMsg dMsg;
-            dMsg.type = REVERSE_SPEED;
-            dMsg.data2 = me.speedAfterReverse;
-            // inform everyone to reverse now
-            for (int i = 0; i < me.numTrainInGroup; i++) {
-              Send(me.trainId[i], (char *)&dMsg, sizeof(DriverMsg), (char *)NULL, 0);
-            }
-            me.isReversing = 0;
-            updateInfo(&me);
-            if (me.speedAfterReverse != 0) {
-              me.stoppedCount = 0;
-            }
-            if (me.route.length != 0) {
-              // Delayer came back. Reverse command completed
-              me.stopCommited = 0; // We're moving again.
-              // We've completed everything up to the reverse node.
-              me.routeRemaining = me.stopNode+1;
-              me.previousStopNode = me.routeRemaining;
-              me.distanceFromLastSensorAtPreviousStopNode = me.info[0].pos.offset;
-              // Calculate the next stop node.
-              updateStopNode(&me);
-              me.nextSetSwitchNode = -1;
-              updateSetSwitch(&me);
-            }
+            handleReverse(&me);
+          } else if (me.route.length != 0) {
+            // Reroute.
+            setRoute(&me, &(me.info[0].pos), &(me.routeMsg));
           }
         }
         break;
@@ -583,7 +595,7 @@ void multitrain_driver() {
         // nothing
         break;
       }
-      case REVERSE_SPEED : {
+      case REVERSE_SPEED: {
         if (!me.tailMode) {
           PrintDebug(me.ui, "Reverse Speed Not in tail mode..??"); break;
         }
@@ -605,7 +617,13 @@ void multitrain_driver() {
         // Reply the head that made query.
         Reply(me.headTid, (char*)&stoppingDist, sizeof(int));
         break;
-
+      }
+      case HIT_SECONDARY: {
+        if (me.route.length != 0) {
+          PrintDebug(me.ui, "Hit secondary rerouting..");
+          groupSetSpeed(&me, 0);
+        }
+        break;
       }
       default: {
         PrintDebug(me.ui, "Not Handled %d", msg->type);

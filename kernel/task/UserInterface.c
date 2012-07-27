@@ -239,8 +239,6 @@ static char* updateTrain(TrainUiMsg* train, char* msg) {
   *msg++ = ' ';
   *msg++ = ' ';
 
-  row++;
-
   msg = moveTo(row++, col, msg);
   msg = formatInt(train->distanceToPreviousTrain, 3, msg);
   row++;

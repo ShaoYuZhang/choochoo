@@ -16,6 +16,7 @@
 #define QUERY_STOP_COUNT 105
 #define MULTI_TRAIN_DRIVER_COURIER 106
 #define GET_POSITION 107
+#define HIT_SECONDARY 108
 
 typedef struct MultiTrainDriver {
   int trainNum;
@@ -39,12 +40,10 @@ typedef struct MultiTrainDriver {
   int useLastSensorNow;
   int stopNow;
   int positionFinding;
-  int rerouteCountdown;
   int nextSetSwitchNode;
   int setSwitchNaggerCount;
   int testMode;
   int reserveTrackMode;
-  Route route;
 
   // The multi-train driver side
   int ui;
@@ -68,16 +67,16 @@ typedef struct MultiTrainDriver {
   int d[15][2][2];
   int a[15]; // TODO should be 15 * 15 later
   int CC;
-  int routeRemaining;
   char nextSensorIsTerminal;
   char nextSensorBox;
   TrackLandmark reserveFailedLandmark;
   char nextSensorVal;
   int nextSensorPredictedTime;
 
-
-
+  int routeRemaining;
   DriverMsg routeMsg;
+  int rerouteCountdown;
+  Route route;
 } MultiTrainDriver;
 
 typedef struct MultiTrainDriverMsg {
