@@ -453,7 +453,8 @@ static void computeSafeReverseDist(track_node* track, int trainLength) {
 // Dijkstra's algorithm, currently slow, need a heap for efficiency
 static void findRoute(
     track_node* track, Position from, Position to,
-    Route* result, int trainNum, track_edge* avoidEdge, int trainLength) {
+    Route* result, int trainNum, track_edge* avoidEdge1, track_edge* avoidEdge2,
+    int trainLength) {
   // fake position into graph
   track_edge* fromEdge = (track_edge*)NULL;
   int offsetFrom = locateNode(track, from, &fromEdge);
@@ -570,8 +571,8 @@ static void findRoute(
       if (tempEdge->dest->in_queue &&
           (tempEdge->reserved_train_num == -1 ||
            tempEdge->reserved_train_num == trainNum) &&
-          (avoidEdge == (track_edge*)NULL ||
-           tempEdge != avoidEdge)
+          (avoidEdge1 == (track_edge*)NULL || tempEdge != avoidEdge1) &&
+          (avoidEdge2 == (track_edge*)NULL || tempEdge != avoidEdge2)
          ) {
         neighbours[neighbour_count] = tempEdge->dest;
         neighbours_dist[neighbour_count++] = tempEdge->dist;
@@ -580,8 +581,8 @@ static void findRoute(
       if (tempEdge->dest->in_queue &&
           (tempEdge->reserved_train_num == -1 ||
            tempEdge->reserved_train_num == trainNum) &&
-          (avoidEdge == (track_edge*)NULL ||
-           tempEdge != avoidEdge)
+          (avoidEdge1 == (track_edge*)NULL || tempEdge != avoidEdge1) &&
+          (avoidEdge2 == (track_edge*)NULL || tempEdge != avoidEdge2)
          ) {
         neighbours[neighbour_count] = tempEdge->dest;
         neighbours_dist[neighbour_count++] = tempEdge->dist;
@@ -591,8 +592,8 @@ static void findRoute(
       if (tempEdge->dest->in_queue &&
           (tempEdge->reserved_train_num == -1 ||
            tempEdge->reserved_train_num == trainNum) &&
-          (avoidEdge == (track_edge*)NULL ||
-           tempEdge != avoidEdge)
+          (avoidEdge1 == (track_edge*)NULL || tempEdge != avoidEdge1) &&
+          (avoidEdge2 == (track_edge*)NULL || tempEdge != avoidEdge2)
          ) {
         neighbours[neighbour_count] = curr_node->edge[DIR_AHEAD].dest;
         neighbours_dist[neighbour_count++] = curr_node->edge[DIR_AHEAD].dist;
@@ -873,18 +874,24 @@ static void trackController() {
         int trainLength = (int)msg->trainLength;
         PrintDebug(ui, "Train Length: %d", trainLength);
 
-        track_edge* avoidEdge = (track_edge*)NULL;
+        track_edge* avoidEdge1 = (track_edge*)NULL;
+        track_edge* avoidEdge2 = (track_edge*)NULL;
         if (msg->data == ONE_PATH_DEST) {
           PrintDebug(ui, "One path dest.");
           track_edge* toEdge = (track_edge*)NULL;
           locateNode(track, to, &toEdge);
-          avoidEdge = toEdge->reverse;
-          PrintDebug(ui, "Avoiding edge (%s,%s)",
-              avoidEdge->src->name, avoidEdge->dest->name);
+          avoidEdge1 = toEdge->reverse;
+          avoidEdge2 = &(avoidEdge1->src->reverse->edge[DIR_AHEAD]);
+
+          PrintDebug(ui, "Avoiding edge (%s,%s) (%s,%s)",
+              avoidEdge1->src->name, avoidEdge1->dest->name,
+              avoidEdge2->src->name, avoidEdge2->dest->name
+              );
         }
 
         Route route;
-        findRoute(track, from, to , &route, trainNum, avoidEdge, trainLength);
+        findRoute(track, from, to , &route, trainNum,
+            avoidEdge1, avoidEdge2, trainLength);
 
         Reply(tid, (char *)&route, 8 + sizeof(RouteNode) * route.length);
         break;
