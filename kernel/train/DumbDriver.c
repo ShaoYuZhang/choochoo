@@ -414,10 +414,8 @@ void dumb_driver() {
         break;
       }
       case STOP_DELAYER: {
-                           TrainDebug(&me, "DUBM stop");
-                           TrainDebug(&me, "%d %d %d", me.lastSensorActualTime, me.speed, me.isAding);
         // To prevent the first receive from this delayer
-        if (me.lastSensorActualTime > 0 && me.speed == 0 && !me.isAding) {
+        if (me.lastSensorActualTime > 0 && me.speed == 0) {
           MultiTrainDriverMsg msg;
           msg.type = STOP_COMPLETED;
           Reply(me.courier, (char *)&msg, sizeof(MultiTrainDriverMsg));
@@ -540,7 +538,6 @@ void dumb_driver() {
       }
       case UPDATE_PARENT_ABOUT_PREDICTION: {
         updatePrediction(&me);
-        updateParentAboutPrediction(&me);
         Reply(tid, (char*)1, 0);
         break;
       }

@@ -910,11 +910,26 @@ static void trackController() {
             default: type = NULL;
           }
           if (type != NULL) {
-            if (node->edge[DIR_AHEAD].reserved_train_num == trainNum) {
-              PrintDebug(ui, "%s (%s,%s)",
-                  type,
-                  node->edge[DIR_AHEAD].src->name,
-                  node->edge[DIR_AHEAD].dest->name);
+            if (node->type == NODE_BRANCH) {
+              if (node->edge[DIR_STRAIGHT].reserved_train_num == trainNum) {
+                PrintDebug(ui, "%s (%s,%s)",
+                    type,
+                    node->edge[DIR_STRAIGHT].src->name,
+                    node->edge[DIR_STRAIGHT].dest->name);
+              }
+              if (node->edge[DIR_CURVED].reserved_train_num == trainNum) {
+                PrintDebug(ui, "%s (%s,%s)",
+                    type,
+                    node->edge[DIR_CURVED].src->name,
+                    node->edge[DIR_CURVED].dest->name);
+              }
+            } else {
+              if (node->edge[DIR_AHEAD].reserved_train_num == trainNum) {
+                PrintDebug(ui, "%s (%s,%s)",
+                    type,
+                    node->edge[DIR_AHEAD].src->name,
+                    node->edge[DIR_AHEAD].dest->name);
+              }
             }
           }
         }

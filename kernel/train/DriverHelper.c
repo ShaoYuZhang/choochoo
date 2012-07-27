@@ -32,7 +32,7 @@ static void trySetSwitch_and_getNextSwitch(MultiTrainDriver* me) {
 static void updatePrediction(MultiTrainDriver* me) {
   DriverMsg dMsg;
   dMsg.type = UPDATE_PARENT_ABOUT_PREDICTION;
-  for (int i = 0; i < MAX_TRAIN_IN_GROUP; i++) {
+  for (int i = 0; i < me->numTrainInGroup; i++) {
     Send(me->trainId[i], (char *)&dMsg, sizeof(DriverMsg), (char *)NULL, 0);
   }
 }

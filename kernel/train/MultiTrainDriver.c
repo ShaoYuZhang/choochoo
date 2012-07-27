@@ -63,7 +63,6 @@ static int makeReservation(MultiTrainDriver* me, int stoppingDistance) {
       }
     }
   }
-  PrintDebug(me->ui, "WTFFF %d", sensorIndex);
 
   ReleaseOldAndReserveNewTrackMsg qMsg;
   qMsg.type = RELEASE_OLD_N_RESERVE_NEW;
@@ -371,8 +370,6 @@ void multitrain_driver() {
         break;
       }
       case STOP_COMPLETED: {
-        PrintDebug(me.ui, "COME BACKKKKK");
-        PrintDebug(me.ui, "%d", me.numTrainInGroup);
         // notify actual train controller.
         if (me.tailMode) {
           MultiTrainDriverCourierMsg cMsg;
