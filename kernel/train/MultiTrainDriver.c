@@ -31,13 +31,16 @@ static int shouldStopNow(MultiTrainDriver* me);
 static void reroute(MultiTrainDriver* me) {
   PrintDebug(me->ui, "Rerouting....");
   groupSetSpeed(me, 0);
-  me->rerouteCountdown = GET_TIMER4() % 2 == 0 ? 45 : 55; // wait ~1 seconds then reroute.
+  me->rerouteCountdown = GET_TIMER4() % 2 == 0 ? 145 : 155; // wait ~1 seconds then reroute.
 }
 
 static int makeReservation(MultiTrainDriver* me, int stoppingDistance) {
   if (me->tailMode) {
     PrintDebug(me->ui, "Cannot make reservation in tail mode");
-    return 0;
+    return RESERVE_SUCESS;
+  } else if (!me->reserveTrackMode) {
+    PrintDebug(me->ui, "No reservation mode");
+    return RESERVE_SUCESS;
   }
   int isStationary = me->stoppedCount == me->numTrainInGroup;
   TrackLandmark sensors[MAX_TRAIN_IN_GROUP * 10];
@@ -81,7 +84,6 @@ static int makeReservation(MultiTrainDriver* me, int stoppingDistance) {
       (char*)&qMsg, sizeof(ReleaseOldAndReserveNewTrackMsg),
       (char*)&(me->reserveFailedLandmark), sizeof(TrackLandmark));
   if (len > 0) {
-    //TrainDebug(me, "Failed cuz couldn't get landmark");
     printLandmark(me, &me->reserveFailedLandmark);
     return RESERVE_FAIL;
   } else if (!isStationary &&
@@ -218,8 +220,15 @@ static void updateInfo(MultiTrainDriver* me) {
     distance -= me->info[i-1].lenFrontOfPickup;
     distance -= PICKUP_LEN;
 
-    // This is pretty arbitrary now and needs tuning
-    if (distance > me->maxFollowingDist && me->info[i].trainSpeed < me->info[i-1].trainSpeed + 1 && me->info[i].trainSpeed < 14) {
+    if (distance == -1) {
+      if (me->info[i].trainSpeed != me->info[i-1].trainSpeed) {
+        // kind of tricky what to do if distance is -1
+        dMsg.type = SET_SPEED;
+        dMsg.data2 = me->info[i-1].trainSpeed;
+        dMsg.data3 = -1;
+        Send(me->trainId[i], (char*)&dMsg, sizeof(DriverMsg), (char*)1, 0);
+      }
+    } else if (distance > me->maxFollowingDist && me->info[i].trainSpeed < me->info[i-1].trainSpeed + 1 && me->info[i].trainSpeed < 14 && me->info[i-1].trainSpeed != 0) {
       PrintDebug(me->ui, "Speeding up Distance: %d", distance);
       // too far, back train need to speed up
       dMsg.type = SET_SPEED;

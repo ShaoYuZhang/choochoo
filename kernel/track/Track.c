@@ -325,7 +325,7 @@ static int calculateDistance(track_node* track, Position from, Position to) {
   track_node *toNode = &track[TRACK_MAX + 2];
 
   track_edge* edges[7];
-  int len = traverse(fromNode, toNode, 0, 7, edges, 0);
+  int len = traverse(fromNode, toNode, 0, 10, edges, 0);
   // TODO, len == -1. .. hmm.
   int dist = -1;
   if (len != -1) {

@@ -336,23 +336,15 @@ static void setRoute(MultiTrainDriver* me, Position* from, DriverMsg* msg) {
 
   getRoute(me, from, msg);
   if (me->route.length != 0) {
-    if (me->route.nodes[1].num == REVERSE) {
-      // Don't need to reserve... cuz.. it's probably stuck.
-      groupSetSpeed(me, msg->data2);
+    int setSpeedSuccess= groupSetSpeed(me, msg->data2);
+    if (setSpeedSuccess) {
       updateStopNode(me);
       me->nextSetSwitchNode = -1;
       updateSetSwitch(me);
     } else {
-      int setSpeedSuccess = groupSetSpeed(me, msg->data2);
-      if (setSpeedSuccess) {
-        updateStopNode(me);
-        me->nextSetSwitchNode = -1;
-        updateSetSwitch(me);
-      } else {
-        PrintDebug(me->ui, "Cannot reserve track!");
-        groupSetSpeed(me, 0);
-        me->rerouteCountdown = 200;
-      }
+      PrintDebug(me->ui, "Cannot reserve track!");
+      groupSetSpeed(me, 0);
+      me->rerouteCountdown = 200;
     }
   } else {
     PrintDebug(me->ui, "No route found!");

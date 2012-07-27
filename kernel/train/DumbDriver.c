@@ -268,7 +268,6 @@ static int getStoppingTime(DumbDriver* me) {
 }
 
 static void dynamicCalibration(DumbDriver* me) {
-  TrainDebug(me, "DC: %d %d %d", me->isAding, me->lastSensorUnexpected, me->speed);
   if (me->isAding) return; // TODO doesn't cover all cases
   if (me->lastSensorUnexpected) return;
   if (me->speed == 0) return; // Cannot calibrate speed zero
@@ -330,7 +329,7 @@ static void trainSetSpeed(
     me->isAding = 1;
     me->lastReportDist = 0;
     me->adEndTime = t1;
-  } else if (newSpeed == 0) {
+  } else if (newSpeed == 0 && getStoppingTime(me) != 0) {
     // decelerating to 0
     int v0 = getVelocity(me);
     int v1 = me->v[newSpeed][DECELERATE];
@@ -397,7 +396,6 @@ static void trainSetSpeed(
       Putstr(me->com1, msg, 2);
       if (speed == 0) {
         int delayTime = stopTime + 500;
-        TrainDebug(me, "%d", stopTime);
         Reply(me->stopDelayer, (char*)&delayTime, 4);
       }
     }
@@ -457,7 +455,6 @@ void dumb_driver() {
         break;
       }
       case SENSOR_TRIGGER: {
-        TrainDebug(&me, "sensor reports");
         int sensorReportValid = 0;
         TrackLandmark conditionLandmark;
         int condition;
