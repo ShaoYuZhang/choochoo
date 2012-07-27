@@ -343,7 +343,7 @@ static void setRoute(MultiTrainDriver* me, Position* from, DriverMsg* msg) {
       me->nextSetSwitchNode = -1;
       updateSetSwitch(me);
     } else {
-      int setSpeedSuccess= groupSetSpeed(me, msg->data2);
+      int setSpeedSuccess = groupSetSpeed(me, msg->data2);
       if (setSpeedSuccess) {
         updateStopNode(me);
         me->nextSetSwitchNode = -1;

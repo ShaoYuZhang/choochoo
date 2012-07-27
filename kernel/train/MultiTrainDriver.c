@@ -38,9 +38,6 @@ static int makeReservation(MultiTrainDriver* me, int stoppingDistance) {
   if (me->tailMode) {
     PrintDebug(me->ui, "Cannot make reservation in tail mode");
     return 0;
-  } else if (!me->reserveTrackMode) {
-    PrintDebug(me->ui, "No reservation mode");
-    return 0;
   }
   int isStationary = me->stoppedCount == me->numTrainInGroup;
   TrackLandmark sensors[MAX_TRAIN_IN_GROUP * 10];
@@ -195,6 +192,9 @@ static int groupSetSpeed(MultiTrainDriver* me, int speed) {
     for (int i = 0; i < me->numTrainInGroup; i++) {
       Send(me->trainId[i], (char *)&msg, sizeof(DriverMsg), (char*)1, 0);
     }
+  }
+  if (speed == 0 && !me->reserveTrackMode) {
+    clearReservation(me->trackManager, me->trainNum);
   }
   return shouldSetSpeed;
 }
@@ -448,6 +448,10 @@ void multitrain_driver() {
             // Reroute.
             setRoute(&me, &(me.info[0].pos), &(me.routeMsg));
           }
+        }
+
+        if (!me.reserveTrackMode) {
+          clearReservation(me.trackManager, me.trainNum);
         }
         break;
       }
