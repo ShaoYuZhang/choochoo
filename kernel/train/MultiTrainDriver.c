@@ -315,7 +315,11 @@ void multitrain_driver() {
     DriverMsg* msg = (DriverMsg*)&actualMsg;
     msg->data3 = 0;
     Receive(&tid, (char *)msg, sizeof(MultiTrainDriverMsg));
-    if (msg->type != REPORT_INFO && msg->type !=  QUERY_STOP_COUNT && msg->type != MULTI_TRAIN_DRIVER_COURIER && msg->type != SENSOR_TRIGGER && msg->type != DELTA_DISTANCE) {
+    if (msg->type != REPORT_INFO &&
+        msg->type != QUERY_STOP_COUNT &&
+        msg->type != MULTI_TRAIN_DRIVER_COURIER &&
+        msg->type != SENSOR_TRIGGER &&
+        msg->type != DELTA_DISTANCE) {
       Reply(tid, (char*)1, 0);
     }
 

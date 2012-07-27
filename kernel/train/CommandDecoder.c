@@ -295,6 +295,45 @@ static void decodeCommand() {
     } else {
       PrintDebug(ui, "ERROR, maxDist less than minDist");
     }
+  } else if (decoderBuffer[0] == 'b' && decoderBuffer[1] == 'i' && decoderBuffer[2] == 'g') {
+      TrackMsg setSwitch;
+      setSwitch.type = SUDO_SET_SWITCH;
+      setSwitch.landmark1.type = LANDMARK_SWITCH;
+      setSwitch.landmark1.num1 = 0;
+
+      setSwitch.data = SWITCH_CURVED;
+      setSwitch.landmark1.num2 = 8;
+      Send(trackController, (char*)&setSwitch, sizeof(TrackMsg), (char *)NULL, 0);
+      Delay(1, timeServer);
+      setSwitch.landmark1.num2 = 9;
+      Send(trackController, (char*)&setSwitch, sizeof(TrackMsg), (char *)NULL, 0);
+      Delay(1, timeServer);
+      setSwitch.landmark1.num2 = 14;
+      Send(trackController, (char*)&setSwitch, sizeof(TrackMsg), (char *)NULL, 0);
+      Delay(1, timeServer);
+      setSwitch.landmark1.num2 = 15;
+      Send(trackController, (char*)&setSwitch, sizeof(TrackMsg), (char *)NULL, 0);
+
+      setSwitch.data = SWITCH_STRAIGHT;
+      Delay(1, timeServer);
+      setSwitch.landmark1.num2 = 10;
+      Send(trackController, (char*)&setSwitch, sizeof(TrackMsg), (char *)NULL, 0);
+      Delay(1, timeServer);
+      setSwitch.landmark1.num2 = 13;
+      Send(trackController, (char*)&setSwitch, sizeof(TrackMsg), (char *)NULL, 0);
+      Delay(1, timeServer);
+      setSwitch.landmark1.num2 = 16;
+      Send(trackController, (char*)&setSwitch, sizeof(TrackMsg), (char *)NULL, 0);
+      Delay(1, timeServer);
+      setSwitch.landmark1.num2 = 17;
+      Send(trackController, (char*)&setSwitch, sizeof(TrackMsg), (char *)NULL, 0);
+
+      DriverMsg trainMsg;
+      trainMsg.trainNum = 255;
+      trainMsg.type = BROADCAST_UPDATE_PREDICTION;
+      Send(trainController, (char*)&trainMsg, sizeof(trainMsg), (char *)NULL, 0);
+
+
   } else {
     PrintDebug(ui, "__Bad command__ %s", decoderBuffer);
     return;
