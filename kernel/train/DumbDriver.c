@@ -314,34 +314,32 @@ static void trainSetSpeed(
   char msg[4];
   msg[1] = (char)me->trainNum;
 
-  if (me->lastSensorActualTime > 0) {
-    // a/d related stuff
-    int newSpeed = speed >=0 ? speed : 0;
-    int now = Time(me->timeserver) * 10;
-    if (me->speed == newSpeed) {
-      // do nothing
-    }
-    else if (me->speed == 0) {
-      // accelerating from 0
-      int v0 = getVelocity(me);
-      int v1 = me->v[newSpeed][ACCELERATE];
-      int t0 = now + 8; // compensate for time it takes to send to train
-      int t1 = now + 8 + me->a[newSpeed];
-      poly_init(&me->adPoly, t0, t1, v0, v1);
-      me->isAding = 1;
-      me->lastReportDist = 0;
-      me->adEndTime = t1;
-    } else if (newSpeed == 0) {
-      // decelerating to 0
-      int v0 = getVelocity(me);
-      int v1 = me->v[newSpeed][DECELERATE];
-      int t0 = now + 8; // compensate for time it takes to send to train
-      int t1 = now + 8 + getStoppingTime(me);
-      poly_init(&me->adPoly, t0, t1, v0, v1);
-      me->isAding = 1;
-      me->lastReportDist = 0;
-      me->adEndTime = t1;
-    }
+  // a/d related stuff
+  int newSpeed = speed >=0 ? speed : 0;
+  int now = Time(me->timeserver) * 10;
+  if (me->speed == newSpeed) {
+    // do nothing
+  }
+  else if (me->speed == 0) {
+    // accelerating from 0
+    int v0 = getVelocity(me);
+    int v1 = me->v[newSpeed][ACCELERATE];
+    int t0 = now + 8; // compensate for time it takes to send to train
+    int t1 = now + 8 + me->a[newSpeed];
+    poly_init(&me->adPoly, t0, t1, v0, v1);
+    me->isAding = 1;
+    me->lastReportDist = 0;
+    me->adEndTime = t1;
+  } else if (newSpeed == 0) {
+    // decelerating to 0
+    int v0 = getVelocity(me);
+    int v1 = me->v[newSpeed][DECELERATE];
+    int t0 = now + 8; // compensate for time it takes to send to train
+    int t1 = now + 8 + getStoppingTime(me);
+    poly_init(&me->adPoly, t0, t1, v0, v1);
+    me->isAding = 1;
+    me->lastReportDist = 0;
+    me->adEndTime = t1;
   }
 
   TrainDebug(me, "Train Setting Speed %d", speed);
