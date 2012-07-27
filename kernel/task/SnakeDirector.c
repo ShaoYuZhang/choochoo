@@ -289,9 +289,18 @@ int RegisterBait(int tid, int trainNum) {
   msg.type = REGISTER_BAIT;
   msg.trainNum = (char)trainNum;
 
-  char ret = -1;
-  int len = Send(tid, (char*)&msg, sizeof(SnakeMessage), &ret, 1);
-  return len != 1 || ret != 0;
+  if (trainNum == 45 ||
+      trainNum == 39 ||
+      trainNum == 37 ||
+      trainNum == 35 ||
+      trainNum == 48 ||
+      trainNum == 44 ||
+      trainNum == 43) {
+    char ret = -1;
+    int len = Send(tid, (char*)&msg, sizeof(SnakeMessage), &ret, 1);
+    return len != 1 || ret != 0;
+  }
+  return 1;
 }
 
 int RegisterSnake(int tid, int trainNum) {
@@ -299,9 +308,18 @@ int RegisterSnake(int tid, int trainNum) {
   msg.type = REGISTER_SNAKE;
   msg.trainNum = (char)trainNum;
 
-  char ret = -1;
-  int len = Send(tid, (char*)&msg, sizeof(SnakeMessage), &ret, 1);
-  return len != 1 || ret != 0;
+  if (trainNum == 45 ||
+      trainNum == 39 ||
+      trainNum == 37 ||
+      trainNum == 35 ||
+      trainNum == 48 ||
+      trainNum == 44 ||
+      trainNum == 43) {
+    char ret = -1;
+    int len = Send(tid, (char*)&msg, sizeof(SnakeMessage), &ret, 1);
+    return len != 1 || ret != 0;
+  }
+  return 1;
 }
 
 int startSnakeDirectorTask(){

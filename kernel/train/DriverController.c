@@ -70,11 +70,19 @@ void DoBaitPositionFinding(int controllerTid, int trainNum) {
 }
 
 void DoPositionFinding(int controllerTid, int trainNum) {
-  DriverMsg msg;
-  msg.type = FIND_POSITION;
-  msg.data2 = RESERVE;
-  msg.trainNum = trainNum;
-  Send(controllerTid, (char*)&msg, sizeof(DriverMsg), (char *)NULL, 0);
+  if (trainNum == 45 ||
+      trainNum == 39 ||
+      trainNum == 37 ||
+      trainNum == 35 ||
+      trainNum == 48 ||
+      trainNum == 44 ||
+      trainNum == 43) {
+    DriverMsg msg;
+    msg.type = FIND_POSITION;
+    msg.data2 = RESERVE;
+    msg.trainNum = trainNum;
+    Send(controllerTid, (char*)&msg, sizeof(DriverMsg), (char *)NULL, 0);
+  }
 }
 
 void DoTrainMerge(int controllerTid, int headTrainNum, int tailTrainNum) {

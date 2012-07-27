@@ -78,7 +78,6 @@ static void decodeCommand() {
     int train_number = strgetui(&temp);
 
     DoPositionFinding(trainController, train_number);
-      PrintDebug(ui, "Registering snake... %d", MyTid());
     int ret = RegisterSnake(snakeDirector, train_number);
   } else if (decoderBuffer[0] == 'i' && decoderBuffer[1] == 'n') {
     char *temp = (char *)decoderBuffer + 5;
